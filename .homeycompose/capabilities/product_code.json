@@ -1,0 +1,8 @@
+{
+  "type": "string",
+  "title": {"en": "Product Code"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/product.svg",
+  "insights": false
+}

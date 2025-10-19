@@ -1,0 +1,8 @@
+{
+  "type": "string",
+  "title": {"en": "Date Time"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/event.svg",
+  "insights": false
+}

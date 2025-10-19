@@ -1,0 +1,45 @@
+{
+  "id": "com.kraken.energy",
+  "version": "1.0.5",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "brandColor": "#5940ff",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Kraken Energy"
+  },
+  "description": {
+    "en": "Monitor the live use of energy as recorded by Kraken using Octopus Mini"
+  },
+  "category": [
+    "energy"
+  ],
+  "tags": {
+    "en": [
+      "kraken",
+      "octopus",
+      "energy",
+      "live",
+      "mini"
+    ]
+  },
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/octopus-energy-small.png",
+    "large": "/assets/images/octopus-energy-large.png",
+    "xlarge": "/assets/images/octopus-energy-xlarge.png"
+  },
+  "author": {
+    "name": "David Piper",
+    "email": "david.piper@normandygite.org.uk"
+  },
+  "contributors": {
+    "developers": [
+      {
+        "name": "David Piper"
+      }
+    ]
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "triggers": [
+    {
+      "id": "data_presence.next_day_prices_true",
+      "title": {
+        "en": "Next Day Prices Published"
+      },
+      "hint": {
+        "en": "Triggers when tariff prices for the next day are published."
+      },
+      "$filter": "capabilities=data_presence.next_day_prices"
+    },
+    {
+      "id": "data_presence.next_day_prices_false",
+      "title": {
+        "en": "Next Day Prices Unpublished"
+      },
+      "hint": {
+        "en": "Triggers when tariff prices for the next day become unavailable, normally as midnight passes."
+      },
+      "$filter": "capabilities=data_presence.next_day_prices"
+    },
+    {
+      "id": "slot_quartile_changed",
+      "title": {
+        "en": "Pricing quartile changed"
+      },
+      "hint": {
+        "en": "The pricing quartile has changed."
+      },
+      "tokens": [
+        {
+          "name": "slot_quartile",
+          "type": "number",
+          "title": {"en": "Price Quartile Number"},
+          "example": {"en": "From 0 (lowest prices) to 3 (highest prices)"}
+        }
+      ],
+      "$filter": "capabilities=slot_quartile"
+    },
+    {
+      "id": "date_time.period_start.changed",
+      "title": {
+        "en": "New invoicing period started"
+      },
+      "hint": {
+        "en": "A new invoicing period has started and an invoice will be issued shortly."
+      },
+      "tokens": [
+        {
+          "name": "date_time.period_start",
+          "type": "string",
+          "title": {"en": "This Invoicing Period Start"},
+          "example": {"en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"}
+        },
+        {
+          "name": "period_day.period_duration",
+          "type": "number",
+          "title": {"en": "New Invoicing Period Duration"},
+          "example": {"en": "Normally 30 or 31 days; February 28 or 29 days"}
+        },
+        {
+          "name": "measure_monetary.account_balance",
+          "type": "number",
+          "title": {"en": "Account Balance"},
+          "example": {"en": "Account balance at the start of the new period in £"}
+        },
+        {
+          "name": "date_time.next_period_start",
+          "type": "string",
+          "title": {"en": "Next Invoicing Period Start"},
+          "example": {"en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"}
+        }
+      ],
+      "$filter": "capabilities=date_time.period_start"
+    }
+  ],
+  "conditions":[
+    {
+      "id": "slot_relative_price",
+      "title": {
+        "en": "Current slot kWh price is !{{cheaper|more expensive}} than that of the next slot"
+      },
+      "hint": {
+        "en": "Compares the price per kWH of the current slot with that for the next slot. Card can be inverted."
+      },
+      "$filter": "capabilities=slot_quartile"
+    }
+  ]
+}

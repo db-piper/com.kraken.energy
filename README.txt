@@ -1,0 +1,1 @@
+Tariff devices allow you to track the energy consumed or exported using the import and export tariffs linked to your Octopus account. The Account device tracks the status of your account, including periodic invoices and credit account balance. An Octopus Home Mini device is required to use the app - this is the only way to obtain live data related to your Octopus account.
