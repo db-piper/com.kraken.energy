@@ -1,0 +1,10 @@
+{
+  "type": "boolean",
+  "title": {"en": "Data Presence"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/presence.svg",
+  "insights": false,
+  "titleTrue": {"en": "present"},
+  "titleFalse": {"en": "absent"} 
+}

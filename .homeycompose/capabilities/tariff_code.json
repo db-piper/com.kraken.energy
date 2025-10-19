@@ -1,0 +1,8 @@
+{
+  "type": "string",
+  "title": {"en": "Tariff Code"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/tariff.svg",
+  "insights": false
+}

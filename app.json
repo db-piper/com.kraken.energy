@@ -1,0 +1,454 @@
+{
+  "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
+  "id": "com.kraken.energy",
+  "version": "1.0.5",
+  "compatibility": ">=12.4.0",
+  "sdk": 3,
+  "brandColor": "#5940ff",
+  "platforms": [
+    "local"
+  ],
+  "name": {
+    "en": "Kraken Energy"
+  },
+  "description": {
+    "en": "Monitor the live use of energy as recorded by Kraken using Octopus Mini"
+  },
+  "category": [
+    "energy"
+  ],
+  "tags": {
+    "en": [
+      "kraken",
+      "octopus",
+      "energy",
+      "live",
+      "mini"
+    ]
+  },
+  "permissions": [],
+  "images": {
+    "small": "/assets/images/octopus-energy-small.png",
+    "large": "/assets/images/octopus-energy-large.png",
+    "xlarge": "/assets/images/octopus-energy-xlarge.png"
+  },
+  "author": {
+    "name": "David Piper",
+    "email": "david.piper@normandygite.org.uk"
+  },
+  "contributors": {
+    "developers": [
+      {
+        "name": "David Piper"
+      }
+    ]
+  },
+  "flow": {
+    "triggers": [
+      {
+        "id": "data_presence.next_day_prices_true",
+        "title": {
+          "en": "Next Day Prices Published"
+        },
+        "hint": {
+          "en": "Triggers when tariff prices for the next day are published."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=data_presence.next_day_prices"
+          }
+        ]
+      },
+      {
+        "id": "data_presence.next_day_prices_false",
+        "title": {
+          "en": "Next Day Prices Unpublished"
+        },
+        "hint": {
+          "en": "Triggers when tariff prices for the next day become unavailable, normally as midnight passes."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=data_presence.next_day_prices"
+          }
+        ]
+      },
+      {
+        "id": "slot_quartile_changed",
+        "title": {
+          "en": "Pricing quartile changed"
+        },
+        "hint": {
+          "en": "The pricing quartile has changed."
+        },
+        "tokens": [
+          {
+            "name": "slot_quartile",
+            "type": "number",
+            "title": {
+              "en": "Price Quartile Number"
+            },
+            "example": {
+              "en": "From 0 (lowest prices) to 3 (highest prices)"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=slot_quartile"
+          }
+        ]
+      },
+      {
+        "id": "date_time.period_start.changed",
+        "title": {
+          "en": "New invoicing period started"
+        },
+        "hint": {
+          "en": "A new invoicing period has started and an invoice will be issued shortly."
+        },
+        "tokens": [
+          {
+            "name": "date_time.period_start",
+            "type": "string",
+            "title": {
+              "en": "This Invoicing Period Start"
+            },
+            "example": {
+              "en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"
+            }
+          },
+          {
+            "name": "period_day.period_duration",
+            "type": "number",
+            "title": {
+              "en": "New Invoicing Period Duration"
+            },
+            "example": {
+              "en": "Normally 30 or 31 days; February 28 or 29 days"
+            }
+          },
+          {
+            "name": "measure_monetary.account_balance",
+            "type": "number",
+            "title": {
+              "en": "Account Balance"
+            },
+            "example": {
+              "en": "Account balance at the start of the new period in £"
+            }
+          },
+          {
+            "name": "date_time.next_period_start",
+            "type": "string",
+            "title": {
+              "en": "Next Invoicing Period Start"
+            },
+            "example": {
+              "en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=date_time.period_start"
+          }
+        ]
+      }
+    ],
+    "conditions": [
+      {
+        "id": "slot_relative_price",
+        "title": {
+          "en": "Current slot kWh price is !{{cheaper|more expensive}} than that of the next slot"
+        },
+        "hint": {
+          "en": "Compares the price per kWH of the current slot with that for the next slot. Card can be inverted."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=slot_quartile"
+          }
+        ]
+      }
+    ]
+  },
+  "drivers": [
+    {
+      "name": {
+        "en": "Metering Devices"
+      },
+      "class": "sensor",
+      "capabilities": [],
+      "platforms": [
+        "local"
+      ],
+      "connectivity": [],
+      "images": {
+        "small": "/drivers/krakendevicedriver/assets/images/kraken-small.png",
+        "large": "/drivers/krakendevicedriver/assets/images/kraken-large.png",
+        "xlarge": "/drivers/krakendevicedriver/assets/images/kraken-xlarge.png"
+      },
+      "pair": [
+        {
+          "id": "login_credentials",
+          "template": "login_credentials",
+          "options": {
+            "logo": "/drivers/krakendevicedriver/assets/images/kraken-small.png",
+            "title": {
+              "en": "Energy Account Details"
+            },
+            "usernameLabel": {
+              "en": "Account Number"
+            },
+            "usernamePlaceholder": {
+              "en": "A-9A999999"
+            },
+            "passwordLabel": {
+              "en": "Account API Key"
+            },
+            "passwordPlaceholder": {
+              "en": "sk_live_... 32 characters"
+            }
+          }
+        },
+        {
+          "id": "list_devices",
+          "template": "list_devices",
+          "navigation": {
+            "next": "add_devices"
+          }
+        },
+        {
+          "id": "add_devices",
+          "template": "add_devices"
+        }
+      ],
+      "id": "krakendevicedriver"
+    }
+  ],
+  "capabilities": {
+    "data_presence": {
+      "type": "boolean",
+      "title": {
+        "en": "Data Presence"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/presence.svg",
+      "insights": false,
+      "titleTrue": {
+        "en": "present"
+      },
+      "titleFalse": {
+        "en": "absent"
+      }
+    },
+    "date_time": {
+      "type": "string",
+      "title": {
+        "en": "Date Time"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/event.svg",
+      "insights": false
+    },
+    "month_day": {
+      "type": "enum",
+      "title": {
+        "en": "Month Day"
+      },
+      "getable": true,
+      "setable": true,
+      "icon": "/assets/monthday.svg",
+      "insights": false,
+      "uiComponent": "picker",
+      "values": [
+        {
+          "id": "01",
+          "title": "01"
+        },
+        {
+          "id": "02",
+          "title": "02"
+        },
+        {
+          "id": "03",
+          "title": "03"
+        },
+        {
+          "id": "04",
+          "title": "04"
+        },
+        {
+          "id": "05",
+          "title": "05"
+        },
+        {
+          "id": "06",
+          "title": "06"
+        },
+        {
+          "id": "07",
+          "title": "07"
+        },
+        {
+          "id": "08",
+          "title": "08"
+        },
+        {
+          "id": "09",
+          "title": "09"
+        },
+        {
+          "id": "10",
+          "title": "10"
+        },
+        {
+          "id": "11",
+          "title": "11"
+        },
+        {
+          "id": "12",
+          "title": "12"
+        },
+        {
+          "id": "13",
+          "title": "13"
+        },
+        {
+          "id": "14",
+          "title": "14"
+        },
+        {
+          "id": "15",
+          "title": "15"
+        },
+        {
+          "id": "16",
+          "title": "16"
+        },
+        {
+          "id": "17",
+          "title": "17"
+        },
+        {
+          "id": "18",
+          "title": "18"
+        },
+        {
+          "id": "19",
+          "title": "19"
+        },
+        {
+          "id": "20",
+          "title": "20"
+        },
+        {
+          "id": "21",
+          "title": "21"
+        },
+        {
+          "id": "22",
+          "title": "22"
+        },
+        {
+          "id": "23",
+          "title": "23"
+        },
+        {
+          "id": "24",
+          "title": "24"
+        },
+        {
+          "id": "25",
+          "title": "25"
+        },
+        {
+          "id": "26",
+          "title": "26"
+        },
+        {
+          "id": "27",
+          "title": "27"
+        },
+        {
+          "id": "28",
+          "title": "28"
+        },
+        {
+          "id": "29",
+          "title": "29"
+        },
+        {
+          "id": "30",
+          "title": "30"
+        },
+        {
+          "id": "31",
+          "title": "31"
+        }
+      ]
+    },
+    "period_day": {
+      "type": "number",
+      "title": {
+        "en": "Period Day"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/monthday.svg",
+      "insights": false,
+      "uiComponent": "sensor",
+      "min": 1,
+      "max": 31,
+      "step": 1
+    },
+    "product_code": {
+      "type": "string",
+      "title": {
+        "en": "Product Code"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/product.svg",
+      "insights": false
+    },
+    "slot_quartile": {
+      "type": "number",
+      "title": {
+        "en": "Slot Price Quartile"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/quartile.svg",
+      "insights": false,
+      "uiComponent": "sensor",
+      "decimals": 0,
+      "min": 0,
+      "max": 3,
+      "step": 1
+    },
+    "tariff_code": {
+      "type": "string",
+      "title": {
+        "en": "Tariff Code"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/tariff.svg",
+      "insights": false
+    }
+  }
+}
