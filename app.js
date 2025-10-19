@@ -5,7 +5,8 @@ const Homey = require('homey');
 /**
  * 
  * DONE: "New Period" trigger card on Octopus Account device
- * DONEgi: Better icon for energyAccount device
+ * DONE: Better icon for energyAccount device
+ * DONE: Work out git usage
  * TODO: Projected bill algorithm
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Subclass the productTariff class to differentiate half-hourly and non-halfhourly tariffs
