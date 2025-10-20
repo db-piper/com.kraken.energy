@@ -125,7 +125,7 @@ module.exports = class managerEvent {
     //TODO: Adjust signature of checkAccountDataCurrent to elide refreshDate
     //const refreshDate = this._accountWrapper.accountLastRefresh;
     //BUG:  refresh is NOT newDay - executeEvent requires newDay as second parameter
-    const refresh = await this.checkAccountDataRefresh(atTime);
+    const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
     let readyToProcess = true;
 
     if (refresh) {
@@ -148,30 +148,7 @@ module.exports = class managerEvent {
   }
 
   /**
-   * Indicate that at least 24 hours has passed, or that the end time of the last slot of a half-hourly charged tariff is past.
-   * @param {string}  atTime                  The date time of the event in string format
-   * @param {string}  refreshDate             The date time of the last refresh in ISO format
-   * @returns {boolean}                       True indicates that the data must be refreshed 
-   */
-  async checkAccountDataRefresh(atTime) {
-    this.driver.log(`managerEvent.checkAccountDataCurrent: starting`);
-    let dataRefresh = true;
-    if (this.accountWrapper.accountData !== undefined) {
-      const timeZone = this.driver.homey.clock.getTimezone();
-      const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
-      const onTheHour = 0 == eventDateTime.minute;
-      const lateEnough = 10 <= eventDateTime.hour;
-      const lastPriceSlotExpiry = await this._accountWrapper.getLastPriceSlotExpiry();
-      const lastPriceSlotExpiryDate = DateTime.fromJSDate(new Date(lastPriceSlotExpiry)).setZone(timeZone);
-      const pricesAlreadyAvailable = lastPriceSlotExpiryDate.day != eventDateTime.day;
-      dataRefresh = onTheHour && lateEnough && !pricesAlreadyAvailable;
-    }
-    this.driver.log(`managerEvent.checkAccountDataCurrent: exiting ${dataRefresh}`);
-    return dataRefresh;
-  }
-
-  /**
-   * Indicate that the day has chnaged between two timestamps in extended ISO format
+   * Indicate that the day has changed between two timestamps in extended ISO format
    * @param   {string}  laterTime     The new timestamp
    * @param   {string}  earlierTime   The old timestamp
    * @returns {boolean}               True when the day has changed

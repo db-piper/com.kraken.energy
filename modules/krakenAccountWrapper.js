@@ -485,5 +485,30 @@ module.exports = class krakenAccountWrapper {
     const pence = this.accountData.data.account.balance;
     return pence * .01;
   }
+   
+  /**
+   * Indicate that at least 24 hours has passed, or that the end time of the last slot of a half-hourly charged tariff is past.
+   * @param {string}  atTime                  The date time of the event in string format
+   * @param {string}  refreshDate             The date time of the last refresh in ISO format
+   * @returns {boolean}                       True indicates that the data must be refreshed 
+   */
+  async checkAccountDataRefresh(atTime) {
+    this._driver.log(`krakenAccountWrapper.checkAccountDataCurrent: starting`);
+    let dataRefresh = true;
+    if (this._accountData !== undefined) {
+      const timeZone = this._driver.homey.clock.getTimezone();
+      const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
+      const onTheHour = 0 == eventDateTime.minute;
+      const lateEnough = 9 <= eventDateTime.hour;
+      const lastPriceSlotExpiry = await this.getLastPriceSlotExpiry();
+      const lastPriceSlotExpiryDate = DateTime.fromJSDate(new Date(lastPriceSlotExpiry)).setZone(timeZone);
+      const pricesAlreadyAvailable = lastPriceSlotExpiryDate.day != eventDateTime.day;
+      this._driver.log(`krakenAccountWrapper.checkAccountDataCurrent: Minute ${eventDateTime.minute} hour ${eventDateTime.hour}`);
+      this._driver.log(`krakenAccountWrapper.checkAccountDataCurrent: onTheHour ${onTheHour} lateEnough ${lateEnough} pricesAvail ${pricesAlreadyAvailable}`);
+      dataRefresh = onTheHour && lateEnough && !pricesAlreadyAvailable;
+    }
+    this._driver.log(`krakenAccountManager.checkAccountDataCurrent: exiting ${dataRefresh}`);
+    return dataRefresh;
+  }
 
 }
