@@ -15,9 +15,7 @@
   "description": {
     "en": "Monitor the live use of energy using an Octopus Home Mini"
   },
-  "category": [
-    "Energy"
-  ],
+  "category": "energy",
   "tags": {
     "en": [
       "kraken",
