@@ -144,8 +144,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async getTomorrowsPricesPresent(atTime, direction) {
 		const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({days: 1});
-		//const nextDay = this.getLocalDateTime(new Date(atTime));
-		//const nextDay = testDate.plus({ days: 1 });
 		const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(),direction);
 		this.homey.log(`krakenDevice.getTomorrowsPricesPresent: nextDayPrices ${JSON.stringify(nextDayPrices)}`);
 		let present = false;
