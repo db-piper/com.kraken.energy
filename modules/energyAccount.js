@@ -275,7 +275,7 @@ module.exports = class energyAccount extends krakenDevice {
 	async updatePeriodDay(startDay) {
 		const periodDay = this.computePeriodDay((new Date).toISOString(), Number(startDay));
 		this.homey.log(`energyAccount.updatePeriodDay: PeriodStart: ${startDay} PeriodDay: ${periodDay}`);
-		this.setCapabilityValue("period_day.period_day", periodDay.toString.padStart(2,'0'));
+		this.setCapabilityValue("period_day.period_day", periodDay);
 		//TODO: Reset next period start to reflect the new start day;
 	}
 

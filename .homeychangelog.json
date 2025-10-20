@@ -4,5 +4,8 @@
   },
   "1.0.6": {
     "en": "First publication"
+  },
+  "1.0.7": {
+    "en": "Fixed crash in Account device caused by single digit day number for account rollover"
   }
 }
