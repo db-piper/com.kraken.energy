@@ -4,6 +4,8 @@
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "brandColor": "#5940ff",
+  "homeyCommunityTopicId": 136685,
+  "source": "https://github.com/db-piper/com.kraken.energy",
   "platforms": [
     "local"
   ],
@@ -11,10 +13,10 @@
     "en": "Kraken Energy"
   },
   "description": {
-    "en": "Monitor the live use of energy as recorded by Kraken using Octopus Mini"
+    "en": "Monitor the live use of energy using an Octopus Home Mini"
   },
   "category": [
-    "energy"
+    "Energy"
   ],
   "tags": {
     "en": [
@@ -22,14 +24,14 @@
       "octopus",
       "energy",
       "live",
-      "mini"
+      "home mini"
     ]
   },
   "permissions": [],
   "images": {
-    "small": "/assets/images/octopus-energy-small.png",
-    "large": "/assets/images/octopus-energy-large.png",
-    "xlarge": "/assets/images/octopus-energy-xlarge.png"
+    "small": "/assets/images/kraken_energy_monitoring_small.png",
+    "large": "/assets/images/kraken_energy_monitoring_medium.png",
+    "xlarge": "/assets/images/kraken_energy_monitoring_large.png"
   },
   "author": {
     "name": "David Piper",

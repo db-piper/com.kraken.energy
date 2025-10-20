@@ -9,16 +9,16 @@
   ],
   "connectivity": [],
   "images": {
-    "small": "/drivers/krakendevicedriver/assets/images/kraken-small.png",
-    "large": "/drivers/krakendevicedriver/assets/images/kraken-large.png",
-    "xlarge": "/drivers/krakendevicedriver/assets/images/kraken-xlarge.png"
+    "small": "/drivers/krakendevicedriver/assets/images/octopus-home-mini-small.png",
+    "large": "/drivers/krakendevicedriver/assets/images/octopus-home-mini-medium.png",
+    "xlarge": "/drivers/krakendevicedriver/assets/images/octopus-home-mini-large.png"
   },
   "pair": [
     {
       "id": "login_credentials",
       "template": "login_credentials",
       "options": {
-        "logo": "/drivers/krakendevicedriver/assets/images/kraken-small.png",
+        "logo": "/assets/icon.svg",
         "title": {
           "en": "Energy Account Details"
         },
