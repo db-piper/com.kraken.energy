@@ -143,7 +143,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
 	 */
 	async getTomorrowsPricesPresent(atTime, direction) {
-		const nextDay = this.getLocalDateTime(new Date(atTime)).plus({days: 1});
+		const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({days: 1});
 		//const nextDay = this.getLocalDateTime(new Date(atTime));
 		//const nextDay = testDate.plus({ days: 1 });
 		const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(),direction);
