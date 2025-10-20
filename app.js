@@ -9,6 +9,7 @@ const Homey = require('homey');
  * DONE: Work out git usage
  * TODO: Projected bill algorithm
  * TODO: Review all classes, complete comments and remove redundant functions
+ * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Subclass the productTariff class to differentiate half-hourly and non-halfhourly tariffs
  * TODO: Add support for Octopus Saving periods including auto-registration
  * TODO: Consider use of the Home Assistant hack for free-energy periods (how reliable is it??)
