@@ -6,7 +6,9 @@
   "brandColor": "#5940ff",
   "homeyCommunityTopicId": 136685,
   "source": "https://github.com/db-piper/com.kraken.energy",
-  "bugs": "https://github.com/db-piper/com.kraken.energy/issues",
+  "bugs": {
+    "url": "https://github.com/db-piper/com.kraken.energy/issues"
+  },
   "platforms": [
     "local"
   ],
