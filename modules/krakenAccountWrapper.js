@@ -432,12 +432,12 @@ module.exports = class krakenAccountWrapper {
   async getLiveMeterData() {
     const meter_query = await this.liveMeterDataQuery();
     this._driver.log
-    let data = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
-    if (("data" in data)) {
+    let data = await this.dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    if ((data !== undefined) && ("data" in data)) {
       let reading = data.data.smartMeterTelemetry[0];
       return reading;
     } else {
-      throw new Error(data.errors.message);
+      return undefined;
     }
   }
 

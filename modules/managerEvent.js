@@ -1,6 +1,5 @@
 'use strict';
 
-//const dataFetcher = require("./dataFetcher");
 const accountWrapper = require("./krakenAccountWrapper");
 const { DateTime } = require("luxon");
 
@@ -107,7 +106,7 @@ module.exports = class managerEvent {
   newDay(atTime) {
     const timeZone = this.driver.homey.clock.getTimezone();
     const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
-    const midnight = eventDateTime.set({hour: 0, minute: 0, second: 0, millisecond: 0});
+    const midnight = eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
     const elapsed = eventDateTime.diff(midnight, 'milliseconds');
     const isNewDay = elapsed.toMillis() < this._period;
     this.driver.log(`managerEvent.newDay: event ${eventDateTime.toISO()} midnight ${midnight.toISO()} elapsed ${elapsed.toMillis()} newDay ${isNewDay}`);
@@ -120,11 +119,6 @@ module.exports = class managerEvent {
    * @returns {array}         Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
-
-    //TODO: Remove processing of the refreshDate here and in krakenAccountWrapper.
-    //TODO: Adjust signature of checkAccountDataCurrent to elide refreshDate
-    //const refreshDate = this._accountWrapper.accountLastRefresh;
-    //BUG:  refresh is NOT newDay - executeEvent requires newDay as second parameter
     const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
     let readyToProcess = true;
 
@@ -137,10 +131,13 @@ module.exports = class managerEvent {
     let updates = new Array();
     if (readyToProcess) {
       const liveReading = await this._accountWrapper.getLiveMeterData();
-      for (const device of this.driver.getDevices()) {
-        this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
-        updates.push(await device.processEvent(atTime, this.newDay(atTime), liveReading));
-        //updates.push(false);
+      if (liveReading !== undefined) {
+        for (const device of this.driver.getDevices()) {
+          this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
+          updates.push(await device.processEvent(atTime, this.newDay(atTime), liveReading));
+        }
+      } else {
+        this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
       }
     }
 
@@ -148,11 +145,11 @@ module.exports = class managerEvent {
   }
 
   /**
-   * Indicate that the day has changed between two timestamps in extended ISO format
-   * @param   {string}  laterTime     The new timestamp
-   * @param   {string}  earlierTime   The old timestamp
-   * @returns {boolean}               True when the day has changed
-   */
+ * Indicate that the day has changed between two timestamps in extended ISO format
+ * @param   {string}  laterTime     The new timestamp
+ * @param   {string}  earlierTime   The old timestamp
+ * @returns {boolean}               True when the day has changed
+ */
   changeOfDay(laterTime, earlierTime) {
     //BUG: Using the JS Date class does not work because Homey always works in UTC. Reimplemented with Luxon
     // const newDate = (new Date(laterTime)).getDate();

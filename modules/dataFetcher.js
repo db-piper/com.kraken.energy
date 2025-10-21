@@ -51,23 +51,24 @@ module.exports = class dataFetcher {
 
   /**
    * Make a query on the Octopus GraphQL API
-   * @param {string} queryString the GraphQL query to be performed
-   * @returns {object} a JSON object representing the result of the query or undefined if query fails to execute
+   * @param   {string} queryString  the GraphQL query to be performed
+   * @returns {object}              a JSON object representing the result of the query or undefined if query fails to execute
    */
   async getDataUsingGraphQL(queryString, apiKey) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getGraphQlApiToken(apiKey);
     if (validToken) {
       try {
-        //TODO: Fix this to pass the token too...
         let result = await this.runGraphQlQuery(queryString, this.graphQlApiToken);
-        if (!result.hasOwnProperty("errors")) {
+        if ((result !== undefined) && (!result.hasOwnProperty("errors"))) {
           return result;
         } else {
           return undefined;
         }
       } catch (err) {
-        throw err;
+        this.homey.log("datafetcher.getDataUsingGraphQL: error block");
+        this.homey.log(err);
+        return undefined;
       }
     } else {
       return undefined;
