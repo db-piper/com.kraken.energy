@@ -13,5 +13,8 @@
   },
   "1.0.9": {
     "en": "Researched fix to enum key problem on month_day.period_start on account device"
+  },
+  "1.0.10": {
+    "en": "Fix to crash caused by timeout obtaining data from Octopus Home Mini"
   }
 }
