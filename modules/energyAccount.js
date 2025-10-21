@@ -338,7 +338,9 @@ module.exports = class energyAccount extends krakenDevice {
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.driver.managerEvent.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.getTariffDirectionPrices(atTime, true);
+		const exportTariffPresent = exportPrices !== undefined;
 		const importPrices = await this.getTariffDirectionPrices(atTime, false);
+		const importTariffPresent = importPrices !== undefined;
 
 		let currentPeriodStartDate = this.getPeriodStartDate("date_time.period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
 		let nextPeriodStartDate = this.getPeriodStartDate("date_time.next_period_start", currentPeriodStartDate.plus({ months: 1 }));
@@ -371,30 +373,40 @@ module.exports = class energyAccount extends krakenDevice {
 		let periodUpdatedExportValue = 0;
 		let dayUpdatedExport = 0;
 		let dayUpdatedExportValue = 0;
+		let dayExportStandingCharge = 0;
 		let deltaImport = 0;
 		let deltaImportValue = 0;
 		let periodUpdatedImport = 0;
 		let periodUpdatedImportValue = 0;
 		let dayUpdatedImport = 0;
 		let dayUpdatedImportValue = 0;
+		let dayImportStandingCharge = 0;
 		let deltaStandingCharge = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
 
 		if (!firstTime) {
-			deltaExport = liveMeterReading.export - currentExport;
-			deltaExportValue = (deltaExport / 1000) * (exportPrices.unitRate / 100);
-			periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);
-			periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);
-			dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);
-			dayUpdatedExportValue  = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);
-			deltaImport = liveMeterReading.consumption - currentImport;
-			deltaImportValue = (deltaImport / 1000) * (importPrices.unitRate / 100);
-			periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);
-			periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);
-			dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);
-			dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);
-			deltaStandingCharge = newDay ? (.01 * (importPrices.standingCharge + exportPrices.standingCharge)) : 0;
+			if (exportTariffPresent) {
+				deltaExport = liveMeterReading.export - currentExport;
+				deltaExportValue = (deltaExport / 1000) * (exportPrices.unitRate / 100);
+				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);
+				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);
+				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);
+				dayUpdatedExportValue  = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);
+				dayExportStandingCharge = exportPrices.standingCharge;
+			}
+
+			if (importTariffPresent) {
+				deltaImport = liveMeterReading.consumption - currentImport;
+				deltaImportValue = (deltaImport / 1000) * (importPrices.unitRate / 100);
+				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);
+				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);
+				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);
+				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);
+				dayImportStandingCharge = importPrices.standingCharge;
+			}
+
+			deltaStandingCharge = newDay ? (.01 * (dayExportStandingCharge + dayImportStandingCharge)) : 0;
 			periodUpdatedStandingCharge = deltaStandingCharge + (newPeriod ? 0 : periodStandingCharge);
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 		}

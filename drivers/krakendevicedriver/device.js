@@ -108,10 +108,14 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async getTariffDirectionPrices(atTime, direction) {
 		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);
-		//this.homey.log(`krakenDevice.getTariffDirectionPrices: tariff: ${JSON.stringify(tariff)}`);
-		const prices = await this.driver.managerEvent.accountWrapper.getPrices(atTime, tariff);
-		//this.homey.log(`krakenDevice.getTariffDirectionPrices: prices: ${JSON.stringify(prices)}`);
-		return prices;
+		// this.homey.log(`krakenDevice.getTariffDirectionPrices: tariff: ${JSON.stringify(tariff)}`);
+		if (tariff !== undefined) {
+			const prices = await this.driver.managerEvent.accountWrapper.getPrices(atTime, tariff);
+			// this.homey.log(`krakenDevice.getTariffDirectionPrices: prices: ${JSON.stringify(prices)}`);
+			return prices;
+		} else {
+			return undefined;
+		}
 	}
 
 	/**
