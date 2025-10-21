@@ -19,5 +19,8 @@
   },
   "1.0.11": {
     "en": "First attempted fix for Bug #2 missing tariff causes energyAccount to crash"
+  },
+  "1.0.12": {
+    "en": "Attempt fix to Bug #4 - failure to set tomorrow's prices capability to true"
   }
 }
