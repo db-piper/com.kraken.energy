@@ -16,5 +16,8 @@
   },
   "1.0.10": {
     "en": "Fix to crash caused by timeout obtaining data from Octopus Home Mini"
+  },
+  "1.0.11": {
+    "en": "First attempted fix for Bug #2 missing tariff causes energyAccount to crash"
   }
 }
