@@ -334,7 +334,6 @@ module.exports = class energyAccount extends krakenDevice {
 		}
 		await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
 
-		//TODO: What is the impact of backward looking consumption and forward looking prices?
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.driver.managerEvent.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.getTariffDirectionPrices(atTime, true);
@@ -345,8 +344,9 @@ module.exports = class energyAccount extends krakenDevice {
 		let currentPeriodStartDate = this.getPeriodStartDate("date_time.period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
 		let nextPeriodStartDate = this.getPeriodStartDate("date_time.next_period_start", currentPeriodStartDate.plus({ months: 1 }));
 		let newPeriod = false;
+		let eventDateTime = this.getLocalDateTime(new Date(atTime));
 
-		if (this.getLocalDateTime(new Date(atTime)) > nextPeriodStartDate) {
+		if (eventDateTime > nextPeriodStartDate) {
 			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
 			currentPeriodStartDate = nextPeriodStartDate;
 			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
@@ -384,6 +384,8 @@ module.exports = class energyAccount extends krakenDevice {
 		let deltaStandingCharge = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
+		let projectedBill = 0;
+		//let elapsedDays = 0;
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -409,6 +411,12 @@ module.exports = class energyAccount extends krakenDevice {
 			deltaStandingCharge = newDay ? (.01 * (dayExportStandingCharge + dayImportStandingCharge)) : 0;
 			periodUpdatedStandingCharge = deltaStandingCharge + (newPeriod ? 0 : periodStandingCharge);
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
+
+			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
+			projectedBill = (billValue / elapsedDays) * periodLength; 
+			this.homey.log(`energyAccount.processEvnet: billValue ${billValue} periodLength ${periodLength}`);
+			this.homey.log(`energyAccount.processEvent: elapsedDays ${elapsedDays} projectedBill ${projectedBill}`);
+
 		}
 
 		updates = (await this.updateCapabilityValue("period_day.period_duration", periodLength)) || updates;
@@ -428,6 +436,7 @@ module.exports = class energyAccount extends krakenDevice {
 		updates = (await this.updateCapabilityValue("measure_monetary.day_import_value", dayUpdatedImportValue)) || updates;
 		updates = (await this.updateCapabilityValue("measure_monetary.period_standing_charge", periodUpdatedStandingCharge)) || updates;
 		updates = (await this.updateCapabilityValue("measure_monetary.period_bill", billValue)) || updates;
+		updates = (await this.updateCapabilityValue("measure_monetary.projected_bill", projectedBill)) || updates;
 
 		return updates;
 	}
