@@ -1,13 +1,14 @@
 'use strict';
 
 const Homey = require('homey');
+const productTariff = require('./modules/productTariff');
 
 /**
  * 
  * DONE: "New Period" trigger card on Octopus Account device
  * DONE: Better icon for energyAccount device
  * DONE: Work out git usage
- * TODO: Projected bill algorithm
+ * DONE: Projected bill algorithm
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript
@@ -23,11 +24,16 @@ module.exports = class krakenApp extends Homey.App {
    * onInit is called when the app is initialized.
    */
   async onInit() {
-    this.log('krakenApp.onInit: App has been initialized');
+    this.homey.log('krakenApp.onInit: App has been initialized');
     this.homey.log(`krakenApp.onInit: Registering run listener`);
-    this.registerConditionRunListener('slot_relative_price', 'getCurrentlyCheaper');
+    this.registerConditionRunListener('slot_relative_price', productTariff.prototype.getCurrentlyCheaper.name)
 	}
 
+  /**
+   * Register the named function on the device class as the listener for the named condition flow card 
+   * @param {string} cardName 
+   * @param {string} functionName 
+   */
   registerConditionRunListener(cardName, functionName) {
     this.homey.flow.getConditionCard(cardName).registerRunListener(this.runListenerExecutor.bind(this, functionName));
   }
