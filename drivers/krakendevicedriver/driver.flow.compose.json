@@ -39,7 +39,7 @@
       "$filter": "capabilities=slot_quartile"
     },
     {
-      "id": "date_time.period_start.changed",
+      "id": "date_time.period_start_changed",
       "title": {
         "en": "New Invoicing Period Started"
       },
@@ -73,6 +73,16 @@
         }
       ],
       "$filter": "capabilities=date_time.period_start"
+    },
+    {
+      "id": "date_time.slot_end_changed",
+      "title": {
+        "en": "Current Slot End Time Has Changed"
+      },
+      "hint": {
+        "en": "The time for the end of the current pricing slot has changed."
+      },
+      "$filter": "capabilities=date_time.slot_end"
     }
   ],
   "conditions":[

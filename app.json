@@ -109,7 +109,7 @@
         ]
       },
       {
-        "id": "date_time.period_start.changed",
+        "id": "date_time.period_start_changed",
         "title": {
           "en": "New Invoicing Period Started"
         },
@@ -163,6 +163,22 @@
             "type": "device",
             "name": "device",
             "filter": "driver_id=krakendevicedriver&capabilities=date_time.period_start"
+          }
+        ]
+      },
+      {
+        "id": "date_time.slot_end_changed",
+        "title": {
+          "en": "Current Slot End Time Has Changed"
+        },
+        "hint": {
+          "en": "The time for the end of the current pricing slot has changed."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=date_time.slot_end"
           }
         ]
       }
