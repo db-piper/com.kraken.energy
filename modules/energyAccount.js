@@ -22,18 +22,10 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.addCapability("measure_monetary.period_export_value");
 		await this.addCapability("measure_monetary.period_standing_charge");
 		await this.addCapability("measure_monetary.period_bill");
-		// await this.addCapability("measure_monetary.import_unit_price");
-		// await this.addCapability("measure_monetary.export_unit_price");
-		// await this.addCapability("meter_power.slot_import");
-		// await this.addCapability("meter_power.slot_export");
-		// await this.addCapability("measure_monetary.slot_import_value");
-		// await this.addCapability("measure_monetary.slot_export_value");
 		await this.addCapability("meter_power.day_import");
 		await this.addCapability("meter_power.day_export");
 		await this.addCapability("measure_monetary.day_import_value");
 		await this.addCapability("measure_monetary.day_export_value");
-		// await this.addCapability("measure_monetary.day_standing_charge");
-		// await this.addCapability("measure_monetary.day_bill");
 		await this.addCapability("month_day.period_start");
 		await this.addCapability("date_time.period_start");
 		await this.addCapability("date_time.next_period_start");
@@ -129,48 +121,6 @@ module.exports = class energyAccount extends krakenDevice {
 					{"en": "£"}
 			}
 		);
-		// await this.updateCapabilityOptions("measure_monetary.import_unit_price",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Import Price" },
-		// 		"decimals": 4
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.export_unit_price",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Export Price" },
-		// 		"decimals": 4
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.slot_import",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Slot Import" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.slot_export",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Slot Export" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.slot_import_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Slot Import Cost" },
-		// 		"decimals": 2
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.slot_export_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Slot Export Cost" },
-		// 		"decimals": 2
-		// 	}
-		// );
 		await this.updateCapabilityOptions("meter_power.day_import",
 			{
 				"title":
@@ -203,20 +153,6 @@ module.exports = class energyAccount extends krakenDevice {
 					{"en": "£"}
 			}
 		);
-		// await this.updateCapabilityOptions("measure_monetary.day_standing_charge",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Standing Charge Today" },
-		// 		"decimals": 2
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.day_bill",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Bill Today" },
-		// 		"decimals": 2
-		// 	}
-		// );
 		await this.updateCapabilityOptions("measure_monetary.account_balance",
 			{
 				"title":
@@ -295,10 +231,10 @@ module.exports = class energyAccount extends krakenDevice {
 	computePeriodStartDate(atTime, periodStartDay) {
 		const eventDateTime = this.getLocalDateTime(new Date(atTime));
 		eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
-		const currentDay = eventDateTime.day;																				//  1      20      21     30
-		const periodStartDate = (currentDay < periodStartDay) ?											//  T      T       F      F
-			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :     //  09/21  09/21   
-			eventDateTime.set({ day: Number(periodStartDay) });    											//                 10/21  10/21
+		const currentDay = eventDateTime.day;																				
+		const periodStartDate = (currentDay < periodStartDay) ?											
+			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :   
+			eventDateTime.set({ day: Number(periodStartDay) });
 		return periodStartDate;
 	}
 
@@ -357,7 +293,6 @@ module.exports = class energyAccount extends krakenDevice {
 		const periodCurrentImportValue = await this.getCapabilityValue("measure_monetary.period_import_value");
 		const dayCurrentImport = 1000 * await this.getCapabilityValue("meter_power.day_import");
 		const dayCurrentImportValue = await this.getCapabilityValue("measure_monetary.day_import_value");
-		const periodStandingCharge = await this.getCapabilityValue("measure_monetary.period_standing_charge");
 
 		let deltaExport = 0;
 		let deltaExportValue = 0;
@@ -373,11 +308,9 @@ module.exports = class energyAccount extends krakenDevice {
 		let dayUpdatedImport = 0;
 		let dayUpdatedImportValue = 0;
 		let dayImportStandingCharge = 0;
-		// let deltaStandingCharge = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
 		let projectedBill = 0;
-		//let elapsedDays = 0;
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -408,7 +341,6 @@ module.exports = class energyAccount extends krakenDevice {
 			projectedBill = (billValue / elapsedDays) * periodLength; 
 			this.homey.log(`energyAccount.processEvnet: billValue ${billValue} periodLength ${periodLength}`);
 			this.homey.log(`energyAccount.processEvent: elapsedDays ${elapsedDays} projectedBill ${projectedBill}`);
-
 		}
 
 		updates = (await this.updateCapabilityValue("period_day.period_duration", periodLength)) || updates;
