@@ -1,11 +1,12 @@
 'use strict';
 
+const krakenAccountWrapper = require("./krakenAccountWrapper");
 const accountWrapper = require("./krakenAccountWrapper");
 const { DateTime } = require("luxon");
 
 module.exports = class managerEvent {
   /**
-   * Establish the event interval and manage the execution even
+   * Establish the event interval and manage the execution of events by devices
    * @param {Homey.Driver} driver controlling the devices
    */
   constructor(driver) {
@@ -30,6 +31,10 @@ module.exports = class managerEvent {
     }
   }
 
+  /**
+   * Return the krakenAccountWrapper instance
+   * @returns   {krakenAccountWrapper}    Account wrapper instance
+   */
   get accountWrapper() {
     return this._accountWrapper;
   }
@@ -79,7 +84,7 @@ module.exports = class managerEvent {
   }
 
   /**
-   * homey.SetInterval callback function get data from Kraken and update devices
+   * homey.SetInterval callback function get data from Kraken and update devices from data
    */
   async processIntervalCallback() {
     const dateTimeNow = new Date();
@@ -115,8 +120,8 @@ module.exports = class managerEvent {
 
   /**
    * Execute a timed event for the specified time
-   * @param   {string} atTime string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
-   * @returns {array}         Booleans indicating for each device whether it has been updated by the event
+   * @param   {string}    atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
+   * @returns {boolean[]}         Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
     const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
@@ -144,7 +149,7 @@ module.exports = class managerEvent {
     return updates;
   }
 
-  /**
+/**
  * Indicate that the day has changed between two timestamps in extended ISO format
  * @param   {string}  laterTime     The new timestamp
  * @param   {string}  earlierTime   The old timestamp

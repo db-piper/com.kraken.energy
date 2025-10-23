@@ -9,6 +9,7 @@ const productTariff = require('./modules/productTariff');
  * DONE: Better icon for energyAccount device
  * DONE: Work out git usage
  * DONE: Projected bill algorithm
+ * TODO: In the pairing process confirm there is a live meter id available; if not return no devices
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript

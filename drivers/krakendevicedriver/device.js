@@ -21,11 +21,11 @@ module.exports = class krakenDevice extends Homey.Device {
 
   /**
    * onSettings is called when the user updates the device's settings.
-   * @param {object} event the onSettings event data
-   * @param {object} event.oldSettings The old settings object
-   * @param {object} event.newSettings The new settings object
-   * @param {string[]} event.changedKeys An array of keys changed since the previous version
-   * @returns {Promise<string|void>} return a custom message that will be displayed
+   * @param 	{object} 		event 						The onSettings event data
+   * @param 	{object} 		event.oldSettings The old settings object
+   * @param 	{object} 		event.newSettings The new settings object
+   * @param 	{string[]} 	event.changedKeys An array of keys changed since the previous version
+   * @returns {Promise<string|void>} 				return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
     this.log('krakenDevice settings where changed');
@@ -91,9 +91,9 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Indicate whether the hour has changed between two times
-	 * @param     {object - date}   newTime         The later time
-	 * @param     {object - date}   oldTime         The earlier time
-	 * @returns   {boolean}                         True if the UTC hour of the two datetimes is different
+	 * @param     {jsDate}   	newTime    The later time
+	 * @param     {jaDate}   	oldTime    The earlier time
+	 * @returns   {boolean}            True if the UTC hour of the two datetimes is different
 	 */
 	hourChange(newTime, oldTime) {
 		const hourChange = newTime.getUTCHours()!==oldTime.getUTCHours(); 
@@ -104,14 +104,12 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * Return the prices for the accounts import or export tariff
 	 * @param   {string}    atTime        String representation of the event date and time
 	 * @param   {boolean}   direction     True: export tariff; False: import tariff
-	 * @returns {string}                  JSON tariff price structure
+	 * @returns {object}                  JSON tariff price structure
 	 */
 	async getTariffDirectionPrices(atTime, direction) {
 		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);
-		// this.homey.log(`krakenDevice.getTariffDirectionPrices: tariff: ${JSON.stringify(tariff)}`);
 		if (tariff !== undefined) {
 			const prices = await this.driver.managerEvent.accountWrapper.getPrices(atTime, tariff);
-			// this.homey.log(`krakenDevice.getTariffDirectionPrices: prices: ${JSON.stringify(prices)}`);
 			return prices;
 		} else {
 			return undefined;
@@ -121,7 +119,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	/**
 	 * Return the details of the accounts import or export tariff
 	 * @param   {boolean}   direction     True: export tariff; False: import tariff
-	 * @returns {string}                  JSON tariff price structure
+	 * @returns {object}                  JSON tariff price structure
 	 */
 	async getTariffDirectionDetail(direction) {
 		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);

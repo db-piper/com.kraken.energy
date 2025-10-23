@@ -11,7 +11,7 @@ module.exports = class miniMeter extends krakenDevice {
     this.log('miniMeter Device:onInit - miniMeter device has been initialized');
   }
 
-    /**
+  /**
    * onAdded is called when the user adds the device, called just after pairing.
    */
   async onAdded() {

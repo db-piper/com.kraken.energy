@@ -16,14 +16,13 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Constructor for krakenAccountWrapper
-   * @param {object - driver} driver managing the devices 
+   * @param {object - Homey.Driver}   driver  managing the devices 
    */
   constructor(driver) {
     driver.homey.log(`krakenAccountWrapper.constructor: Instantiating`);
     this._driver = driver;
     this._dataFetcher = new dataFetcher(this._driver);
     this._accountData = undefined;
-    //this._accountRefreshDate = undefined;
   }
 
   /**
@@ -76,23 +75,23 @@ module.exports = class krakenAccountWrapper {
     return this._accountData;
   }
 
-  // get accountLastRefresh() {
-  //   return this._accountRefreshDate;
-  // }
-
+  /**
+   * Get the live meter id on the account
+   * @returns {string}      Live meter ID
+   */
   async getLiveMeterId() {
     let transform = this.liveMeterTransform();
     return await jsonata(transform).evaluate(this.accountData);
   }
 
-  /**
-   * Return the instantiated data fetcher
-   * @returns {object} Of class dataFetcher
-   */
-  //TODO: Remove this property getter when it's no longer needed
-  get dataFetcher() {
-    return this._dataFetcher;
-  }
+  // /**
+  //  * Return the instantiated data fetcher
+  //  * @returns {dataFetcher}  The dataFetcher instance
+  //  */
+  // //TODO: Remove this property getter when it's no longer needed
+  // get dataFetcher() {
+  //   return this._dataFetcher;
+  // }
 
   /**
    * Return tariff details for the specified direction for the account overview
@@ -333,9 +332,9 @@ module.exports = class krakenAccountWrapper {
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = this.accountDataQuery(this.accountId);
-    const accountData = await this.dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
+    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-      this.dataFetcher.accountOverview = accountData;
+      this._dataFetcher.accountOverview = accountData;
       this._accountData = accountData;
       //this.dataFetcher.homey.settings.set("accountOverview", accountData);
       //this._accountRefreshDate = (new Date()).toISOString();
@@ -432,7 +431,7 @@ module.exports = class krakenAccountWrapper {
   async getLiveMeterData() {
     const meter_query = await this.liveMeterDataQuery();
     this._driver.log
-    let data = await this.dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    let data = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
     if ((data !== undefined) && ("data" in data)) {
       let reading = data.data.smartMeterTelemetry[0];
       return reading;

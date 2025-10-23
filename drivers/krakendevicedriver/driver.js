@@ -17,13 +17,6 @@ module.exports = class krakenDriver extends Homey.Driver {
     if (this.getDevices().length > 0){
       this._managerEvent.setInterval(this._period);
     } 
-    // GASH - Unset accidentally established app settings
-    const settings = this.homey.settings;
-    const keys = settings.getKeys();
-    for (const key of keys) {
-      this.homey.log(`SETTING FOUND: ${key}:${this.homey.settings.get(key)}`);
-      //settings.unset(key);
-    }
 
     this.log('krakenDriver: onInit: driver has been initialized');
   }
@@ -64,6 +57,11 @@ module.exports = class krakenDriver extends Homey.Driver {
     let account = "";
     let apiKey = "";
 
+    /**
+     * Set a handler for the login event
+     * @param   {object}  data  contains credential login information
+     * @returns {booelan}       true if valid credentials
+     */
     session.setHandler("login", async (data) => {
       this.log("krakenDriver.onpair.setHandler(login) - starting");
       let account = data.username;
@@ -79,6 +77,10 @@ module.exports = class krakenDriver extends Homey.Driver {
       return success;
     });
 
+    /**
+     * Set a handler for the list_devices event
+     * @returns {object}  Array of device definitions that can be selected for creation
+     */
     session.setHandler("list_devices", async () =>{
       this.log("krakenDriver.onPair.setHandler(list_devices) - starting");
       const deviceDefinitions = await this._managerEvent.getOctopusDeviceDefinitions();
@@ -94,6 +96,9 @@ module.exports = class krakenDriver extends Homey.Driver {
     this._managerEvent.unSetInterval();
   }
 
+  /**
+   * Return the event manager instance
+   */
   get managerEvent() {
     return this._managerEvent;
   }
