@@ -381,7 +381,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let dayUpdatedImport = 0;
 		let dayUpdatedImportValue = 0;
 		let dayImportStandingCharge = 0;
-		let deltaStandingCharge = 0;
+		// let deltaStandingCharge = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
 		let projectedBill = 0;
@@ -408,8 +408,9 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;
 			}
 
-			deltaStandingCharge = newDay ? (.01 * (dayExportStandingCharge + dayImportStandingCharge)) : 0;
-			periodUpdatedStandingCharge = deltaStandingCharge + (newPeriod ? 0 : periodStandingCharge);
+			//deltaStandingCharge = newDay ? (.01 * (dayExportStandingCharge + dayImportStandingCharge)) : 0;
+			//periodUpdatedStandingCharge = deltaStandingCharge + (newPeriod ? 0 : periodStandingCharge);
+			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * this.getCapabilityValue("period_day.period_day");
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
 			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
