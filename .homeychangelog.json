@@ -25,5 +25,8 @@
   },
   "1.0.13": {
     "en": "Calculation of projected bill (first attempt)"
+  },
+  "1.0.14": {
+    "en": "Refresh account data every 30 minutes; energyAccount simplify calculation of period stand charge; improve commenting and remove redundant code"
   }
 }
