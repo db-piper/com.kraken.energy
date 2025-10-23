@@ -84,27 +84,14 @@ module.exports = class krakenAccountWrapper {
     return await jsonata(transform).evaluate(this.accountData);
   }
 
-  // /**
-  //  * Return the instantiated data fetcher
-  //  * @returns {dataFetcher}  The dataFetcher instance
-  //  */
-  // //TODO: Remove this property getter when it's no longer needed
-  // get dataFetcher() {
-  //   return this._dataFetcher;
-  // }
-
   /**
    * Return tariff details for the specified direction for the account overview
    * @param   {boolean} isExport    true - export tariff; false - import tariff
    * @returns {string}              JSON structure of the tariff details or undefined
    */
   async getTariffDirection(isExport) {
-    const accountOverview = this.accountData;
-    const tariffTransform = `data.account.electricityAgreements.meterPoint.agreements.tariff
-                          [
-                            isExport=${isExport}
-                          ]`;
-    const tariff = await jsonata(tariffTransform).evaluate(accountOverview);
+    const tariffTransform = this.tariffTransform(isExport);
+    const tariff = await jsonata(tariffTransform).evaluate(this.accountData);
     return tariff;
   }
 
@@ -114,18 +101,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {object - JSON}             ISO date-time string of the expiry of the last slot currently in stored account overview
    */
   async getLastPriceSlotExpiry(direction = undefined) {
-    let index = "";
-    if (direction !== undefined) {
-      index = `[isExport=${direction}]`;
-    }
-    const transform = `data.account.electricityAgreements.meterPoint.agreements.tariff${index}.
-                  $fromMillis(
-                    $max(
-                      unitRates.$toMillis(
-                        validTo
-                      )
-                    )
-                  )`;
+    const transform = this.lastPriceSlotTransform(direction);
     const lastExpiry = await jsonata(transform).evaluate(this.accountData);
     return lastExpiry;
   }
@@ -141,26 +117,7 @@ module.exports = class krakenAccountWrapper {
     const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
     const timeZone = this._driver.homey.clock.getTimezone();
     if ("unitRates" in tariff) {
-      const tomorrow = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone).plus({ days: 1 }).set(midnight);
-      const slotPriceTransform = `(
-        $targetTimestamp := $toMillis("${atTime}");
-        $tomorrow := $toMillis("${tomorrow}");
-        $selectedRate := unitRates[$toMillis(validFrom) <= $targetTimestamp and $toMillis(validTo) > $targetTimestamp]; 
-        $rates := unitRates[$toMillis(validTo)<=$tomorrow];
-        $minPrice := $min($rates.value);
-        $quartileStep := ($max($rates.value)-$minPrice) / 4;
-        $selectedRate != null ?
-        {
-          "preVatUnitRate": $selectedRate.preVatValue,
-          "unitRate": $selectedRate.value,
-          "preVatStandingCharge": preVatStandingCharge,
-          "standingCharge": standingCharge,
-          "nextSlotStart": $selectedRate.validTo,
-          "thisSlotStart": $selectedRate.validFrom,
-          "quartile": $min([3,$floor(($selectedRate.value-$minPrice)/$quartileStep)]),
-          "isHalfHourly": true
-        } : undefined                      
-      )`;
+      const slotPriceTransform = this.slotPriceTransform(atTime);
       prices = await jsonata(slotPriceTransform).evaluate(tariff);
     } else {
       const startTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone).set(midnight);
@@ -191,6 +148,73 @@ module.exports = class krakenAccountWrapper {
                   .meters.smartImportElectricityMeter.deviceId`;
     return transform;
   }
+
+  /**
+   * Return the jsonata transformation to obtain tariff detail for a specified direction
+   * @param   {boolean} isExport  Direction for the tariff
+   * @returns {string}            Jsonata transform string
+   */
+  tariffTransform(isExport) {
+    const transform = `data.account.electricityAgreements.meterPoint.agreements.tariff
+                          [
+                            isExport=${isExport}
+                          ]`;
+    return transform;
+  }
+
+  /**
+   * Return the jsonata transformation to obtain the last recorded slot datetime
+   * @param   {string}    index   Indexing specification for the tariffs in the account data
+   * @returns {string}            Jsonata transform string
+   */
+  lastPriceSlotTransform(direction) {
+    let index = "";
+    if (direction !== undefined) {
+      index = `[isExport=${direction}]`;
+    }
+    const transform = `data.account.electricityAgreements.meterPoint.agreements.tariff${index}.
+                $fromMillis(
+                  $max(
+                    unitRates.$toMillis(
+                      validTo
+                    )
+                  )
+                )`;
+    return transform;
+  }
+
+  /**
+   * Return the jsonata transformation to obtain a timed price slot
+   * @param   {string}    atTime    DateTime string of the required price slot 
+   * @returns {string}              Jsonata transformation string
+   */
+  slotPriceTransform(atTime) {
+    const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
+    const timeZone = this._driver.homey.clock.getTimezone();
+    const tomorrow = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone).plus({ days: 1 }).set(midnight).toISO();
+    const slotPriceTransform = `(
+      $targetTimestamp := $toMillis("${atTime}");
+      $tomorrow := $toMillis("${tomorrow}");
+      $selectedRate := unitRates[$toMillis(validFrom) <= $targetTimestamp and $toMillis(validTo) > $targetTimestamp]; 
+      $rates := unitRates[$toMillis(validTo)<=$tomorrow];
+      $minPrice := $min($rates.value);
+      $quartileStep := ($max($rates.value)-$minPrice) / 4;
+      $selectedRate != null ?
+      {
+        "preVatUnitRate": $selectedRate.preVatValue,
+        "unitRate": $selectedRate.value,
+        "preVatStandingCharge": preVatStandingCharge,
+        "standingCharge": standingCharge,
+        "nextSlotStart": $selectedRate.validTo,
+        "thisSlotStart": $selectedRate.validFrom,
+        "quartile": $min([3,$floor(($selectedRate.value-$minPrice)/$quartileStep)]),
+        "isHalfHourly": true
+      } : undefined                      
+    )`;
+    return slotPriceTransform;
+  }
+
+
 
   /**
    * Return the GraphQL query string to obtain the Octopus Account Information
@@ -319,7 +343,6 @@ module.exports = class krakenAccountWrapper {
       success = accountData !== undefined;
       if (success) {
         this._accountData = accountData;
-        //this._accountRefreshDate = (new Date()).toISOString();
       }
     }
     return success;
@@ -334,18 +357,12 @@ module.exports = class krakenAccountWrapper {
     const accountQuery = this.accountDataQuery(this.accountId);
     const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-      this._dataFetcher.accountOverview = accountData;
       this._accountData = accountData;
-      //this.dataFetcher.homey.settings.set("accountOverview", accountData);
-      //this._accountRefreshDate = (new Date()).toISOString();
-      //this.dataFetcher.accountOverviewRefresh = (new Date()).toISOString();
-      //this.dataFetcher.homey.settings.set("accountOverviewRefresh",(new Date()).toISOString());
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
       return true;
     } else {
-      this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
       this._accountData = undefined;
-      //this._accountRefreshDate = undefined;
+      this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
       return false;
     }
   }
@@ -423,7 +440,6 @@ module.exports = class krakenAccountWrapper {
     return transform
   }
 
-  //TODO: Sometimes the GQL returns an empty object at data.data.smartMeterTelemetry - retry?
   /**
    * Return live meter data from the instantiated live meter device
    * @returns {object} reading JSON object representing the current data
@@ -472,8 +488,8 @@ module.exports = class krakenAccountWrapper {
   async getBillingPeriodStartDay() {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
-    //TODO: Make this robust for TZ using the TZ data
-    const date = DateTime.fromJSDate(new Date(dateString + "T00:00:00Z"));
+    const timeZone = this._driver.homey.clock.getTimezone();
+    const date = DateTime.fromISO(dateString,{zone: timeZone, setZone: true}).set({hour: 0, minute: 0, second: 0, millisecond: 0});
     const monthDay = date.minus({ days: 1 }).day;
     this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: monthDay: ${monthDay}`);
     return monthDay;

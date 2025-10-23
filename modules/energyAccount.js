@@ -292,14 +292,6 @@ module.exports = class energyAccount extends krakenDevice {
 		return periodDay;
 	}
 
-	// computeEventDate(atTime) {
-	// return this.getLocalDateTime(new Date(atTime));
-	// const eventDate = new Date(atTime);																					//  2025/10...
-	// const timeZone = this.homey.clock.getTimezone();
-	// const eventDateTime = DateTime.fromJSDate(eventDate).setZone(timeZone);			//  10/01  10/20   10/21  10/30
-	// return eventDateTime;
-	// }
-
 	computePeriodStartDate(atTime, periodStartDay) {
 		const eventDateTime = this.getLocalDateTime(new Date(atTime));
 		eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
@@ -408,9 +400,8 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;
 			}
 
-			//deltaStandingCharge = newDay ? (.01 * (dayExportStandingCharge + dayImportStandingCharge)) : 0;
-			//periodUpdatedStandingCharge = deltaStandingCharge + (newPeriod ? 0 : periodStandingCharge);
-			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * this.getCapabilityValue("period_day.period_day");
+			const periodDay = this.getCapabilityValue("period_day.period_day");
+			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
 			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
