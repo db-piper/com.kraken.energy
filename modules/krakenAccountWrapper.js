@@ -6,8 +6,6 @@ const { DateTime } = require('luxon');
 const AccountIdName = "krakenAccountId";
 const ApiKeyName = "krakenApiKey";
 
-//TODO: Place Jsonata queries in separate functions.
-
 module.exports = class krakenAccountWrapper {
   /**
    * krakenAccountWrapper obtains the account overview data via GQL and then uses jsonata to query the data structure
@@ -373,34 +371,41 @@ module.exports = class krakenAccountWrapper {
    */
   async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
-    const expression = jsonata(this.mpanProductTariffsTransform());
-    this._driver.homey.log(`Account data ID: ${this.accountData.data.account.id}`);
-    const deviceDefinitions = await expression.evaluate(this.accountData);
-    const octopusMini = {
-      name: "Octopus Mini",
-      data: {
-        id: `${this.accountId} Octopus Mini`
-      },
-      settings: {},
-      store: {
-        octopusClass: "octopusMini"
-      },
-      icon: "/meter.svg"
-    };
-    const octopusAccount = {
-      name: "Octopus Account",
-      data: {
-        id: `${this.accountId} Octopus Account`
-      },
-      settings: {},
-      store: {
-        octopusClass: "octopusAccount"
-      },
-      icon: "/account.svg"
-    };
-    //deviceDefinitions.push(octopusMini, octopusAccount);
-    deviceDefinitions.push(octopusAccount);
-    return deviceDefinitions;
+    const meterId = await this.getLiveMeterId();
+    if (meterId === undefined) {
+      return [];
+    } else {
+      this._driver.homey.log(`Account data ID: ${this.accountData.data.account.id}`);
+      const expression = jsonata(this.mpanProductTariffsTransform());
+      const deviceDefinitions = await expression.evaluate(this.accountData);
+      // const octopusMini = {
+      //   name: "Octopus Mini",
+      //   data: {
+      //     id: `${this.accountId} Octopus Mini`
+      //   },
+      //   settings: {},
+      //   store: {
+      //     octopusClass: "octopusMini"
+      //   },
+      //   icon: "/meter.svg"
+      // };
+      const octopusAccount = {
+        name: "Octopus Account",
+        data: {
+          id: `${this.accountId} Octopus Account`
+        },
+        settings: {},
+        store: {
+          octopusClass: "octopusAccount"
+        },
+        icon: "/account.svg"
+      };
+      //deviceDefinitions.push(octopusMini, octopusAccount);
+      deviceDefinitions.push(octopusAccount);
+      return deviceDefinitions;
+
+    }
+
   }
 
   /**
@@ -461,8 +466,8 @@ module.exports = class krakenAccountWrapper {
    * @returns {string} Stringified JSON representing the query
    */
   async liveMeterDataQuery() {
-    let meterId = await this.getLiveMeterId();
-    let query = {
+    const meterId = await this.getLiveMeterId();
+    const query = {
       query: `query GetOctopusMiniReading(
           $meterID: String!
         ) 
@@ -489,7 +494,7 @@ module.exports = class krakenAccountWrapper {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
     const timeZone = this._driver.homey.clock.getTimezone();
-    const date = DateTime.fromISO(dateString,{zone: timeZone, setZone: true}).set({hour: 0, minute: 0, second: 0, millisecond: 0});
+    const date = DateTime.fromISO(dateString, { zone: timeZone, setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
     const monthDay = date.minus({ days: 1 }).day;
     this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: monthDay: ${monthDay}`);
     return monthDay;
@@ -500,7 +505,7 @@ module.exports = class krakenAccountWrapper {
     const pence = this.accountData.data.account.balance;
     return pence * .01;
   }
-   
+
   /**
    * Indicate that at least 24 hours has passed, or that the end time of the last slot of a half-hourly charged tariff is past.
    * @param {string}  atTime                  The date time of the event in string format
