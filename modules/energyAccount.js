@@ -35,26 +35,6 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyCapabilities();
 		this.homey.log(`energyAccount.onInit: returned from applyCapabilities`);
 
-		// await this.addCapability("period_day.period_day");
-		// await this.addCapability("period_day.period_duration");
-		// await this.addCapability("measure_monetary.account_balance");
-		// await this.addCapability("measure_monetary.projected_bill");
-		// await this.addCapability("meter_power.import");
-		// await this.addCapability("meter_power.export");
-		// await this.addCapability("meter_power.period_import");
-		// await this.addCapability("meter_power.period_export");
-		// await this.addCapability("measure_monetary.period_import_value");
-		// await this.addCapability("measure_monetary.period_export_value");
-		// await this.addCapability("measure_monetary.period_standing_charge");
-		// await this.addCapability("measure_monetary.period_bill");
-		// await this.addCapability("meter_power.day_import");
-		// await this.addCapability("meter_power.day_export");
-		// await this.addCapability("measure_monetary.day_import_value");
-		// await this.addCapability("measure_monetary.day_export_value");
-		// await this.addCapability("month_day.period_start");
-		// await this.addCapability("date_time.period_start");
-		// await this.addCapability("date_time.next_period_start");
-
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
 		this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
 			await this.updatePeriodDay(value);
@@ -67,143 +47,6 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	async onAdded() {
 		this.log('energyAccount Device:onAdded - has been added');
-		// await this.updateCapabilityOptions("period_day.period_duration",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Period Duration" },
-		// 		"icon": "../assets/duration.svg"
-		// 	},
-		// )
-		// await this.updateCapabilityOptions("measure_monetary.projected_bill",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Projected Bill" },
-		// 		"units":
-		// 			{ "en": "£" }
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.import",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Cumulative Import" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.export",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Cumulative Export" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.period_import",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Period Import" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.period_export",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Period Export" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.period_import_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Import Cost" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{"en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.period_export_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Export Value" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{"en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.period_standing_charge",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Standing Charge" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{"en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.period_bill",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Bill Total" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{"en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.day_import",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Day Import" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("meter_power.day_export",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Day Export" },
-		// 		"decimals": 3
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.day_import_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Day Import Cost" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{ "en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.day_export_value",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Day Export Value" },
-		// 		"decimals": 2,
-		// 		"units":
-		// 			{"en": "£"}
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("measure_monetary.account_balance",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Account Balance" },
-		// 		"units":
-		// 			{ "en": "£" }
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("month_day.period_start",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Period Start Day" }
-		// 	}
-		// );
-		// await this.updateCapabilityOptions("date_time.period_start",
-		// 	{
-		// 		"title":
-		// 			{ "en": "This Period Start" }
-		// 	},
-		// );
-		// await this.updateCapabilityOptions("date_time.next_period_start",
-		// 	{
-		// 		"title":
-		// 			{ "en": "Next Period Start" }
-		// 	},
-		// )
 	}
 
 	/**
@@ -223,11 +66,11 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 	/**
 	 * onSettings is called when the user updates the device's settings.
-	 * @param {object} event the onSettings event data
-	 * @param {object} event.oldSettings The old settings object
-	 * @param {object} event.newSettings The new settings object
-	 * @param {string[]} event.changedKeys An array of keys changed since the previous version
-	 * @returns {Promise<string|void>} return a custom message that will be displayed
+	 * @param 	{object} 		event 						 	The onSettings event data
+	 * @param 	{object} 		event.oldSettings 	The old settings object
+	 * @param 	{object} 		event.newSettings 	The new settings object
+	 * @param 	{string[]} 	event.changedKeys 	An array of keys changed since the previous version
+	 * @returns {Promise<string|void>} 					Return a custom message that will be displayed
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
 		this.log('energyAccount Device:onSettings - settings where changed');
