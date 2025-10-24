@@ -13,28 +13,31 @@ module.exports = class productTariff extends krakenDevice {
 	async onInit() {
 		//TODO: Reverse ordering of Tomorrow's Prices and Next Slot Quartile capabilities
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
-		await this.addCapability("product_code");
-		await this.addCapability("tariff_code");
-		await this.addCapability("measure_monetary.unit_price");
-		await this.addCapability("measure_monetary.unit_price_taxed");
-		await this.addCapability("measure_monetary.standing_charge");
-		await this.addCapability("measure_monetary.standing_charge_taxed");
-		await this.addCapability("meter_power");
-		await this.addCapability("meter_power.consumption");
-		await this.addCapability("measure_monetary.energy_value");
-		await this.addCapability("measure_monetary.energy_value_taxed");
-		await this.addCapability("measure_power.average");
-		await this.addCapability("slot_quartile")
-		await this.addCapability("date_time.slot_start");
-		await this.addCapability("date_time.slot_end");
-		await this.addCapability("measure_monetary.next_unit_price");
-		await this.addCapability("measure_monetary.next_unit_price_taxed");
-		await this.addCapability("measure_monetary.next_standing_charge");
-		await this.addCapability("measure_monetary.next_standing_charge_taxed");
-		await this.addCapability("slot_quartile.next_slot_quartile");
-		await this.addCapability("data_presence.next_day_prices");
-		await this.addCapability("date_time.next_slot_end");
+		await super.onInit();
+		this.defineCapability("product_code");
+		this.defineCapability("tariff_code");
+		this.defineCapability("measure_monetary.unit_price",{"title":{"en": '£/kWh', "fr": '€/kWh',}, "decimals": 4, "units": {"en": "£", "fr": "€",}});
+		this.defineCapability("measure_monetary.unit_price_taxed",{"title": {"en": '£/kWh (Taxed)'}, "decimals": 4, "units": {"en": "£",}});
+		this.defineCapability("measure_monetary.standing_charge",{"title":{"en": 'Std Charge',},"decimals": 4,"units":{"en": "£",}});
+		this.defineCapability("measure_monetary.standing_charge_taxed",{"title":{"en": 'Std Charge (Taxed)',},"decimals": 4,"units":{"en": "£",}});
+		this.defineCapability("meter_power",{"title": {"en": 'Cumulative kWh'}, "decimals": 3});
+		this.defineCapability("meter_power.consumption",{"title":{"en": 'Slot Energy kWh'}, "decimals": 3});
+		this.defineCapability("measure_monetary.energy_value",{"title": {"en": 'Slot Energy £',},"decimals": 4,"units": {"en": "£",}});
+		this.defineCapability("measure_monetary.energy_value_taxed",{"title": {"en": 'Slot £ (Taxed)'}, "decimals": 4, "units": {"en": "£",}});
+		this.defineCapability("measure_power.average",{"title":{"en": 'Slot Ave. Power'}});
+		this.defineCapability("slot_quartile",{"title": {"en": "Price Quartile"}});
+		this.defineCapability("date_time.slot_start", {"title":{"en": 'Slot Start'}});
+		this.defineCapability("date_time.slot_end",{"title":{"en": 'Slot End',}});
+		this.defineCapability("measure_monetary.next_unit_price",{"title":{"en": 'Next £/kWh'},"units": {"en": "£", "fr": "€"},"decimals": 4});
+		this.defineCapability("measure_monetary.next_unit_price_taxed",{"title": {"en": 'Next £/kWh (Taxed)',}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
+		this.defineCapability("measure_monetary.next_standing_charge", {"title": {"en": 'Next Std Charge'}, "units": {"en": "£","fr": "€"}, "decimals": 4});
+		this.defineCapability("measure_monetary.next_standing_charge_taxed", {"title": {"en": 'Next Charge (Taxed)'}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
+		this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
+		this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
+		this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
 
+		await this.applyCapabilities();
+		
 	}	
 
 	/**
@@ -42,191 +45,6 @@ module.exports = class productTariff extends krakenDevice {
 	 */
 	async onAdded() {
 		this.log('productTariff Device:onAdded - has been added');
-		await this.updateCapabilityOptions("date_time.slot_start",
-			{
-				"title":
-				{
-					"en": 'Slot Start',
-				}
-			});
-		await this.updateCapabilityOptions("meter_power",
-			{
-				"title":
-				{
-					"en": 'Cumulative kWh'
-				},
-				"decimals": 3
-			});
-		await this.updateCapabilityOptions("measure_monetary.unit_price",
-			{
-				"title":
-				{
-					"en": '£/kWh',
-					"fr": '€/kWh',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-					"fr": "€",
-				}
-			});
-		await this.updateCapabilityOptions("measure_monetary.unit_price_taxed",
-			{
-				"title":
-				{
-					"en": '£/kWh (Taxed)',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-				}
-			});
-		await this.updateCapabilityOptions("measure_monetary.standing_charge",
-			{
-				"title":
-				{
-					"en": 'Std Charge',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-				}
-			});
-		await this.updateCapabilityOptions("measure_monetary.standing_charge_taxed",
-			{
-				"title":
-				{
-					"en": 'Std Charge (Taxed)',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-				}
-			});
-		await this.updateCapabilityOptions("meter_power.consumption",
-			{
-				"title":
-				{
-					"en": 'Slot Energy kWh'
-				},
-				"decimals": 3
-			});
-		await this.updateCapabilityOptions("measure_power.average",
-			{
-				"title":
-				{
-					"en": 'Slot Ave. Power'
-				}
-			});
-		await this.updateCapabilityOptions("slot_quartile",
-			{
-				"title":
-					{"en": "Price Quartile"}
-			}
-		);
-		await this.updateCapabilityOptions("measure_monetary.energy_value",
-			{
-				"title":
-				{
-					"en": 'Slot Energy £',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-				}
-			});
-		await this.updateCapabilityOptions("measure_monetary.energy_value_taxed",
-			{
-				"title": {
-					"en": 'Slot £ (Taxed)',
-				},
-				"decimals": 4,
-				"units":
-				{
-					"en": "£",
-				}
-			});
-		await this.updateCapabilityOptions("date_time.slot_end",
-			{
-				"title":
-				{
-					"en": 'Slot End',
-				}
-			});
-		await this.updateCapabilityOptions("measure_monetary.next_unit_price",
-			{
-				"title":
-				{
-					"en": 'Next £/kWh'
-				},
-				"units":
-				{
-					"en": "£",
-					"fr": "€"
-				},
-				"decimals": 4
-			});
-		await this.updateCapabilityOptions("measure_monetary.next_unit_price_taxed",
-			{
-				"title":
-				{
-					"en": 'Next £/kWh (Taxed)',
-				},
-				"units":
-				{
-					"en": "£",
-					"fr": "€"
-				},
-				"decimals": 4
-			});
-		await this.updateCapabilityOptions("measure_monetary.next_standing_charge",
-			{
-				"title":
-				{
-					"en": 'Next Std Charge'
-				},
-				"units":
-				{
-					"en": "£",
-					"fr": "€"
-				},
-				"decimals": 4
-			});
-		await this.updateCapabilityOptions("measure_monetary.next_standing_charge_taxed",
-			{
-				"title":
-				{
-					"en": 'Next Charge (Taxed)'
-				},
-				"units":
-				{
-					"en": "£",
-					"fr": "€"
-				},
-				"decimals": 4
-			});
-		await this.updateCapabilityOptions("slot_quartile.next_slot_quartile",
-			{
-				"title":
-					{"en": "Next Price Quartile"}
-			});
-		await this.updateCapabilityOptions("data_presence.next_day_prices",
-				{
-					"title": 
-						{"en": "Tomorrow's Prices"}
-			});
-		await this.updateCapabilityOptions("date_time.next_slot_end",
-			{
-				"title":
-				{
-					"en": 'Next Slot End'
-				}
-			});
 	}
 
 	/**
@@ -255,6 +73,8 @@ module.exports = class productTariff extends krakenDevice {
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
 		this.log('productTariff Device:onSettings - settings where changed');
 	}
+
+
 
 	/**
 	 * Indicate if the current product tariff is an export product tariff

@@ -10,6 +10,7 @@ module.exports = class krakenDevice extends Homey.Device {
    */
   async onInit() {
     this.log('krakenDevice:onInit - generic krakenDevice has been initialized');
+		this._requiredCapabilities = new Map();
   }
 
   /**
@@ -158,8 +159,45 @@ module.exports = class krakenDevice extends Homey.Device {
 				present = null;
 			}
  		}
-
 		return present;
+	}
+
+  defineCapability(name, overrides = null) {
+		this._requiredCapabilities.set(name, overrides);
+	}
+
+	async applyCapabilities() {
+		this.homey.log(`krakenDevice.applyCapabilities: starting`);
+		const definedCapabilitiesNames = this.getCapabilities();
+		const requiredCapabilitiesNames = Array.from(this._requiredCapabilities.keys());
+		let addedCapabilityNames = [];
+		for (const definedCapabilityName of definedCapabilitiesNames) {
+			if (!(requiredCapabilitiesNames.includes(definedCapabilityName))) {				// Defined capability not in required list - remove it
+				this.homey.log(`krakenDevice.restrictCapabilities: Remove capability ${definedCapabilityName}`);
+				await this.removeCapability(definedCapabilityName);
+			}
+		}
+
+		for (const requiredCapabilityName of requiredCapabilitiesNames) {
+			if (!(definedCapabilitiesNames.includes(requiredCapabilityName))) {		// Required capability is not defined
+				this.homey.log(`krakenDevice.restrictCapabilities: Add capability ${requiredCapabilityName}`);
+				await this.addCapability(requiredCapabilityName);
+				addedCapabilityNames.push(requiredCapabilityName);
+			}
+		}
+
+		this.ready();
+		
+		//const addedCapabilityNames = Object.keys(addedCapabilities);
+		for (const addedCapabilityName of addedCapabilityNames) {
+			const overrides = this._requiredCapabilities.get(addedCapabilityName);
+			if (overrides != null) {
+				await this.setCapabilityOptions(addedCapabilityName, overrides);
+				this.homey.log(`krakenDevice.restrictCapabilities: Change capability options ${addedCapabilityName} overrides ${JSON.stringify(overrides)}`);
+			} else {
+				this.homey.log(`krakenDevice.restrictCapabilities: ${addedCapabilityName} no options to change`);
+			}
+		}
 	}
 
 };
