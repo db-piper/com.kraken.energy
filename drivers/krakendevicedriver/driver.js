@@ -14,9 +14,9 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onInit() {
     this._period = 60000;
     this._managerEvent = new managerEvent(this);
-    if (this.getDevices().length > 0){
+    if (this.getDevices().length > 0) {
       this._managerEvent.setInterval(this._period);
-    } 
+    }
 
     this.log('krakenDriver: onInit: driver has been initialized');
   }
@@ -64,28 +64,18 @@ module.exports = class krakenDriver extends Homey.Driver {
      */
     session.setHandler("login", async (data) => {
       this.log("krakenDriver.onpair.setHandler(login) - starting");
-      let account = data.username;
-      let apiKey = data.password;
-      this.log("krakenDriver.onpair.login: Testing Access To Account GQL");
-      const success = await this._managerEvent.testAccessParameters(account, apiKey);
-      this.log(`krakenDriver.onpair.login: Access test complete: ${success}`);
-      if (success) {
-        this.log("krakenDriver.onpair.login: Setting access parameters");
-        this._managerEvent.setAccessParameters(account, apiKey);
-        this._managerEvent.setInterval(this._period);
-      }
-      return success;
+      return this.sessionLoginHandler(data.username, data.password);
     });
 
     /**
      * Set a handler for the list_devices event
      * @returns {object}  Array of device definitions that can be selected for creation
      */
-    session.setHandler("list_devices", async () =>{
+    session.setHandler("list_devices", async () => {
       this.log("krakenDriver.onPair.setHandler(list_devices) - starting");
       const deviceDefinitions = await this._managerEvent.getOctopusDeviceDefinitions();
       return deviceDefinitions;
-    });  
+    });
   }
 
   /**
@@ -103,18 +93,8 @@ module.exports = class krakenDriver extends Homey.Driver {
      * @returns {booelan}       true if valid credentials
      */
     session.setHandler("login", async (data) => {
-      this.log("krakenDriver.onpair.setHandler(login) - starting");
-      let account = data.username;
-      let apiKey = data.password;
-      this.log("krakenDriver.onpair.login: Testing Access To Account GQL");
-      const success = await this._managerEvent.testAccessParameters(account, apiKey);
-      this.log(`krakenDriver.onpair.login: Access test complete: ${success}`);
-      if (success) {
-        this.log("krakenDriver.onpair.login: Setting access parameters");
-        this._managerEvent.setAccessParameters(account, apiKey);
-        this._managerEvent.setInterval(this._period);
-      }
-      return success;
+      this.log("krakenDriver.onRepair.setHandler(login) - starting");
+      return this.sessionLoginHandler(data.username, data.password);
     });
 
   }
@@ -133,6 +113,23 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   get managerEvent() {
     return this._managerEvent;
+  }
+
+  /**
+   * Helper function used by onPair and onRepair to validate login parameters
+   * @param   {string}  account   Account identifier
+   * @param   {string}  apiKey    Kraken API Key for the identified account 
+   * @returns {boolean}           True: valid login parameters; False: otherwise
+   */
+  async sessionLoginHandler(account, apiKey) {
+    this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
+    const success = await this._managerEvent.testAccessParameters(account, apiKey);
+    this.log(`krakenDriver.sessionLoginHandler: Access test complete: ${success}`);
+    if (success) {
+      this._managerEvent.setAccessParameters(account, apiKey);
+      this._managerEvent.setInterval(this._period);
+    }
+    return success;
   }
 
 };

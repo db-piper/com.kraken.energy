@@ -10,6 +10,7 @@ const productTariff = require('./modules/productTariff');
  * DONE: Work out git usage
  * DONE: Projected bill algorithm
  * DONE: In the pairing process confirm there is a live meter id available; if not return no devices
+ * DONE: Device Repair Functionality
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
