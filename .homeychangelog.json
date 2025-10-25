@@ -28,5 +28,8 @@
   },
   "1.0.14": {
     "en": "Refresh account data every 30 minutes; energyAccount simplify calculation of period stand charge; improve commenting and remove redundant code"
+  },
+  "1.0.15": {
+    "en": "Flexible capability addition/removal; device repair"
   }
 }
