@@ -89,6 +89,38 @@ module.exports = class krakenDriver extends Homey.Driver {
   }
 
   /**
+   * This method is called when a pairing session starts.
+   * @param {PairSession} session   The session using this driver
+   * @param {Device}      device    The device being repaired
+   */
+  async onRepair(session, device) {
+    let account = "";
+    let apiKey = "";
+
+    /**
+     * Set a handler for the login event
+     * @param   {object}  data  contains credential login information
+     * @returns {booelan}       true if valid credentials
+     */
+    session.setHandler("login", async (data) => {
+      this.log("krakenDriver.onpair.setHandler(login) - starting");
+      let account = data.username;
+      let apiKey = data.password;
+      this.log("krakenDriver.onpair.login: Testing Access To Account GQL");
+      const success = await this._managerEvent.testAccessParameters(account, apiKey);
+      this.log(`krakenDriver.onpair.login: Access test complete: ${success}`);
+      if (success) {
+        this.log("krakenDriver.onpair.login: Setting access parameters");
+        this._managerEvent.setAccessParameters(account, apiKey);
+        this._managerEvent.setInterval(this._period);
+      }
+      return success;
+    });
+
+  }
+
+
+  /**
    * onUninit is called when the app is terminating.
    */
   async onUninit() {

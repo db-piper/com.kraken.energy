@@ -37,5 +37,17 @@
       "id": "add_devices",
       "template": "add_devices"
     }
+  ],
+  "repair": [
+    {
+      "id": "login_credentials",
+      "template": "login_credentials",
+      "options" : { 
+        "logo": "/assets/icon.svg",
+        "title": {
+          "en": "Energy Account Details"
+        }
+      }
+    }
   ]
 }

@@ -188,14 +188,11 @@ module.exports = class krakenDevice extends Homey.Device {
 
 		this.ready();
 		
-		//const addedCapabilityNames = Object.keys(addedCapabilities);
 		for (const addedCapabilityName of addedCapabilityNames) {
 			const overrides = this._requiredCapabilities.get(addedCapabilityName);
-			if (overrides != null) {
+			if (overrides !== null) {
 				await this.setCapabilityOptions(addedCapabilityName, overrides);
 				this.homey.log(`krakenDevice.restrictCapabilities: Change capability options ${addedCapabilityName} overrides ${JSON.stringify(overrides)}`);
-			} else {
-				this.homey.log(`krakenDevice.restrictCapabilities: ${addedCapabilityName} no options to change`);
 			}
 		}
 	}
