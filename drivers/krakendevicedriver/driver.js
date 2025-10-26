@@ -79,7 +79,7 @@ module.exports = class krakenDriver extends Homey.Driver {
   }
 
   /**
-   * This method is called when a pairing session starts.
+   * This method is called when a re-pairing session starts.
    * @param {PairSession} session   The session using this driver
    * @param {Device}      device    The device being repaired
    */
@@ -90,7 +90,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     /**
      * Set a handler for the login event
      * @param   {object}  data  contains credential login information
-     * @returns {booelan}       true if valid credentials
+     * @returns {boolean}       true if valid credentials
      */
     session.setHandler("login", async (data) => {
       this.log("krakenDriver.onRepair.setHandler(login) - starting");
