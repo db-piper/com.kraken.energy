@@ -21,7 +21,7 @@ module.exports = class managerEvent {
    * Create the setInterval callback
    * @param {integer} period  Timing interval in milliseconds 
    */
-  setInterval(period) {
+  async setInterval(period) {
     if (this._interval === undefined) {
       this._period = period;
       this.driver.log(`managerEvent.setInterval: setting period: ${period}`);
@@ -53,7 +53,7 @@ module.exports = class managerEvent {
    * @returns {object}    With fields accountId and apiKey
    */
   getAccessParameters() {
-    return this._accountWrapper.accessParameters();
+    return this._accountWrapper.accessParameters;
   }
 
   /**

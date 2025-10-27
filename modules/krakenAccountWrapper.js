@@ -3,8 +3,8 @@
 const jsonata = require('jsonata');
 const dataFetcher = require('./dataFetcher');
 const { DateTime } = require('luxon');
-const AccountIdName = "krakenAccountId";
-const ApiKeyName = "krakenApiKey";
+const AccountIdSetting = "krakenAccountId";
+const ApiKeySetting = "krakenApiKey";
 
 module.exports = class krakenAccountWrapper {
   /**
@@ -30,8 +30,8 @@ module.exports = class krakenAccountWrapper {
    */
   setAccessParameters(accountId, apiKey) {
     const settings = this._driver.homey.settings;
-    settings.set(AccountIdName, accountId);
-    settings.set(ApiKeyName, apiKey);
+    settings.set(AccountIdSetting, accountId);
+    settings.set(ApiKeySetting, apiKey);
   }
 
   /**
@@ -43,15 +43,15 @@ module.exports = class krakenAccountWrapper {
     const keys = settings.getKeys();
 
     let parameters = {};
-    parameters[AccountIdName] = undefined;
-    parameters[ApiKeyName] = undefined;
+    parameters.accountId = undefined;
+    parameters.apiKey = undefined;
 
-    if (keys.includes(AccountIdName)) {
-      parameters.accountId = settings.get(AccountIdName);
+    if (keys.includes(AccountIdSetting)) {
+      parameters.accountId = settings.get(AccountIdSetting);
     }
 
-    if (keys.includes(ApiKeyName)) {
-      parameters.apiKey = settings.get(ApiKeyName);
+    if (keys.includes(ApiKeySetting)) {
+      parameters.apiKey = settings.get(ApiKeySetting);
     }
 
     return parameters;
@@ -88,8 +88,10 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}              JSON structure of the tariff details or undefined
    */
   async getTariffDirection(isExport) {
+    this._driver.log(`krakenAccountWrapper.getTariffDirection: starting ${isExport}`);
     const tariffTransform = this.tariffTransform(isExport);
     const tariff = await jsonata(tariffTransform).evaluate(this.accountData);
+    //this._driver.log(`krakenAccountWrapper.getTariffDirection: ${this.accountData}`);
     return tariff;
   }
 
@@ -219,8 +221,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {string} Stringified JSON representing the query
    */
   accountDataQuery(accountId) {
-    //const account = this._dataFetcher.account;
-    this._driver.homey.log(`krakenAccountWrapper.accountDataQuery: accountId ${accountId}`);
     const query = {
       query: `query GetAccount($accountNumber: String!) {
         account(accountNumber: $accountNumber) {
@@ -432,7 +432,8 @@ module.exports = class krakenAccountWrapper {
         },
         "store" : {
           "isExport" : meterPoint.agreements.tariff.isExport,
-          "octopusClass" : "octopusTariff"
+          "octopusClass" : "octopusTariff",
+          "isHalfHourly":meterPoint.agreements.tariff.$exists(unitRates)
         },
         "icon" : $join (
           [

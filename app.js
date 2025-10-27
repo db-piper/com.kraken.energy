@@ -12,6 +12,7 @@ const productTariff = require('./modules/productTariff');
  * DONE: In the pairing process confirm there is a live meter id available; if not return no devices
  * DONE: Device Repair Functionality
  * TODO: Research and understand dispatches on intelligent tariffs
+ * TODO: Work out how to "subclass" Tariff devices with different sets of capabilities.
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript

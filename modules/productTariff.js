@@ -14,6 +14,23 @@ module.exports = class productTariff extends krakenDevice {
 		//TODO: Reverse ordering of Tomorrow's Prices and Next Slot Quartile capabilities
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
+
+		const isHalfHourlyKey = 'isHalfHourly';
+		const keys = this.getStoreKeys();
+		this.log(`productTariff:onInit - store keys: ${keys}`);
+		const exportTariff = this.isExport();
+		this.log(`productTariff:onInit - export: ${exportTariff}`);
+		let isHalfHourly = undefined;
+		if (keys.includes(isHalfHourlyKey)) {
+			isHalfHourly = this.getStoreValue(isHalfHourlyKey);
+			this.log(`productTariff:onInit - isHalfHourly key present: ${isHalfHourly}`);
+		} else {
+			const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(exportTariff);
+			isHalfHourly = ('unitRates' in tariff); 
+			//await this.setStoreValue(isHalfHourlyKey, isHalfHourly);
+			this.log(`productTariff.onInit - isHalfHourly key added: ${isHalfHourly}`);
+		}
+
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
 		this.defineCapability("measure_monetary.unit_price",{"title":{"en": '£/kWh', "fr": '€/kWh',}, "decimals": 4, "units": {"en": "£", "fr": "€",}});
@@ -37,6 +54,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
 
 		await this.applyCapabilities();
+		//await this.unsetStoreValue('isHalfHourly');
 		
 	}	
 
@@ -83,6 +101,22 @@ module.exports = class productTariff extends krakenDevice {
 	isExport() {
 		const isExport = this.getStoreValue("isExport");
 		return isExport;
+	}
+
+	async isHalfHourlyTariff(direction) {
+		let halfHourly = undefined;
+		if (this.getStoreKeys().includes("isHalfHourly")) {
+			this.log(`productTariff.isHalfHourlyTariff: Already in store`)
+			halfHourly = this.getStoreValue("isHalfHourly");
+		} else {
+			const tariff = this.getTariffDirectionDetail(direction);
+			if (tariff !== undefined) {
+				halfHourly = ('unitRates' in tariff);
+				this.log(`productTariff.isHalfHourlyTariff: Not in store, if tariff: ${halfHourly}`);
+				await this.setStoreValue("isHalfHourly", halfHourly);
+			}
+		}
+		return halfHourly;
 	}
 
 	/**

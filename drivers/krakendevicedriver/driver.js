@@ -15,7 +15,12 @@ module.exports = class krakenDriver extends Homey.Driver {
     this._period = 60000;
     this._managerEvent = new managerEvent(this);
     if (this.getDevices().length > 0) {
-      this._managerEvent.setInterval(this._period);
+      await this._managerEvent.setInterval(this._period);
+      const accessParameters = this._managerEvent.getAccessParameters();
+      if (accessParameters.accountId !== undefined) {
+        const success = await this._managerEvent.testAccessParameters(accessParameters.accountId, accessParameters.apiKey);
+        this.log(`krakenDriver.onInit: Test access parameters: ${success}`)
+      }
     }
 
     this.log('krakenDriver: onInit: driver has been initialized');
@@ -27,25 +32,21 @@ module.exports = class krakenDriver extends Homey.Driver {
    * @returns   {class}                 The concrete implementation class 
    */
   onMapDeviceClass(device) {
-    this.log("KrakenDeviceDriver.onMapDeviceClass");
     const deviceClass = device.getStoreValue("octopusClass");
-    this.log(`KrakenDeviceDriver.onMapDeviceClass: ${deviceClass}`);
     let nodeClass = undefined;
     switch (deviceClass) {
       case "octopusTariff":
-        this.log(`KrakenDeviceDriver.onMapDeviceClass: class is productTariff`);
         nodeClass = productTariff;
         break;
       case "octopusMini":
-        this.log(`KrakenDeviceDriver.onMapDeviceClass: class is miniMeter`);
         nodeClass = miniMeter;
         break;
       case "octopusAccount":
-        this.log(`KrakenDeviceDriver.onMapDeviceClass: class is energyAccount`);
         nodeClass = energyAccount;
         break;
       default:
     }
+    this.log(`krakenDriver.onMapDeviceClass: device nickname: ${deviceClass} nodeClass ${nodeClass.name}`);
     return nodeClass;
   }
 
@@ -127,7 +128,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     this.log(`krakenDriver.sessionLoginHandler: Access test complete: ${success}`);
     if (success) {
       this._managerEvent.setAccessParameters(account, apiKey);
-      this._managerEvent.setInterval(this._period);
+      await this._managerEvent.setInterval(this._period);
     }
     return success;
   }

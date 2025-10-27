@@ -81,8 +81,6 @@ module.exports = class dataFetcher {
    */
   getKrakenTokenQuery(apiKey) {
     this.homey.log(`dataFetcher.getKrakenTokenQuery: starting`);
-    //const apiKey = this.apiKey;
-    this.homey.log(`dataFetcher.getKrakenTokenQuery: apiKey: ${apiKey}`);
     let query = {
       query: `mutation GetKrakenToken($apikey: String!) {
         obtainKrakenToken(input: {APIKey: $apikey}) {
@@ -121,9 +119,7 @@ module.exports = class dataFetcher {
           let tokenExpiry = new Date(1000 * (result.data.obtainKrakenToken.payload.exp - 60));
           this._graphQlApiToken = graphQlApiToken;
           this._tokenExpiry = tokenExpiry.toISOString();
-          this.homey.log(`dataFetcher.getGraphQlApiToken: QL API Token: ${this._graphQlApiToken}: Expiry: ${this._tokenExpiry}`);
-          //this.homey.settings.set("tokenExpiry", tokenExpiry.toISOString());
-          //this.homey.settings.set("graphQlApiToken", graphQlApiToken);
+          this.homey.log(`dataFetcher.getGraphQlApiToken: QL API Token Expiry: ${this._tokenExpiry}`);
           return true;
         } else {
           this.homey.log("dataFetcher.getGraphQlAPIToken: errors property found, throwing error");
@@ -161,8 +157,6 @@ module.exports = class dataFetcher {
       }
 
       let result = await response.json();
-      this.homey.log("dataFetcher.runGraphQlQuery: JSON received");
-      //this.homey.log(JSON.stringify(result,null,2));
 
       return result;
     }
@@ -249,13 +243,11 @@ module.exports = class dataFetcher {
   async testApiKey(apiKey) {
     this._driver.log(`dataFetcher.testApiKey: Starting: apiKey: ${apiKey} : query:`);
     const query = this.getKrakenTokenQuery(apiKey);
-    this._driver.log(`${JSON.stringify(query,null,2)}`);
     const result = await this.runGraphQlQuery(query, undefined);
     let token = undefined;
     if (result.data.obtainKrakenToken !== null) {
       token = result.data.obtainKrakenToken.token;
     }
-    this._driver.log(`Token: ${token}`);
     return token;
   }
 
