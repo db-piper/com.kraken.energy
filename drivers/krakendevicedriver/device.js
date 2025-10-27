@@ -18,7 +18,7 @@ module.exports = class krakenDevice extends Homey.Device {
    * onAdded is called when the user adds the device, called just after pairing.
    */
   async onAdded() {
-    this.log('krakenDevice has been added');
+    this.log('krakenDevice:onAdded - generic karkenDevice has been added');
   }
 
   /**
@@ -30,7 +30,7 @@ module.exports = class krakenDevice extends Homey.Device {
    * @returns {Promise<string|void>} 				return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('krakenDevice settings where changed');
+    this.log('krakenDevice settings were changed');
   }
 
   /**
@@ -50,16 +50,20 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
   /**
-	 * Update the value of a capability
+	 * Tolerant update of a capability value
 	 * @param     {string}  capabilityName    The name of the capability to be updated
 	 * @param     {any}     newValue          The new value to be given to the capability
 	 * @returns   {boolean}                   Indicates the value of the capability has changed 
 	 */
 	async updateCapabilityValue(capabilityName, newValue) {
-		let oldValue = this.getCapabilityValue(capabilityName);
-		if (oldValue !== newValue) {
-			await this.setCapabilityValue(capabilityName, newValue);
-			return true;
+		if (this.hasCapability(capabilityName)) {
+			let oldValue = this.getCapabilityValue(capabilityName);
+			if (oldValue !== newValue) {
+				await this.setCapabilityValue(capabilityName, newValue);
+				return true;
+			} else {
+				return false;
+			}
 		} else {
 			return false;
 		}

@@ -10,7 +10,7 @@ module.exports = class managerEvent {
    * @param {Homey.Driver} driver controlling the devices
    */
   constructor(driver) {
-    driver.homey.log(`managerEvent.constructor: creating managerEvent`);
+    driver.homey.log(`managerEvent.constructor: Instantiating`);
     this._driver = driver;
     this._accountWrapper = new accountWrapper(this._driver);
     this._interval = undefined;

@@ -17,6 +17,7 @@ module.exports = class productTariff extends krakenDevice {
 
 		const isHalfHourly = ('unitRates' in (await this.driver.managerEvent.accountWrapper.getTariffDirection(this.isExport())));
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
+		const slotLabel = isHalfHourly ? "Slot" : "Day";
 
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
@@ -25,20 +26,24 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("measure_monetary.standing_charge",{"title":{"en": 'Std Charge',},"decimals": 4,"units":{"en": "£",}});
 		this.defineCapability("measure_monetary.standing_charge_taxed",{"title":{"en": 'Std Charge (Taxed)',},"decimals": 4,"units":{"en": "£",}});
 		this.defineCapability("meter_power",{"title": {"en": 'Cumulative kWh'}, "decimals": 3});
-		this.defineCapability("meter_power.consumption",{"title":{"en": 'Slot Energy kWh'}, "decimals": 3});
-		this.defineCapability("measure_monetary.energy_value",{"title": {"en": 'Slot Energy £',},"decimals": 4,"units": {"en": "£",}});
-		this.defineCapability("measure_monetary.energy_value_taxed",{"title": {"en": 'Slot £ (Taxed)'}, "decimals": 4, "units": {"en": "£",}});
-		this.defineCapability("measure_power.average",{"title":{"en": 'Slot Ave. Power'}});
-		this.defineCapability("slot_quartile",{"title": {"en": "Price Quartile"}});
-		this.defineCapability("date_time.slot_start", {"title":{"en": 'Slot Start'}});
-		this.defineCapability("date_time.slot_end",{"title":{"en": 'Slot End',}});
-		this.defineCapability("measure_monetary.next_unit_price",{"title":{"en": 'Next £/kWh'},"units": {"en": "£", "fr": "€"},"decimals": 4});
-		this.defineCapability("measure_monetary.next_unit_price_taxed",{"title": {"en": 'Next £/kWh (Taxed)',}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
-		this.defineCapability("measure_monetary.next_standing_charge", {"title": {"en": 'Next Std Charge'}, "units": {"en": "£","fr": "€"}, "decimals": 4});
-		this.defineCapability("measure_monetary.next_standing_charge_taxed", {"title": {"en": 'Next Charge (Taxed)'}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
-		this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
-		this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
-		this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
+		this.defineCapability("meter_power.consumption",{"title":{"en": `${slotLabel} Energy kWh`}, "decimals": 3});
+		this.defineCapability("measure_monetary.energy_value",{"title": {"en": `${slotLabel} Energy £`,},"decimals": 4,"units": {"en": "£",}});
+		this.defineCapability("measure_monetary.energy_value_taxed",{"title": {"en": `${slotLabel} £ (Taxed)`}, "decimals": 4, "units": {"en": "£",}});
+		this.defineCapability("measure_power.average",{"title":{"en": `${slotLabel} Ave. Power`}});
+		if (isHalfHourly) {
+			this.defineCapability("slot_quartile",{"title": {"en": "Price Quartile"}});
+		}
+		this.defineCapability("date_time.slot_start", {"title":{"en": `${slotLabel} Start`}});
+		this.defineCapability("date_time.slot_end",{"title":{"en": `${slotLabel} End`,}});
+		if (isHalfHourly) {
+			this.defineCapability("measure_monetary.next_unit_price",{"title":{"en": 'Next £/kWh'},"units": {"en": "£", "fr": "€"},"decimals": 4});
+			this.defineCapability("measure_monetary.next_unit_price_taxed",{"title": {"en": 'Next £/kWh (Taxed)',}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
+			this.defineCapability("measure_monetary.next_standing_charge", {"title": {"en": 'Next Std Charge'}, "units": {"en": "£","fr": "€"}, "decimals": 4});
+			this.defineCapability("measure_monetary.next_standing_charge_taxed", {"title": {"en": 'Next Charge (Taxed)'}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
+			this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
+			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
+			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
+		}
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -156,7 +161,7 @@ module.exports = class productTariff extends krakenDevice {
 		const firstTime = recordedSlotEnd === null;
 
 		if (!firstTime) {
-			slotChange = eventTime >= new Date(recordedSlotEnd);
+			slotChange = eventTime >= new Date(recordedSlotEnd);		// 
 			let current_consumption = this.getCapabilityValue("meter_power.consumption");
 			consumption = (currentMeterPower - lastMeterPower) + (slotChange ? 0 : current_consumption);		//kWh
 			averagePower = 1000 * consumption / durationHours;	//W
