@@ -11,6 +11,7 @@ module.exports = class krakenDevice extends Homey.Device {
   async onInit() {
     this.log('krakenDevice:onInit - generic krakenDevice has been initialized');
 		this._requiredCapabilities = new Map();
+		this._storeValues = {};
   }
 
   /**
@@ -194,6 +195,21 @@ module.exports = class krakenDevice extends Homey.Device {
 				await this.setCapabilityOptions(addedCapabilityName, overrides);
 				this.homey.log(`krakenDevice.restrictCapabilities: Change capability options ${addedCapabilityName} overrides ${JSON.stringify(overrides)}`);
 			}				
+		}
+	}
+
+	defineStoreValue(name, value) {
+		this._storeValues[name] = value;
+	}
+
+	async applyStoreValues() {
+		this.log(`krakenDevice.applyStoreValues: starting`);
+		const keys = this.getStoreKeys();
+		for (const newKey of Object.keys(this._storeValues)) {
+			if (!keys.includes(newKey)) {
+				await this.setStoreValue(newKey, this._storeValues[newKey]);
+				this.log(`krakenDevice.applyStoreValues: new key ${newKey} value ${this.getStoreValue(newKey)}`);
+			}
 		}
 	}
 

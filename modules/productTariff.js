@@ -15,21 +15,8 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
-		const isHalfHourlyKey = 'isHalfHourly';
-		const keys = this.getStoreKeys();
-		this.log(`productTariff:onInit - store keys: ${keys}`);
-		const exportTariff = this.isExport();
-		this.log(`productTariff:onInit - export: ${exportTariff}`);
-		let isHalfHourly = undefined;
-		if (keys.includes(isHalfHourlyKey)) {
-			isHalfHourly = this.getStoreValue(isHalfHourlyKey);
-			this.log(`productTariff:onInit - isHalfHourly key present: ${isHalfHourly}`);
-		} else {
-			const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(exportTariff);
-			isHalfHourly = ('unitRates' in tariff); 
-			//await this.setStoreValue(isHalfHourlyKey, isHalfHourly);
-			this.log(`productTariff.onInit - isHalfHourly key added: ${isHalfHourly}`);
-		}
+		const isHalfHourly = ('unitRates' in (await this.driver.managerEvent.accountWrapper.getTariffDirection(this.isExport())));
+		this.defineStoreValue('isHalfHourly', isHalfHourly);
 
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
@@ -54,7 +41,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
 
 		await this.applyCapabilities();
-		//await this.unsetStoreValue('isHalfHourly');
+		await this.applyStoreValues();
 		
 	}	
 

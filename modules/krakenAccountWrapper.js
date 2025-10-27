@@ -413,7 +413,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {string} Jsonata query to perform the transform
    */
   mpanProductTariffsTransform() {
-    let accountNumber = this._dataFetcher.account;
+    //let accountNumber = this.accountId;
     let transform = `data[].account.electricityAgreements.{
         "name" : $join(
           [
@@ -423,7 +423,7 @@ module.exports = class krakenAccountWrapper {
         "data" : {
           "id": $join(
             [
-              "${accountNumber}",
+              "${this.accountId}",
               " ",
               meterPoint.agreements.tariff.isExport ? "Export" : "Import"
             ])
@@ -443,6 +443,7 @@ module.exports = class krakenAccountWrapper {
           ]
         )
       }`
+    this._driver.homey.log(`krakenAccountWrapper.mpanProductTariffsTransform: ${JSON.stringify(transform)}`);
     return transform
   }
 
