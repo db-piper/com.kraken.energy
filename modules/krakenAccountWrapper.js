@@ -322,6 +322,13 @@ module.exports = class krakenAccountWrapper {
             }
           }
         }
+        devices(accountNumber: $accountNumber) {
+          id
+          name
+          status {
+            currentState
+          }
+        }
       }`,
       variables: {
         accountNumber: accountId,
@@ -506,6 +513,10 @@ module.exports = class krakenAccountWrapper {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const pence = this.accountData.data.account.balance;
     return pence * .01;
+  }
+
+  getDeviceCount() {
+    return this.accountData.data.devices.length;
   }
 
   /**

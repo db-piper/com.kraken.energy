@@ -134,6 +134,21 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
+	 * Indicate whether a tariff is halfHourly or simple
+	 * @param 		{boolean} 		direction		True: export; False: import 
+	 * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
+	 */
+	async isHalfHourly(direction) {
+		const tariff = await this.getTariffDirectionDetail(direction);
+		const priceSlots = 'unitRates' in tariff;
+		return priceSlots; 
+	}
+
+	getDeviceCount() {
+		return this.driver.managerEvent.accountWrapper.getDeviceCount();
+	}
+
+	/**
 	 * Get date/time in Homey timezone
 	 * @param		{Date}				jsDate			JS Date object
 	 * @returns {DateTime}								DateTime object in Homey's timezone

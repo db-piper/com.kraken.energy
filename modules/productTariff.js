@@ -15,7 +15,9 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
-		const isHalfHourly = ('unitRates' in (await this.driver.managerEvent.accountWrapper.getTariffDirection(this.isExport())));
+		//const isHalfHourly = ('unitRates' in (await this.getTariffDirectionDetail(this.isExport())));
+		const isHalfHourly = await this.isHalfHourly(this.isExport());
+		this.log(`productTariff Device:onInit - direction ${this.isExport()} is halfHourly Tariff: ${isHalfHourly}`);
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
 
@@ -43,6 +45,7 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
 			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
 			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
+			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
 		}
 
 		const forceOptions = (!isHalfHourly) && (this.getCapabilities().length > 0);	//(simple tariff) & (existing device)
@@ -150,6 +153,7 @@ module.exports = class productTariff extends krakenDevice {
 		const nextSlotEnd = new Date(nextPrices.nextSlotStart);
 		const nextSlotPriceQuartile = nextPrices.quartile;
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
+		const deviceCount = this.getDeviceCount();
 
 		let slotChange = true;
 		let consumption = 0;
@@ -181,6 +185,7 @@ module.exports = class productTariff extends krakenDevice {
 			updates = (await this.updateCapabilityValue("measure_monetary.energy_value", energyValue)) || updates;
 			updates = (await this.updateCapabilityValue("measure_monetary.energy_value_taxed", energyValueTaxed)) || updates;
 			updates = (await this.updateCapabilityValue("data_presence.next_day_prices", nextDayPrices)) || updates;
+			updates = (await this.updateCapabilityValue("item_count.devices", deviceCount)) || updates;
 		}
 
 		if (firstTime || slotChange || newDay) {
