@@ -31,5 +31,8 @@
   },
   "1.0.15": {
     "en": "Flexible capability addition/removal; device repair"
+  },
+  "1.0.16": {
+    "en": "Dynamic capability sets on devices with modifiable capability options"
   }
 }
