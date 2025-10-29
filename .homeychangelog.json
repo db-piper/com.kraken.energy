@@ -34,5 +34,8 @@
   },
   "1.0.16": {
     "en": "Dynamic capability sets on devices with modifiable capability options"
+  },
+  "1.0.17": {
+    "en": "First simple integration of dispatches for intelligent tariffs"
   }
 }
