@@ -148,6 +148,10 @@ module.exports = class krakenDevice extends Homey.Device {
 		return this.driver.managerEvent.accountWrapper.getDeviceCount();
 	}
 
+	getCompletedDispatchesCount() {
+		return this.driver.managerEvent.accountWrapper.getCompletedDispatchesCount();
+	}
+
 	/**
 	 * Get date/time in Homey timezone
 	 * @param		{Date}				jsDate			JS Date object

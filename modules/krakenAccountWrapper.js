@@ -329,6 +329,15 @@ module.exports = class krakenAccountWrapper {
             currentState
           }
         }
+        completedDispatches(accountNumber: $accountNumber) {
+          delta
+          end
+          start
+          meta {
+            location
+            source
+          }
+        }
       }`,
       variables: {
         accountNumber: accountId,
@@ -517,6 +526,12 @@ module.exports = class krakenAccountWrapper {
 
   getDeviceCount() {
     return this.accountData.data.devices.length;
+  }
+
+  getCompletedDispatchesCount() {
+    const dispatches = this._accountData.data.completedDispatches;
+    const count = dispatches === null ? null : dispatches.length;
+    return count;
   }
 
   /**
