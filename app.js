@@ -13,6 +13,7 @@ const productTariff = require('./modules/productTariff');
  * DONE: Device Repair Functionality
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Work out how to "subclass" Tariff devices with different sets of capabilities.
+ * TODO: In event of data read failures, turn a capability red, set error number as title(!) and kill the timer loop
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript
