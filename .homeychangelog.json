@@ -37,5 +37,8 @@
   },
   "1.0.17": {
     "en": "First simple integration of dispatches for intelligent tariffs"
+  },
+  "1.0.18": {
+    "en": "Fix to Bug #7 devices not being updated"
   }
 }
