@@ -54,7 +54,7 @@ module.exports = class dataFetcher {
    * @param   {string} queryString  the GraphQL query to be performed
    * @returns {object}              a JSON object representing the result of the query or undefined if query fails to execute
    */
-  async getDataUsingGraphQL(queryString, apiKey) {
+  async getDataUsingGraphQL(queryString, apiKey, acceptableErrors) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getGraphQlApiToken(apiKey);
     if (validToken) {
@@ -63,7 +63,13 @@ module.exports = class dataFetcher {
         if ((result !== undefined) && (!result.hasOwnProperty("errors"))) {
           return result;
         } else {
-          return undefined;
+          if (this.isAllIgnorable(result, acceptableErrors)) {
+            return result;
+          } else {
+            this.homey.log(`dataFetcher.getDataUsingGraphQL: query result:`);
+            this.homey.log(JSON.stringify(result));
+            return undefined;
+          }
         }
       } catch (err) {
         this.homey.log("datafetcher.getDataUsingGraphQL: error block");
@@ -73,6 +79,24 @@ module.exports = class dataFetcher {
     } else {
       return undefined;
     }
+  }
+
+  /**
+   * Check that all error codes from a query are in the list of acceptable errors
+   * @param     {object}    result            The query result with an Errors item  
+   * @param     {string[]}  acceptableErrors  Array of acceptable error code strings of the form "KT-aa-nnnn" 
+   * @returns   {boolean}                     True if all result error codes exist in acceptable errors array
+   */
+  isAllIgnorable(result, acceptableErrors) {
+    let ignorable = true;
+    for (const queryError of result.errors) {
+      let queryErrorCode = queryError.extensions.errorCode;
+      ignorable &= acceptableErrors.includes(queryErrorCode);
+      if (!ignorable) {
+        break;
+      }
+    }
+    return ignorable;
   }
 
   /**

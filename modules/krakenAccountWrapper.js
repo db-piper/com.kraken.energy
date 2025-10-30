@@ -353,7 +353,7 @@ module.exports = class krakenAccountWrapper {
     let success = false;
     if (token !== undefined) {
       const accountQuery = this.accountDataQuery(accountId);
-      accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token, true);
+      accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
       success = accountData !== undefined;
       if (success) {
         this._accountData = accountData;
@@ -366,10 +366,10 @@ module.exports = class krakenAccountWrapper {
    * Test whether the API Key gives access to the Account and store the Account data if successful
    * @returns {boolean}           True iff account data retrieved
    */
-  async accessAccountGraphQL() {
+  async accessAccountGraphQL(acceptableErrors = []) {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = this.accountDataQuery(this.accountId);
-    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
+    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey, acceptableErrors);
     if (accountData !== undefined) {
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
@@ -473,6 +473,7 @@ module.exports = class krakenAccountWrapper {
     let data = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
     if ((data !== undefined) && ("data" in data)) {
       let reading = data.data.smartMeterTelemetry[0];
+      this._driver.log(`krakenAccountWrapper.getLiveMeterData: Reading: ${JSON.stringify(reading)}`);
       return reading;
     } else {
       return undefined;
