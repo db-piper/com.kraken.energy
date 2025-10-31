@@ -40,5 +40,8 @@
   },
   "1.0.18": {
     "en": "Fix to Bug #7 devices not being updated"
+  },
+  "1.0.19": {
+    "en": "Attempted fix of Bug #7 and its follow-on"
   }
 }
