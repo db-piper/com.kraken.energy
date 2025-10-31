@@ -127,11 +127,11 @@ module.exports = class managerEvent {
     const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
     let readyToProcess = true;
 
-    // if (true) {
+    //if (true) {
     if (refresh) {
       this.driver.log(`managerEvent.executeEvent: Trying account access`);
-      const acceptableErrors = ["KT-CT-4301"];
-      readyToProcess = (await this._accountWrapper.accessAccountGraphQL(acceptableErrors));
+      //const acceptableErrors = ["KT-CT-4301"];
+      readyToProcess = (await this._accountWrapper.accessAccountGraphQL());
       this.driver.log(`managerEvent.executeEvent: Account access outcome ${readyToProcess}`);
     }
 

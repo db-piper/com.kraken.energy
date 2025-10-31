@@ -220,7 +220,7 @@ module.exports = class krakenAccountWrapper {
    * Return the GraphQL query string to obtain the Octopus Account Information
    * @returns {string} Stringified JSON representing the query
    */
-  accountDataQuery(accountId) {
+  accountDataQuery(accountId, deviceIds=[]) {
     const query = {
       query: `query GetAccount($accountNumber: String!) {
         account(accountNumber: $accountNumber) {
@@ -366,10 +366,10 @@ module.exports = class krakenAccountWrapper {
    * Test whether the API Key gives access to the Account and store the Account data if successful
    * @returns {boolean}           True iff account data retrieved
    */
-  async accessAccountGraphQL(acceptableErrors = []) {
+  async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
-    const accountQuery = this.accountDataQuery(this.accountId);
-    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey, acceptableErrors);
+    const accountQuery = this.accountDataQuery(this.accountId, this.deviceIds);
+    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
@@ -470,9 +470,9 @@ module.exports = class krakenAccountWrapper {
   async getLiveMeterData() {
     const meter_query = await this.liveMeterDataQuery();
     this._driver.log
-    let data = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
-    if ((data !== undefined) && ("data" in data)) {
-      let reading = data.data.smartMeterTelemetry[0];
+    let result = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    if ((result !== undefined) && ("data" in result)) {
+      let reading = result.data.smartMeterTelemetry[0];
       this._driver.log(`krakenAccountWrapper.getLiveMeterData: Reading: ${JSON.stringify(reading)}`);
       return reading;
     } else {
@@ -530,9 +530,20 @@ module.exports = class krakenAccountWrapper {
   }
 
   getCompletedDispatchesCount() {
-    const dispatches = this._accountData.data.completedDispatches;
+    const dispatches = this.accountData.data.completedDispatches;
     const count = dispatches === null ? null : dispatches.length;
     return count;
+  }
+
+  get deviceIds() {
+    let deviceIds = [];
+    if ((this.accountData !== undefined) && ('devices' in this._accountData)) {
+      for (const device in this.accountData.devices) {
+        if (device.name !== null) {
+          deviceIds.push[device.id];
+        }
+      }
+    }
   }
 
   /**

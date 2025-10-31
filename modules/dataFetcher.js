@@ -54,22 +54,18 @@ module.exports = class dataFetcher {
    * @param   {string} queryString  the GraphQL query to be performed
    * @returns {object}              a JSON object representing the result of the query or undefined if query fails to execute
    */
-  async getDataUsingGraphQL(queryString, apiKey, acceptableErrors) {
+  async getDataUsingGraphQL(queryString, apiKey) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getGraphQlApiToken(apiKey);
     if (validToken) {
       try {
         let result = await this.runGraphQlQuery(queryString, this.graphQlApiToken);
-        if ((result !== undefined) && (!result.hasOwnProperty("errors"))) {
+        if ((result !== undefined) && ("data" in result)) {
           return result;
         } else {
-          if (this.isAllIgnorable(result, acceptableErrors)) {
-            return result;
-          } else {
-            this.homey.log(`dataFetcher.getDataUsingGraphQL: query result:`);
-            this.homey.log(JSON.stringify(result));
-            return undefined;
-          }
+          this.homey.log(`dataFetcher.getDataUsingGraphQL: query result:`);
+          this.homey.log(JSON.stringify(result));
+          return undefined;
         }
       } catch (err) {
         this.homey.log("datafetcher.getDataUsingGraphQL: error block");
