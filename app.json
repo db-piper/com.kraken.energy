@@ -295,6 +295,18 @@
       "icon": "/assets/event.svg",
       "insights": false
     },
+    "item_count": {
+      "type": "number",
+      "title": {
+        "en": "Item Count"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/devices.svg",
+      "insights": false,
+      "uiComponent": "sensor",
+      "decimals": 0
+    },
     "month_day": {
       "type": "enum",
       "title": {

@@ -11,8 +11,13 @@ const productTariff = require('./modules/productTariff');
  * DONE: Projected bill algorithm
  * DONE: In the pairing process confirm there is a live meter id available; if not return no devices
  * DONE: Device Repair Functionality
+ * DONE: Work out how to "subclass" Tariff devices with different sets of capabilities.
+ * TODO: Fix the single slot problem for Tracker Tariff 
+ * TODO: Work out and implement capability changes for single slot Tracker
+ * TODO: Release new version with these changes
  * TODO: Research and understand dispatches on intelligent tariffs
- * TODO: Work out how to "subclass" Tariff devices with different sets of capabilities.
+ * TODO: Implement basic dispatch fetching code and relevant error processing in GetAccountData
+ * TODO: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript
