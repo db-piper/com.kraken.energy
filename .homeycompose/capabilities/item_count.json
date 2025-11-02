@@ -1,0 +1,10 @@
+{
+  "type": "number",
+  "title": {"en": "Item Count"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/devices.svg",
+  "insights": false,
+  "uiComponent": "sensor",
+  "decimals": 0
+}   
