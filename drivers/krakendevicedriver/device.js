@@ -127,7 +127,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
 	 * @returns {object}							Price slot structure with empty values if absent
 	 */
-	async getNextSlotPrices(slotStart, halfHourly, direction) {
+	async getNextTariffSlotPrices(slotStart, halfHourly, direction) {
 		let nextPrices = undefined;
 		if (slotStart !== null) {
 			nextPrices = await this.getTariffDirectionPrices(slotStart, direction);

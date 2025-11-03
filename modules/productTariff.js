@@ -146,7 +146,7 @@ module.exports = class productTariff extends krakenDevice {
 		const durationHours = (eventTime - slotStart) / (60 * 60 * 1000);
 		const recordedSlotEnd = this.getCapabilityValue("date_time.slot_end");
 		const lastMeterPower = this.getCapabilityValue("meter_power");
-		const nextPrices = await this.getNextPrices(prices.nextSlotStart, prices.isHalfHourly, direction);
+		const nextPrices = await this.getNextTariffSlotPrices(prices.nextSlotStart, prices.isHalfHourly, direction);
 		const nextSlotPriceQuartile = nextPrices.quartile;
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
 
