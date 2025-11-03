@@ -118,6 +118,7 @@ module.exports = class productTariff extends krakenDevice {
 	 * @returns {boolean}			True iff currentPrice < nextPrice
 	 */
 	getCurrentlyCheaper() {
+		this.homey.log(`productTariff.getCurrentlyCheaper: Starting`);
 		const currentPrice = this.getCapabilityValue("measure_monetary.unit_price");
 		const nextPrice = this.getCapabilityValue("measure_monetary.next_unit_price");
 		return currentPrice < nextPrice;

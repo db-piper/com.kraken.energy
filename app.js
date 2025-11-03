@@ -56,7 +56,8 @@ module.exports = class krakenApp extends Homey.App {
    */
   async runListenerExecutor(handlerFunction, args, state) {
     this.homey.log(`krakenApp.runListenerExecutor: ${handlerFunction.name}`)
-    const result = handlerFunction(args);
+    //const result = args.device[handlerFunction.name](args);
+    const result = handlerFunction.call(args.device, args);
     return result;
   }
   
