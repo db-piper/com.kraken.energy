@@ -453,14 +453,15 @@ module.exports = class krakenAccountWrapper {
    */
   async getLiveMeterData() {
     const meter_query = await this.liveMeterDataQuery();
-    this._driver.log
-    let data = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
-    if ((data !== undefined) && ("data" in data)) {
-      let reading = data.data.smartMeterTelemetry[0];
-      return reading;
-    } else {
-      return undefined;
+    let reading = undefined;
+    const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    if ((response !== undefined) && ("data" in response)) {
+      const readingArray = response.data.smartMeterTelemetry;
+      if (readingArray.length > 0) {
+        reading = response.data.smartMeterTelemetry[0];
+      }
     }
+    return reading;
   }
 
   /**
