@@ -18,7 +18,7 @@ module.exports = class krakenDevice extends Homey.Device {
    * onAdded is called when the user adds the device, called just after pairing.
    */
   async onAdded() {
-    this.log('krakenDevice:onAdded - generic karkenDevice has been added');
+    this.log('krakenDevice:onAdded - generic krakenDevice has been added');
   }
 
   /**
@@ -94,10 +94,10 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * Indicate whether the hour has changed between two times
-	 * @param     {jsDate}   	newTime    The later time
-	 * @param     {jaDate}   	oldTime    The earlier time
-	 * @returns   {boolean}            True if the UTC hour of the two datetimes is different
+	 * Indicate whether the hour has changed between two event times
+	 * @param     {jsDate}   	newTime   The later time
+	 * @param     {jaDate}   	oldTime   The earlier time
+	 * @returns   {boolean}            	True if the UTC hour of the two datetimes is different
 	 */
 	hourChange(newTime, oldTime) {
 		const hourChange = newTime.getUTCHours()!==oldTime.getUTCHours(); 
@@ -140,7 +140,7 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Return a price slot structure with appropriate values for a missing slot
-	 * @param 	{string}	start				Start datetime in ISO format 
+	 * @param 	{string}	start				Start datetime in ISO format or null
 	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
 	 */
 	getEmptyPriceSlot(start, halfHourly) {
@@ -150,7 +150,7 @@ module.exports = class krakenDevice extends Homey.Device {
 			preVatStandingCharge: null,
 			standingCharge: null,
 			nextSlotStart: null,
-			thisSlotStart: start === null ? null : slotStart,
+			thisSlotStart: start,
 			isHalfHourly: halfHourly,
 			quartile: null
 		};

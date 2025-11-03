@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const accountWrapper = require("./krakenAccountWrapper");
 const { DateTime } = require("luxon");
 
 module.exports = class managerEvent {
@@ -12,13 +11,13 @@ module.exports = class managerEvent {
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
     this._driver = driver;
-    this._accountWrapper = new accountWrapper(this._driver);
+    this._accountWrapper = new krakenAccountWrapper(this._driver);
     this._interval = undefined;
     this._period = undefined;
   }
 
   /**
-   * Create the setInterval callback
+   * Create the setInterval and its callback
    * @param {integer} period  Timing interval in milliseconds 
    */
   async setInterval(period) {
@@ -96,8 +95,8 @@ module.exports = class managerEvent {
   }
 
   /**
-   * Get the current homeyApp instance
-   * @returns {object - homeyApp} current app instance
+   * Get the current Homey.driver instance
+   * @returns {object - Homey.driver} current driver instance
    */
   get driver() {
     return this._driver;

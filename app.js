@@ -11,8 +11,8 @@ const productTariff = require('./modules/productTariff');
  * DONE: In the pairing process confirm there is a live meter id available; if not return no devices
  * DONE: Device Repair Functionality
  * DONE: Work out how to "subclass" Tariff devices with different sets of capabilities.
- * TODO: Fix the single slot problem for Tracker Tariff by counting <<today's slots>>
- * TODO: Work out and implement capability changes for single slot Tracker
+ * DONE: Fix the single slot problem for Tracker Tariff by counting <<today's slots>>
+ * DONE: Work out and implement capability changes for single slot Tracker
  * TODO: Release new version with these changes
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Implement basic dispatch fetching code and relevant error processing in GetAccountData
@@ -34,11 +34,11 @@ module.exports = class krakenApp extends Homey.App {
    */
   async onInit() {
     this.homey.log('krakenApp.onInit: App has been initialized');
-    this.registerConditionRunListener('slot_relative_price', productTariff.prototype.getCurrentlyCheaper)
+    this.registerConditionRunListener('slot_relative_price', productTariff.prototype.getCurrentlyCheaper);
 	}
 
   /**
-   * Register the named function on the device class as the listener for the named condition flow card 
+   * Register the specified function on the device class as the listener for the named condition flow card 
    * @param {string}   cardName           The name of the condition card getting the listener
    * @param {function} handlerFunction    The function
    */
@@ -48,7 +48,7 @@ module.exports = class krakenApp extends Homey.App {
   }
 
   /**
-   * Run the named function in the context of the class specific in args.device with args as parameter
+   * Run the specified function in the context of the object referenced in args.device with args as parameter
    * @param {function}  handlerFunction   The handler function
    * @param {object}    args              args.device is the device instance 
    * @param {object}    state             Current homey state 

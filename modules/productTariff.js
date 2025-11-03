@@ -1,9 +1,7 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
-const { DateTime } = require("luxon");
-
-//TODO: Consider a sub-class of half-hourly priced tariff.  This will implement slot-quartile, data-presence capabilities
+//const { DateTime } = require("luxon");
 
 module.exports = class productTariff extends krakenDevice {
 
@@ -46,8 +44,7 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
 		}
 
-		const forceOptions = (!isHalfHourly) && (this.getCapabilities().length > 0);	//(simple tariff) & (existing device)
-		await this.applyCapabilities(forceOptions);
+		await this.applyCapabilities(false);
 		await this.applyStoreValues();
 		
 	}	
