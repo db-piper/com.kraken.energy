@@ -56,17 +56,15 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns   {boolean}                   Indicates the value of the capability has changed 
 	 */
 	async updateCapabilityValue(capabilityName, newValue) {
+		let updated = false;
 		if (this.hasCapability(capabilityName)) {
 			let oldValue = this.getCapabilityValue(capabilityName);
 			if (oldValue !== newValue) {
 				await this.setCapabilityValue(capabilityName, newValue);
-				return true;
-			} else {
-				return false;
+				updated = true;
 			}
-		} else {
-			return false;
 		}
+		return updated;
 	}
 
 	/**
@@ -110,7 +108,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * Return the prices for the accounts import or export tariff
 	 * @param   {string}    atTime        String representation of the event date and time
 	 * @param   {boolean}   direction     True: export tariff; False: import tariff
-	 * @returns {object}                  JSON tariff price structure
+	 * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
 	 */
 	async getTariffDirectionPrices(atTime, direction) {
 		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);
@@ -120,6 +118,42 @@ module.exports = class krakenDevice extends Homey.Device {
 		} else {
 			return undefined;
 		}
+	}
+
+	/**
+	 * Get the price slot details of the next slot returning default values if not present
+	 * @param 	{string}	slotStart		Start datetime in ISO format
+	 * @param 	{boolean} direction		True - export; false - import 
+	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+	 * @returns {object}							Price slot structure with empty values if absent
+	 */
+	async getNextSlotPrices(slotStart, halfHourly, direction) {
+		let nextPrices = undefined;
+		if (slotStart !== null) {
+			nextPrices = await this.getTariffDirectionPrices(slotStart, direction);
+		}
+		if (nextPrices === undefined) {
+			nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
+		}
+		return nextPrices;
+	}
+
+	/**
+	 * Return a price slot structure with appropriate values for a missing slot
+	 * @param 	{string}	start				Start datetime in ISO format 
+	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+	 */
+	getEmptyPriceSlot(start, halfHourly) {
+		nextPrices = {
+			preVatUnitRate: null,
+			unitRate: null,
+			preVatStandingCharge: null,
+			standingCharge: null,
+			nextSlotStart: null,
+			thisSlotStart: start === null ? null : slotStart,
+			isHalfHourly: halfHourly,
+			quartile: null
+		};
 	}
 
 	/**

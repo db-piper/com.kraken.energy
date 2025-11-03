@@ -110,7 +110,7 @@ module.exports = class krakenAccountWrapper {
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
    * @param   {string}          atTime    ISO format timestamp string
    * @param   {object - JSON}   tariff    Tariff data structure
-   * @returns {object - JSON}   {preVatUnitRate, unitRate, preVatStandingCharge, standingCharge, ...} 
+   * @returns {object - JSON}   {preVatUnitRate, unitRate, preVatStandingCharge, standingCharge, ...}; undefined if no prices available
    */
   async getPrices(atTime, tariff) {
     let prices = undefined;
