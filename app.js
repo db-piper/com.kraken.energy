@@ -4,7 +4,6 @@ const Homey = require('homey');
 const productTariff = require('./modules/productTariff');
 
 /**
- * 
  * DONE: "New Period" trigger card on Octopus Account device
  * DONE: Better icon for energyAccount device
  * DONE: Work out git usage
@@ -18,6 +17,7 @@ const productTariff = require('./modules/productTariff');
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Implement basic dispatch fetching code and relevant error processing in GetAccountData
  * TODO: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading
+ * TODO: Review the impact of changing the Period Start Day - changed to estimated Bill, for example
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
  * TODO: Convert to TypeScript

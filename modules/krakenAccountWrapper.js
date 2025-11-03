@@ -214,7 +214,9 @@ module.exports = class krakenAccountWrapper {
     return slotPriceTransform;
   }
 
+  getDevicCount() {
 
+  }
 
   /**
    * Return the GraphQL query string to obtain the Octopus Account Information
@@ -320,6 +322,14 @@ module.exports = class krakenAccountWrapper {
                 }
               }
             }
+          }
+        }
+        devices(accountNumber: $accountNumber) {
+          id
+          name
+          deviceType
+          status {
+            currentState
           }
         }
       }`,
@@ -507,6 +517,11 @@ module.exports = class krakenAccountWrapper {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const pence = this.accountData.data.account.balance;
     return pence * .01;
+  }
+
+  getDeviceCount() {
+    let deviceCount = this.accountData.data.devices.length;
+    return deviceCount;
   }
 
   /**
