@@ -499,7 +499,7 @@ module.exports = class krakenAccountWrapper {
     return JSON.stringify(query, null, 2);
   }
 
-  	/**
+  /**
 	 * Return a price slot structure with appropriate values for a missing slot
 	 * @param 	{string}	start				Start datetime in ISO format or null
 	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
@@ -518,6 +518,10 @@ module.exports = class krakenAccountWrapper {
     return nextPrices;
 	}
 
+  /**
+   * Get the month day number (1-31) on which the charging period commences
+   * @returns {integer}       Day number (1-31)
+   */
   async getBillingPeriodStartDay() {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
@@ -528,12 +532,20 @@ module.exports = class krakenAccountWrapper {
     return monthDay;
   }
 
+  /**
+   * Get the current balance of the account from account data
+   * @returns {float}         Balance amount
+   */
   getCurrentBalance() {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const pence = this.accountData.data.account.balance;
     return pence * .01;
   }
 
+  /**
+   * Get the count of devices registered to the account
+   * @returns {integer}       Number of devices registered
+   */
   getDeviceCount() {
     let deviceCount = this.accountData.data.devices.length;
     return deviceCount;
