@@ -73,6 +73,7 @@ module.exports = class productTariff extends krakenDevice {
 	async onDeleted() {
 		this.log('productTariff Device:onDeleted - has been deleted');
 	}
+	
 	/**
 	 * onSettings is called when the user updates the device's settings.
 	 * @param {object} event the onSettings event data
@@ -84,8 +85,6 @@ module.exports = class productTariff extends krakenDevice {
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
 		this.log('productTariff Device:onSettings - settings where changed');
 	}
-
-
 
 	/**
 	 * Indicate if the current product tariff is an export product tariff

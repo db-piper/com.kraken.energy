@@ -94,6 +94,14 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
+	 * Return the app's current instance of krakenAccountWrapper
+	 * @returns		{object - krakenAccountManager}		Current app instance of the account wrapper
+	 */
+	get accountWrapper() {
+		return this.driver.managerEvent.accountWrapper;
+	}
+
+	/**
 	 * Indicate whether the hour has changed between two event times
 	 * @param     {jsDate}   	newTime   The later time
 	 * @param     {jaDate}   	oldTime   The earlier time
@@ -111,9 +119,9 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
 	 */
 	async getTariffDirectionPrices(atTime, direction) {
-		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);
+		const tariff = await this.accountWrapper.getTariffDirection(direction);
 		if (tariff !== undefined) {
-			const prices = await this.driver.managerEvent.accountWrapper.getPrices(atTime, tariff);
+			const prices = await this.accountWrapper.getPrices(atTime, tariff);
 			return prices;
 		} else {
 			return undefined;
@@ -144,7 +152,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
 	 */
 	getEmptyPriceSlot(start, halfHourly) {
-		return this.driver.managerEvent.accountWrapper.getEmptyPriceSlot(start, halfHourly);
+		return this.accountWrapper.getEmptyPriceSlot(start, halfHourly);
 	}
 
 	/**
@@ -153,7 +161,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {object}                  JSON tariff price structure
 	 */
 	async getTariffDirectionDetail(direction) {
-		const tariff = await this.driver.managerEvent.accountWrapper.getTariffDirection(direction);
+		const tariff = await this.accountWrapper.getTariffDirection(direction);
 		this.homey.log(`krakenDevice.getTariffDirectionDetail: Direction ${direction}`);
 		return tariff;
 	}
@@ -170,11 +178,11 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	getDeviceCount() {
-		return this.driver.managerEvent.accountWrapper.getDeviceCount();
+		return this.accountWrapper.getDeviceCount();
 	}
 
 	getCompletedDispatchesCount() {
-		return this.driver.managerEvent.accountWrapper.getCompletedDispatchesCount();
+		return this.accountWrapper.getCompletedDispatchesCount();
 	}
 
 	/**

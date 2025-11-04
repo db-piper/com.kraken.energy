@@ -124,12 +124,12 @@ module.exports = class energyAccount extends krakenDevice {
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
 		const firstTime = billingPeriodStartDay === null;
 		if (firstTime) {
-			billingPeriodStartDay = (await this.driver.managerEvent.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2,'0');
+			billingPeriodStartDay = (await this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2,'0');
 		}
 		await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
 
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
-		const currentBalance = this.driver.managerEvent.accountWrapper.getCurrentBalance();
+		const currentBalance = this.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.getTariffDirectionPrices(atTime, true);
 		const exportTariffPresent = exportPrices !== undefined;
 		const importPrices = await this.getTariffDirectionPrices(atTime, false);
