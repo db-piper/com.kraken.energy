@@ -150,6 +150,7 @@ module.exports = class productTariff extends krakenDevice {
 		const nextPrices = await this.getNextTariffSlotPrices(prices.nextSlotStart, prices.isHalfHourly, direction);
 		const nextSlotPriceQuartile = nextPrices.quartile;
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
+		const deviceCount = this.getDeviceCount();
 
 		let slotChange = true;
 		let consumption = 0;
