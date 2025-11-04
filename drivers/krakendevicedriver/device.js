@@ -144,16 +144,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
 	 */
 	getEmptyPriceSlot(start, halfHourly) {
-		nextPrices = {
-			preVatUnitRate: null,
-			unitRate: null,
-			preVatStandingCharge: null,
-			standingCharge: null,
-			nextSlotStart: null,
-			thisSlotStart: start,
-			isHalfHourly: halfHourly,
-			quartile: null
-		};
+		return this.driver.managerEvent.accountWrapper.getEmptyPriceSlot(start, halfHourly);
 	}
 
 	/**

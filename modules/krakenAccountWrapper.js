@@ -214,10 +214,6 @@ module.exports = class krakenAccountWrapper {
     return slotPriceTransform;
   }
 
-  getDevicCount() {
-
-  }
-
   /**
    * Return the GraphQL query string to obtain the Octopus Account Information
    * @returns {string} Stringified JSON representing the query
@@ -502,6 +498,25 @@ module.exports = class krakenAccountWrapper {
     }
     return JSON.stringify(query, null, 2);
   }
+
+  	/**
+	 * Return a price slot structure with appropriate values for a missing slot
+	 * @param 	{string}	start				Start datetime in ISO format or null
+	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+	 */
+	getEmptyPriceSlot(start, halfHourly) {
+		const nextPrices = {
+			preVatUnitRate: null,
+			unitRate: null,
+			preVatStandingCharge: null,
+			standingCharge: null,
+			nextSlotStart: null,
+			thisSlotStart: start,
+			isHalfHourly: halfHourly,
+			quartile: null
+		};
+    return nextPrices;
+	}
 
   async getBillingPeriodStartDay() {
     //TODO: Consider using JSONata to do this for consistency and robustness

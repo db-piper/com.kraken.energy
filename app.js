@@ -14,6 +14,8 @@ const productTariff = require('./modules/productTariff');
  * DONE: Fix the single slot problem for Tracker Tariff by counting <<today's slots>>
  * DONE: Work out and implement capability changes for single slot Tracker
  * TODO: Release new version with these changes
+ * TODO: Make accountWrapper more directly available to krakenDevices (getAccountWrapper property)
+ * TODO: Make use of the getAccountWrapper property
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Implement basic dispatch fetching code and relevant error processing in GetAccountData
  * TODO: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading

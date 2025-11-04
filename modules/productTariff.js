@@ -149,7 +149,6 @@ module.exports = class productTariff extends krakenDevice {
 		const nextSlotPriceQuartile = nextPrices.quartile;
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
 		const deviceCount = this.driver.managerEvent.accountWrapper.getDeviceCount();
-		this.homey.log(`productTariff.processEvent: Device Count: ${deviceCount}`);
 
 		let slotChange = true;
 		let consumption = 0;
