@@ -43,5 +43,8 @@
   },
   "1.0.19": {
     "en": "Attempted fix of Bug #7 and its follow-on"
+  },
+  "1.0.21": {
+    "en": "Rollback to 1.0.16 code base. Make changes to support single slot tariffs such as Octopus Tracker. Re-add the device count capability to verify ability to access Device and Dispatch data for Intelligent Tariffs."
   }
 }

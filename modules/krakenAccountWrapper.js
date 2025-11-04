@@ -110,7 +110,7 @@ module.exports = class krakenAccountWrapper {
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
    * @param   {string}          atTime    ISO format timestamp string
    * @param   {object - JSON}   tariff    Tariff data structure
-   * @returns {object - JSON}   {preVatUnitRate, unitRate, preVatStandingCharge, standingCharge, ...} 
+   * @returns {object - JSON}   {preVatUnitRate, unitRate, preVatStandingCharge, standingCharge, ...}; undefined if no prices available
    */
   async getPrices(atTime, tariff) {
     let prices = undefined;
@@ -213,8 +213,6 @@ module.exports = class krakenAccountWrapper {
     )`;
     return slotPriceTransform;
   }
-
-
 
   /**
    * Return the GraphQL query string to obtain the Octopus Account Information
@@ -325,17 +323,9 @@ module.exports = class krakenAccountWrapper {
         devices(accountNumber: $accountNumber) {
           id
           name
+          deviceType
           status {
             currentState
-          }
-        }
-        completedDispatches(accountNumber: $accountNumber) {
-          delta
-          end
-          start
-          meta {
-            location
-            source
           }
         }
       }`,
@@ -469,15 +459,15 @@ module.exports = class krakenAccountWrapper {
    */
   async getLiveMeterData() {
     const meter_query = await this.liveMeterDataQuery();
-    this._driver.log
-    let result = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
-    if ((result !== undefined) && ("data" in result)) {
-      let reading = result.data.smartMeterTelemetry[0];
-      this._driver.log(`krakenAccountWrapper.getLiveMeterData: Reading: ${JSON.stringify(reading)}`);
-      return reading;
-    } else {
-      return undefined;
+    let reading = undefined;
+    const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    if ((response !== undefined) && ("data" in response)) {
+      const readingArray = response.data.smartMeterTelemetry;
+      if (readingArray.length > 0) {
+        reading = response.data.smartMeterTelemetry[0];
+      }
     }
+    return reading;
   }
 
   /**
@@ -509,6 +499,25 @@ module.exports = class krakenAccountWrapper {
     return JSON.stringify(query, null, 2);
   }
 
+  	/**
+	 * Return a price slot structure with appropriate values for a missing slot
+	 * @param 	{string}	start				Start datetime in ISO format or null
+	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+	 */
+	getEmptyPriceSlot(start, halfHourly) {
+		const nextPrices = {
+			preVatUnitRate: null,
+			unitRate: null,
+			preVatStandingCharge: null,
+			standingCharge: null,
+			nextSlotStart: null,
+			thisSlotStart: start,
+			isHalfHourly: halfHourly,
+			quartile: null
+		};
+    return nextPrices;
+	}
+
   async getBillingPeriodStartDay() {
     //TODO: Consider using JSONata to do this for consistency and robustness
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
@@ -526,24 +535,8 @@ module.exports = class krakenAccountWrapper {
   }
 
   getDeviceCount() {
-    return this.accountData.data.devices.length;
-  }
-
-  getCompletedDispatchesCount() {
-    const dispatches = this.accountData.data.completedDispatches;
-    const count = dispatches === null ? null : dispatches.length;
-    return count;
-  }
-
-  get deviceIds() {
-    let deviceIds = [];
-    if ((this.accountData !== undefined) && ('devices' in this._accountData)) {
-      for (const device in this.accountData.devices) {
-        if (device.name !== null) {
-          deviceIds.push[device.id];
-        }
-      }
-    }
+    let deviceCount = this.accountData.data.devices.length;
+    return deviceCount;
   }
 
   /**
