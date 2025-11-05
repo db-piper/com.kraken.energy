@@ -463,7 +463,8 @@ module.exports = class krakenAccountWrapper {
     const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
-      if (readingArray.length > 0) {
+      if ((readingArray !== null) && (readingArray.length > 0)) {
+        this._driver.homey.log(`krakenAccountWrapper.getLiveMeterData: Live data present`);
         reading = response.data.smartMeterTelemetry[0];
       }
     }
