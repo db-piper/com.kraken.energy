@@ -583,15 +583,6 @@ module.exports = class krakenAccountWrapper {
       const timeZone = this._driver.homey.clock.getTimezone();
       const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
       dataRefresh = ((eventDateTime.minute == 0) || eventDateTime.minute == 30);
-      // const onTheHour = 0 == eventDateTime.minute;
-      // const lateEnough = 9 <= eventDateTime.hour;
-      // const lastPriceSlotExpiry = await this.getLastPriceSlotExpiry();
-      // const lastPriceSlotExpiryDate = DateTime.fromJSDate(new Date(lastPriceSlotExpiry)).setZone(timeZone).minus({days: 1});
-      // const pricesAlreadyAvailable = lastPriceSlotExpiryDate.day != eventDateTime.day;
-      // this._driver.log(`krakenAccountWrapper.checkAccountDateCurrnet: Last price slot expiry day ${lastPriceSlotExpiryDate.day}`)
-      // this._driver.log(`krakenAccountWrapper.checkAccountDataCurrent: Day ${eventDateTime.day} Minute ${eventDateTime.minute} hour ${eventDateTime.hour}`);
-      // this._driver.log(`krakenAccountWrapper.checkAccountDataCurrent: onTheHour ${onTheHour} lateEnough ${lateEnough} pricesAvail ${pricesAlreadyAvailable}`);
-      // dataRefresh = onTheHour && lateEnough && !pricesAlreadyAvailable;
     }
     this._driver.log(`krakenAccountManager.checkAccountDataRefresh: exiting ${dataRefresh}`);
     return dataRefresh;
