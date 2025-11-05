@@ -378,7 +378,7 @@ module.exports = class krakenAccountWrapper {
   async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
     const meterId = await this.getLiveMeterId();
-    if (meterId === undefined) {
+    if (meterId === undefined || meterId === null || meterId.length == 0) {
       return [];
     } else {
       this._driver.homey.log(`Account data ID: ${this.accountData.data.account.id}`);
