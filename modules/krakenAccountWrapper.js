@@ -543,25 +543,30 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Get the count of devices registered to the account
+   * Get the count of devices registered to the account that are smart control capable
    * @returns {integer}       Number of devices registered
    */
   async getDeviceCount() {
     const transform = this.getDeviceCountTransform();
     const expression = jsonata(transform);
-    const deviceCount = await expression.evaluate(this.accountData);
-    this._driver.homey.log(`krakenAccountWrapper.getDeviceCount: count ${deviceCount}`);
-    return deviceCount;
+    const deviceIds = await expression.evaluate(this.accountData);
+    return deviceIds.length;
   }
 
-  getDeviceCountTransform() {
-    const transform = `
-      $count(
+  /**
+   * Get the transform to return the device ids of devices that are smart control capable
+   * @returns {string[]}        Jsonata transform string
+   */
+  getDeviceTransform() {
+    const transform = 
+      `[
         data.
           devices[
-            status.currentState="SMART_CONTROL_IN_PROGRESS"
-          ]
-        )`;
+            status.
+              currentState = "SMART_CONTROL_IN_PROGRESS"
+          ].
+        id
+      ]`;
     return transform;
   }
 
