@@ -177,8 +177,8 @@ module.exports = class krakenDevice extends Homey.Device {
 		return priceSlots; 
 	}
 
-	getDeviceCount() {
-		return this.accountWrapper.getDeviceCount();
+	async getDeviceCount() {
+		return await this.accountWrapper.getDeviceCount();
 	}
 
 	getCompletedDispatchesCount() {

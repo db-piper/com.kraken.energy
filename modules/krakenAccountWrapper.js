@@ -464,7 +464,6 @@ module.exports = class krakenAccountWrapper {
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
       if ((readingArray !== null) && (readingArray.length > 0)) {
-        this._driver.homey.log(`krakenAccountWrapper.getLiveMeterData: Live data present`);
         reading = response.data.smartMeterTelemetry[0];
       }
     }
@@ -547,9 +546,23 @@ module.exports = class krakenAccountWrapper {
    * Get the count of devices registered to the account
    * @returns {integer}       Number of devices registered
    */
-  getDeviceCount() {
-    let deviceCount = this.accountData.data.devices.length;
+  async getDeviceCount() {
+    const transform = this.getDeviceCountTransform();
+    const expression = jsonata(transform);
+    const deviceCount = await expression.evaluate(this.accountData);
+    this._driver.homey.log(`krakenAccountWrapper.getDeviceCount: count ${deviceCount}`);
     return deviceCount;
+  }
+
+  getDeviceCountTransform() {
+    const transform = `
+      $count(
+        data.
+          devices[
+            status.currentState="SMART_CONTROL_IN_PROGRESS"
+          ]
+        )`;
+    return transform;
   }
 
   /**

@@ -150,7 +150,7 @@ module.exports = class productTariff extends krakenDevice {
 		const nextSlotPriceQuartile = nextPrices.quartile;
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
 		const nextSlotEnd = (nextPrices.nextSlotStart === null) ? null : this.getLocalDateTime(new Date(nextPrices.nextSlotStart)).toISO();
-		const deviceCount = this.getDeviceCount();
+		const deviceCount = await this.getDeviceCount();
 
 		let slotChange = true;
 		let consumption = 0;
