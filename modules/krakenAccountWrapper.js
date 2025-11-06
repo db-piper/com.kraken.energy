@@ -463,7 +463,7 @@ module.exports = class krakenAccountWrapper {
     const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
-      if ((readingArray !== null) && (readingArray.length > 0)) {
+      if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         reading = response.data.smartMeterTelemetry[0];
       }
     }
@@ -557,7 +557,7 @@ module.exports = class krakenAccountWrapper {
    * Get the transform to return the device ids of devices that are smart control capable
    * @returns {string[]}        Jsonata transform string
    */
-  getDeviceTransform() {
+  getDeviceCountTransform() {
     const transform = 
       `[
         data.
