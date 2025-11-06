@@ -162,7 +162,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async getTariffDirectionDetail(direction) {
 		const tariff = await this.accountWrapper.getTariffDirection(direction);
-		this.homey.log(`krakenDevice.getTariffDirectionDetail: Direction ${direction}`);
 		return tariff;
 	}
 
@@ -205,7 +204,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	async getTomorrowsPricesPresent(atTime, direction) {
 		const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({days: 1});
 		const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(),direction);
-		this.homey.log(`krakenDevice.getTomorrowsPricesPresent: nextDayPrices ${JSON.stringify(nextDayPrices)}`);
 		let present = false;
 		if (nextDayPrices === undefined) {
 			present = false;

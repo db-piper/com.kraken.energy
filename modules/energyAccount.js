@@ -205,8 +205,6 @@ module.exports = class energyAccount extends krakenDevice {
 
 			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
 			projectedBill = (billValue / elapsedDays) * periodLength; 
-			this.homey.log(`energyAccount.processEvnet: billValue ${billValue} periodLength ${periodLength}`);
-			this.homey.log(`energyAccount.processEvent: elapsedDays ${elapsedDays} projectedBill ${projectedBill}`);
 		}
 
 		updates = (await this.updateCapabilityValue("period_day.period_duration", periodLength)) || updates;

@@ -15,7 +15,6 @@ module.exports = class productTariff extends krakenDevice {
 
 		//const isHalfHourly = ('unitRates' in (await this.getTariffDirectionDetail(this.isExport())));
 		const isHalfHourly = await this.isHalfHourly(this.isExport());
-		this.log(`productTariff Device:onInit - direction ${this.isExport()} is halfHourly Tariff: ${isHalfHourly}`);
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
 
@@ -172,8 +171,6 @@ module.exports = class productTariff extends krakenDevice {
 			energyValue = consumption * recordedUnitPrice;
 			energyValueTaxed = consumption * recordedUnitPriceTaxed;
 		}
-
-		this.homey.log(`productTariff.processEvent: EventTime:${eventTime.toISOString()}: recordedSlotEnd:${recordedSlotEnd}: slotChange:${slotChange}`);
 
 		if (true) {
 			updates = (await this.updateCapabilityValue("meter_power", currentMeterPower)) || updates;

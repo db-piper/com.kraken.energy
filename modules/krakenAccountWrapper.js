@@ -88,10 +88,8 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}              JSON structure of the tariff details or undefined
    */
   async getTariffDirection(isExport) {
-    this._driver.log(`krakenAccountWrapper.getTariffDirection: starting ${isExport}`);
     const tariffTransform = this.tariffTransform(isExport);
     const tariff = await jsonata(tariffTransform).evaluate(this.accountData);
-    //this._driver.log(`krakenAccountWrapper.getTariffDirection: ${this.accountData}`);
     return tariff;
   }
 

@@ -113,7 +113,6 @@ module.exports = class managerEvent {
     const midnight = eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
     const elapsed = eventDateTime.diff(midnight, 'milliseconds');
     const isNewDay = elapsed.toMillis() < this._period;
-    this.driver.log(`managerEvent.newDay: event ${eventDateTime.toISO()} midnight ${midnight.toISO()} elapsed ${elapsed.toMillis()} newDay ${isNewDay}`);
     return isNewDay
   }
 
