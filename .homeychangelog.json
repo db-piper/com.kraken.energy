@@ -49,5 +49,8 @@
   },
   "1.0.22": {
     "en": "Fix minor typo"
+  },
+  "1.0.23": {
+    "en": "Harden code to access live meter reading data; filter devices to those that have Smart Control In Progress; remove excess logging"
   }
 }
