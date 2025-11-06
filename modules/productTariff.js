@@ -199,15 +199,12 @@ module.exports = class productTariff extends krakenDevice {
 				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge", null)) || updates;
 				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge_taxed", null)) || updates;
 				updates = (await this.updateCapabilityValue("slot_quartile.next_slot_quartile", null)) || updates;
-				//updates = (await this.updateCapabilityValue("date_time.next_slot_end", null)) || updates;
 			} else {
 				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price", .01 * nextPrices.preVatUnitRate)) || updates;
 				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price_taxed", .01 * nextPrices.unitRate)) || updates;
 				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge", .01 * nextPrices.preVatStandingCharge)) || updates;
 				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge_taxed", .01 * nextPrices.standingCharge)) || updates;
 				updates = (await this.updateCapabilityValue("slot_quartile.next_slot_quartile", nextSlotPriceQuartile)) || updates;
-				//const nextSlotEnd = this.getLocalDateTime(new Date(nextPrices.nextSlotStart)).toISO();
-				//updates = (await this.updateCapabilityValue("date_time.next_slot_end", nextSlotEnd)) || updates;
 			}
 		}
 
