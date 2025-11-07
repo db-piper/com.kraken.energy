@@ -90,7 +90,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
-		this.homey.log(`krakenDevice.processEvent: plannedDispatches ${JSON.stringify(plannedDispatches)}`);
 		return false;
 	}
 

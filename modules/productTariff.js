@@ -43,6 +43,7 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
 			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
 			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
+			this.defineCapability("item_count.dispatches", {"title": {"en": 'Planned Dispatches'}});
 		}
 
 		await this.applyCapabilities(false);
@@ -150,6 +151,7 @@ module.exports = class productTariff extends krakenDevice {
 		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
 		const nextSlotEnd = (nextPrices.nextSlotStart === null) ? null : this.getLocalDateTime(new Date(nextPrices.nextSlotStart)).toISO();
 		const deviceCount = await this.getDeviceCount();
+		const dispatchCount = plannedDispatches.length;
 
 		let slotChange = true;
 		let consumption = 0;
@@ -180,6 +182,7 @@ module.exports = class productTariff extends krakenDevice {
 			updates = (await this.updateCapabilityValue("measure_monetary.energy_value_taxed", energyValueTaxed)) || updates;
 			updates = (await this.updateCapabilityValue("data_presence.next_day_prices", nextDayPrices)) || updates;
 			updates = (await this.updateCapabilityValue("item_count.devices", deviceCount)) || updates;
+			updates = (await this.updateCapabilityValue("item_count.dispatches", dispatchCount)) || updates;
 		}
 
 		if (firstTime || slotChange || newDay) {
