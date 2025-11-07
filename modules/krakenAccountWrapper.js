@@ -463,18 +463,31 @@ module.exports = class krakenAccountWrapper {
   async getLiveMeterData() {
     const meterId = await this.getLiveMeterId();
     const deviceIds = await this.getDeviceIds();
-    const meter_query = this.buildDispatchQuery(meterId, deviceIds);
-    let reading = undefined;
-    const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
+    const meterQuery = this.buildDispatchQuery(meterId, deviceIds);
+    let result = {};
+    const response = await this._dataFetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
-        reading = response.data.smartMeterTelemetry[0];
+        result.reading = readingArray[0];
+      }
+      result.dispatchArray = [];
+      for (const deviceId of deviceIds) {
+        const deviceKey = this.hashDeviceId(deviceId);
+        if (deviceKey in response.data) {
+          result.dispatchArray.concat(response.data.deviceKey);
+        }
       }
     }
-    return reading;
+    return result.reading;
   }
 
+  /**
+   * Build the live data query using the live meter Id and intelligent device Ids
+   * @param   {string}      meterId     The id of the live meter (e.g. Octopus Home Mini) 
+   * @param   {string[]}    deviceIds   Array of intelligent device Ids   
+   * @returns {object}                  JSON result of Graph QL query
+   */
   buildDispatchQuery(meterId, deviceIds) {
     const operationName = 'getHighFrequencyData';
     let variableDeclarations = '$meterId: String!';
@@ -496,8 +509,9 @@ module.exports = class krakenAccountWrapper {
       const deviceNumLabel = deviceNum.padStart(2, "0");
       const deviceVariableName = `deviceId${deviceNumLabel}`;
       variableDeclarations += `, $${deviceVariableName}: String!`;
+      const deviceLabel = this.hashDeviceId(deviceIds[deviceNum]);
       queryDeclarations += `
-      fpd${deviceNumLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
+      ${deviceLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
         type
         start
         end
@@ -517,34 +531,43 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the query string to obtain current data from Octopus Mini Live Meter
-   * @returns {string} Stringified JSON representing the query
+   * Hash a deviceId into a valid GQL query label
+   * @param   {string}    deviceId    DeviceId to be hashed 
+   * @returns {string}                Hashed deviceId usable as a GQL query label        
    */
-  async liveMeterDataQuery() {
-    const meterId = await this.getLiveMeterId();
-    const query = {
-      query: 
-        `query GetOctopusMiniReading(
-          $meterID: String!
-        ) 
-        {
-          smartMeterTelemetry(
-            deviceId: $meterID
-          ) 
-          {
-            demand
-            export
-            consumption
-            readAt
-          }
-        }`,
-      variables: {
-        meterID: meterId,
-      },
-      operationName: "GetOctopusMiniReading",
-    }
-    return JSON.stringify(query, null, 2);
+  hashDeviceId(deviceId) {
+    return `d${deviceId.replaceAll("-","_")}`;
   }
+
+  // /**
+  //  * Return the query string to obtain current data from Octopus Mini Live Meter
+  //  * @returns {string} Stringified JSON representing the query
+  //  */
+  // async liveMeterDataQuery() {
+  //   const meterId = await this.getLiveMeterId();
+  //   const query = {
+  //     query: 
+  //       `query GetOctopusMiniReading(
+  //         $meterID: String!
+  //       ) 
+  //       {
+  //         smartMeterTelemetry(
+  //           deviceId: $meterID
+  //         ) 
+  //         {
+  //           demand
+  //           export
+  //           consumption
+  //           readAt
+  //         }
+  //       }`,
+  //     variables: {
+  //       meterID: meterId,
+  //     },
+  //     operationName: "GetOctopusMiniReading",
+  //   }
+  //   return JSON.stringify(query, null, 2);
+  // }
 
   /**
    * Return a price slot structure with appropriate values for a missing slot
