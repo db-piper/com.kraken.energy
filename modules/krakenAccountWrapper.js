@@ -82,6 +82,11 @@ module.exports = class krakenAccountWrapper {
     return await jsonata(transform).evaluate(this.accountData);
   }
 
+  async getDeviceIds() {
+    let transform = "[data.devices[status.currentState = 'SMART_CONTROL_IN_PROGRESS'].id]";
+    return await jsonata(transform).evaluate(this.accountData);
+  }
+
   /**
    * Return tariff details for the specified direction for the account overview
    * @param   {boolean} isExport    true - export tariff; false - import tariff
@@ -216,7 +221,7 @@ module.exports = class krakenAccountWrapper {
    * Return the GraphQL query string to obtain the Octopus Account Information
    * @returns {string} Stringified JSON representing the query
    */
-  accountDataQuery(accountId, deviceIds=[]) {
+  accountDataQuery(accountId, deviceIds = []) {
     const query = {
       query: `query GetAccount($accountNumber: String!) {
         account(accountNumber: $accountNumber) {
@@ -456,7 +461,9 @@ module.exports = class krakenAccountWrapper {
    * @returns {object} reading JSON object representing the current data
    */
   async getLiveMeterData() {
-    const meter_query = await this.liveMeterDataQuery();
+    const meterId = await this.getLiveMeterId();
+    const deviceIds = await this.getDeviceIds();
+    const meter_query = this.buildDispatchQuery(meterId, deviceIds);
     let reading = undefined;
     const response = await this._dataFetcher.getDataUsingGraphQL(meter_query, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
@@ -468,6 +475,47 @@ module.exports = class krakenAccountWrapper {
     return reading;
   }
 
+  buildDispatchQuery(meterId, deviceIds) {
+    const operationName = 'getHighFrequencyData';
+    let variableDeclarations = '$meterId: String!';
+    let queryDeclarations = 
+      `smartMeterTelemetry(
+        deviceId: $meterId
+      ) 
+      {
+        demand
+        export
+        consumption
+        readAt
+      }`;
+    let variableValues = {
+      meterId: meterId
+    };
+
+    for (const deviceNum in deviceIds) {
+      const deviceNumLabel = deviceNum.padStart(2, "0");
+      const deviceVariableName = `deviceId${deviceNumLabel}`;
+      variableDeclarations += `, $${deviceVariableName}: String!`;
+      queryDeclarations += `
+      fpd${deviceNumLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
+        type
+        start
+        end
+        energyAddedKwh
+      }`;
+      variableValues[deviceVariableName] = deviceIds[deviceNum];
+    }
+
+    const gqlQuery = {
+      query: `query ${operationName}(${variableDeclarations}){${queryDeclarations}}`,
+      variables: variableValues,
+      operationName: operationName
+    }
+
+    return JSON.stringify(gqlQuery);
+
+  }
+
   /**
    * Return the query string to obtain current data from Octopus Mini Live Meter
    * @returns {string} Stringified JSON representing the query
@@ -475,7 +523,8 @@ module.exports = class krakenAccountWrapper {
   async liveMeterDataQuery() {
     const meterId = await this.getLiveMeterId();
     const query = {
-      query: `query GetOctopusMiniReading(
+      query: 
+        `query GetOctopusMiniReading(
           $meterID: String!
         ) 
         {
@@ -498,23 +547,23 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-	 * Return a price slot structure with appropriate values for a missing slot
-	 * @param 	{string}	start				Start datetime in ISO format or null
-	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
-	 */
-	getEmptyPriceSlot(start, halfHourly) {
-		const nextPrices = {
-			preVatUnitRate: null,
-			unitRate: null,
-			preVatStandingCharge: null,
-			standingCharge: null,
-			nextSlotStart: null,
-			thisSlotStart: start,
-			isHalfHourly: halfHourly,
-			quartile: null
-		};
+   * Return a price slot structure with appropriate values for a missing slot
+   * @param 	{string}	start				Start datetime in ISO format or null
+   * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+   */
+  getEmptyPriceSlot(start, halfHourly) {
+    const nextPrices = {
+      preVatUnitRate: null,
+      unitRate: null,
+      preVatStandingCharge: null,
+      standingCharge: null,
+      nextSlotStart: null,
+      thisSlotStart: start,
+      isHalfHourly: halfHourly,
+      quartile: null
+    };
     return nextPrices;
-	}
+  }
 
   /**
    * Get the month day number (1-31) on which the charging period commences
@@ -556,7 +605,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {string[]}        Jsonata transform string
    */
   getDeviceCountTransform() {
-    const transform = 
+    const transform =
       `[
         data.
           devices[

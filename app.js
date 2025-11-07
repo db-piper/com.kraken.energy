@@ -19,6 +19,7 @@ const productTariff = require('./modules/productTariff');
  * TODO: Research and understand dispatches on intelligent tariffs
  * TODO: Implement basic dispatch fetching code and relevant error processing in GetAccountData
  * TODO: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading
+ * TODO: Change GQL Query Builder functions to return {object} not {string}; stringify query inside dataFetcher.getDataUsingGraphQL
  * TODO: Review the impact of changing the Period Start Day - changed to estimated Bill, for example
  * TODO: Review all classes, complete comments and remove redundant functions
  * TODO: Review subject factoring for device classes and krakenAccountWrapper
