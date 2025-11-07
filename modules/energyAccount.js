@@ -116,9 +116,9 @@ module.exports = class energyAccount extends krakenDevice {
 		return date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 	}
 
-	async processEvent(atTime, newDay, liveMeterReading = undefined) {
+	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
 
-		let updates = await super.processEvent(atTime, newDay, liveMeterReading);
+		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 		this.homey.log(`energyAccount.processEvent: Returned from super method`);
 
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");

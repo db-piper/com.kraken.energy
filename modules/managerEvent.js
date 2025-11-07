@@ -125,22 +125,20 @@ module.exports = class managerEvent {
     const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
     let readyToProcess = true;
 
-    //if (true) {
     if (refresh) {
       this.driver.log(`managerEvent.executeEvent: Trying account access`);
-      //const acceptableErrors = ["KT-CT-4301"];
       readyToProcess = (await this._accountWrapper.accessAccountGraphQL());
       this.driver.log(`managerEvent.executeEvent: Account access outcome ${readyToProcess}`);
     }
 
     let updates = new Array();
     if (readyToProcess) {
-      const liveReading = await this._accountWrapper.getLiveMeterData();
-      this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveReading)}`);
-      if (liveReading !== undefined) {
+      const liveData = await this._accountWrapper.getLiveMeterData();
+      this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
+      if (liveData !== undefined) {
         for (const device of this.driver.getDevices()) {
           this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
-          updates.push(await device.processEvent(atTime, this.newDay(atTime), liveReading));
+          updates.push(await device.processEvent(atTime, this.newDay(atTime), liveData.reading, liveData.dispatches));
         }
       } else {
         this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
