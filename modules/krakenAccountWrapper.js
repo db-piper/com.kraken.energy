@@ -464,7 +464,10 @@ module.exports = class krakenAccountWrapper {
     const meterId = await this.getLiveMeterId();
     const deviceIds = await this.getDeviceIds();
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds);
-    let result = {};
+    const result = {
+      reading : undefined,
+      dispatches : undefined
+    };
     const response = await this._dataFetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;

@@ -76,7 +76,6 @@ module.exports = class energyAccount extends krakenDevice {
 
 	async updatePeriodDay(startDay) {
 		const periodDay = this.computePeriodDay((new Date).toISOString(), Number(startDay));
-		this.homey.log(`energyAccount.updatePeriodDay: PeriodStart: ${startDay} PeriodDay: ${periodDay}`);
 		this.setCapabilityValue("period_day.period_day", periodDay);
 		//TODO: Reset next period start to reflect the new start day;
 	}
@@ -119,7 +118,6 @@ module.exports = class energyAccount extends krakenDevice {
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
-		this.homey.log(`energyAccount.processEvent: Returned from super method`);
 
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
 		const firstTime = billingPeriodStartDay === null;
@@ -146,8 +144,6 @@ module.exports = class energyAccount extends krakenDevice {
 			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
 			newPeriod = true;
 		}
-
-		this.homey.log(`energyAccount.processEvent: newPeriod: ${newPeriod}`);
 
 		const currentExport = 1000 * await this.getCapabilityValue("meter_power.export");
 		const periodCurrentExport = 1000 * await this.getCapabilityValue("meter_power.period_export");
