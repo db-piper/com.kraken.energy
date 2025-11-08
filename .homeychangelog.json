@@ -58,5 +58,8 @@
   },
   "1.0.25": {
     "en": "Point release to broaden the selection of Intelligent Devices based on Device Status Codes"
+  },
+  "1.0.26": {
+    "en": "Point fix to resolve retrieval of Dispatch Slots"
   }
 }
