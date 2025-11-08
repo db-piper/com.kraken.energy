@@ -32,6 +32,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("date_time.next_period_start",{"title": {"en": "Next Start Day" }});
 
 		await this.applyCapabilities();
+		await this.applyStoreValues();
 
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
 		this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
