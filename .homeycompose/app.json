@@ -1,6 +1,6 @@
 {
   "id": "com.kraken.energy",
-  "version": "1.0.24",
+  "version": "1.0.25",
   "compatibility": ">=12.4.0",
   "sdk": 3,
   "brandColor": "#5940ff",

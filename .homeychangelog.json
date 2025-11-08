@@ -55,5 +55,8 @@
   },
   "1.0.24": {
     "en": "Dispatch count capability on productTariff device to demonstrate correct access to flexPlannedDispatch data; tidy up logging."
+  },
+  "1.0.25": {
+    "en": "Point release to broaden the selection of Intelligent Devices based on Device Status Codes"
   }
 }
