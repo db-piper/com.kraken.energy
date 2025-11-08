@@ -52,5 +52,8 @@
   },
   "1.0.23": {
     "en": "Harden code to access live meter reading data; filter devices to those that have Smart Control In Progress; remove excess logging"
+  },
+  "1.0.24": {
+    "en": "Dispatch count capability on productTariff device to demonstrate correct access to flexPlannedDispatch data; tidy up logging."
   }
 }
