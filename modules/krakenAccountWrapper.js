@@ -474,13 +474,17 @@ module.exports = class krakenAccountWrapper {
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         result.reading = readingArray[0];
       }
-      result.dispatches = [];
+      let dispatches = [];
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (deviceKey in response.data) {
-          result.dispatches.concat(response.data.deviceKey);
+          for (const dispatch of response.data[deviceKey]) {
+            dispatches.push(dispatch);
+          }
+          this._driver.log(JSON.stringify(dispatches));
         }
       }
+      result.dispatches = dispatches;
     }
     return result;
   }
