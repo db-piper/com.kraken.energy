@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
-//const { DateTime } = require("luxon");
 
 module.exports = class productTariff extends krakenDevice {
 
@@ -83,7 +82,7 @@ module.exports = class productTariff extends krakenDevice {
 	 * @returns {Promise<string|void>} return a custom message that will be displayed
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
-		this.log('productTariff Device:onSettings - settings where changed');
+		this.log('productTariff Device:onSettings - settings were changed');
 	}
 
 	/**

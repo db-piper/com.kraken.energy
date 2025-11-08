@@ -2,7 +2,7 @@
 
 const Homey = require('homey');
 const productTariff = require('../../modules/productTariff');
-const miniMeter = require('../../modules/miniMeter');
+//const miniMeter = require('../../modules/miniMeter');
 const energyAccount = require('../../modules/energyAccount');
 const managerEvent = require('../../modules/managerEvent');
 
@@ -37,9 +37,6 @@ module.exports = class krakenDriver extends Homey.Driver {
     switch (deviceClass) {
       case "octopusTariff":
         nodeClass = productTariff;
-        break;
-      case "octopusMini":
-        nodeClass = miniMeter;
         break;
       case "octopusAccount":
         nodeClass = energyAccount;

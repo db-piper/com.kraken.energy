@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
-//const { DateTime } = require("../node_modules/luxon");
 
 module.exports = class energyAccount extends krakenDevice {
 
@@ -72,7 +71,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {Promise<string|void>} 					Return a custom message that will be displayed
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
-		this.log('energyAccount Device:onSettings - settings where changed');
+		this.log('energyAccount Device:onSettings - settings were changed');
 	}
 
 	async updatePeriodDay(startDay) {

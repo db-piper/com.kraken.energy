@@ -30,7 +30,7 @@ module.exports = class krakenDevice extends Homey.Device {
    * @returns {Promise<string|void>} 				return a custom message that will be displayed
    */
   async onSettings({ oldSettings, newSettings, changedKeys }) {
-    this.log('krakenDevice settings were changed');
+    this.log('krakenDevice:onSettings settings were changed');
   }
 
   /**
@@ -39,14 +39,14 @@ module.exports = class krakenDevice extends Homey.Device {
    * @param {string} name The new name
    */
   async onRenamed(name) {
-    this.log('krakenDevice was renamed');
+    this.log('krakenDevice:onRenamed was renamed');
   }
 
   /**
    * onDeleted is called when the user deleted the device.
    */
   async onDeleted() {
-    this.log('krakenDevice has been deleted');
+    this.log('krakenDevice:onDeleted has been deleted');
   }
 
   /**
