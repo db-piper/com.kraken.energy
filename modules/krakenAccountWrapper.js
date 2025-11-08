@@ -83,7 +83,7 @@ module.exports = class krakenAccountWrapper {
   }
 
   async getDeviceIds() {
-    let transform = "[data.devices[status.currentState = 'SMART_CONTROL_IN_PROGRESS'].id]";
+    let transform = '[data.devices[status.currentState in ["SETUP_COMPLETE", "SMART_CONTROL_IN_PROGRESS", "SMART_CONTROL_OFF", "BOOSTING", "LOST_CONNECTION"]].id]';
     return await jsonata(transform).evaluate(this.accountData);
   }
 
