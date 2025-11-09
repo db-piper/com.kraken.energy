@@ -61,5 +61,8 @@
   },
   "1.0.26": {
     "en": "Point fix to resolve retrieval of Dispatch Slots"
+  },
+  "1.0.27": {
+    "en": "Point release to suppress Device and Dispatch capabilities for non-intelligent tariffs. Force through updates to capability titles."
   }
 }
