@@ -20,6 +20,7 @@ const productTariff = require('./modules/productTariff');
  * DONE: Implement basic dispatch fetching code and relevant error processing in GetAccountData
  * DONE: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading
  * TODO: Reflect flexPlannedDispatches as changes to Price in Tariff and Account devices
+ * TODO: Remove Device count and Dispatches count from Tariff device if Device count is zero.
  * TODO: Change GQL Query Builder functions to return {object} not {string}; stringify query inside dataFetcher.getDataUsingGraphQL
  * TODO: Review the impact of changing the Period Start Day - changed to estimated Bill, for example
  * TODO: Review all classes, complete comments and remove redundant functions
@@ -28,6 +29,7 @@ const productTariff = require('./modules/productTariff');
  * TODO: Subclass the productTariff class to differentiate half-hourly and non-halfhourly tariffs
  * TODO: Add support for Octopus Saving periods including auto-registration
  * TODO: Consider use of the Home Assistant hack for free-energy periods (how reliable is it??)
+ * TODO: Research Energy Saving and FreeElectricityEvents in Kraken via GQL (customerFlexibilityCampaignEvents and savingsSessions)
  * TODO: Tariff efficiency measures on half-hourly tariff based on power consumed in each Quartile range (new device?)
  */
 

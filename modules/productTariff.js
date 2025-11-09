@@ -16,6 +16,7 @@ module.exports = class productTariff extends krakenDevice {
 		const isHalfHourly = await this.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
+		const deviceCount = await this.accountWrapper.getDeviceCount();
 
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
@@ -41,11 +42,13 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
 			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
 			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
+		}
+		if (deviceCount > 0){
 			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
 			this.defineCapability("item_count.dispatches", {"title": {"en": 'Planned Dispatches'}});
 		}
 
-		await this.applyCapabilities(false);
+		await this.applyCapabilities(deviceCount > 0);
 		await this.applyStoreValues();
 		
 	}	

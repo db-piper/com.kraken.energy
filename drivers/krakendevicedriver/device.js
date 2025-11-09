@@ -180,10 +180,6 @@ module.exports = class krakenDevice extends Homey.Device {
 		return await this.accountWrapper.getDeviceCount();
 	}
 
-	getCompletedDispatchesCount() {
-		return this.accountWrapper.getCompletedDispatchesCount();
-	}
-
 	/**
 	 * Get date/time in Homey timezone
 	 * @param		{Date}				jsDate			JS Date object
