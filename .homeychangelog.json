@@ -64,5 +64,8 @@
   },
   "1.0.27": {
     "en": "Point release to suppress Device and Dispatch capabilities for non-intelligent tariffs. Force through updates to capability titles."
+  },
+  "1.0.28": {
+    "en": "Implement queued capability update architecture and fix capability listener not found error"
   }
 }
