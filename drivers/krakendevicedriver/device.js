@@ -11,6 +11,7 @@ module.exports = class krakenDevice extends Homey.Device {
   async onInit() {
     this.log('krakenDevice:onInit - generic krakenDevice has been initialized');
 		this._requiredCapabilities = new Map();
+		this._updatedCapabilities = new Map();
 		this._storeValues = {};
   }
 
@@ -48,6 +49,32 @@ module.exports = class krakenDevice extends Homey.Device {
   async onDeleted() {
     this.log('krakenDevice:onDeleted has been deleted');
   }
+
+	/**
+	 * Queue the update of the value of the named capability
+	 * @param {string} 	capabilityName 		Name of the capability to be updated
+	 * @param {any} 		newValue 					New value to be assigned to the capability
+	 */
+	updateCapability(capabilityName, newValue) {
+		this._updatedCapabilities.set(capabilityName, newValue);
+	}
+
+	/**
+	 * Perform the queued updates to capability values
+	 * @param 	{boolean}		updates		True iff any preceding capability has been updated
+	 * @returns {boolean}							True iff this or any preceding capability has its value changed
+	 */
+	async updateCapabilities(updates) {
+		const updatedCapabilitiesNames = Array.from(this._updatedCapabilities.keys());
+		let updated = updates;
+		for (const capabilityName of updatedCapabilitiesNames) {
+			const value = this._updatedCapabilities.get(capabilityName);
+			this.homey.log(`krakenDevice.updateCapabilities: Update ${capabilityName} with ${value}`);
+			updated = (await this.updateCapabilityValue(capabilityName, value)) || updated; 
+		}
+		this._updatedCapabilities = new Map();
+		return updated;
+	}
 
   /**
 	 * Tolerant update of a capability value
@@ -226,7 +253,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * Constrain the capabilities of a device to match the required list of capabilities
 	 * @param {boolean}		forceOptions	Capability options will be applied too all capabilities, not just newly added ones 
 	 */
-	async applyCapabilities(forceOptions) {
+	async applyCapabilities(forceOptions = false) {
 		this.homey.log(`krakenDevice.applyCapabilities: starting`);
 		const definedCapabilitiesNames = this.getCapabilities();
 		const requiredCapabilitiesNames = Array.from(this._requiredCapabilities.keys());
@@ -246,8 +273,6 @@ module.exports = class krakenDevice extends Homey.Device {
 			}
 		}
 
-		this.ready();
-		
 		const setOptionsNames = forceOptions ? requiredCapabilitiesNames : addedCapabilityNames;
 		for (const setOptionsName of setOptionsNames) {
 			const overrides = this._requiredCapabilities.get(setOptionsName);
@@ -256,6 +281,8 @@ module.exports = class krakenDevice extends Homey.Device {
 				this.homey.log(`krakenDevice.restrictCapabilities: Change capability options ${setOptionsName} overrides ${JSON.stringify(overrides)}`);
 			}				
 		}
+		
+		this._requiredCapabilities = new Map();
 	}
 
 	defineStoreValue(name, value) {
@@ -271,6 +298,7 @@ module.exports = class krakenDevice extends Homey.Device {
 				this.log(`krakenDevice.applyStoreValues: new key ${newKey} value ${this.getStoreValue(newKey)}`);
 			}
 		}
+		this._storeValues = {};
 	}
 
 };

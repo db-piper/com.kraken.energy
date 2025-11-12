@@ -10,6 +10,7 @@ module.exports = class energyAccount extends krakenDevice {
 	async onInit() {
 		this.log('energyAccount Device:onInit - energyAccount device has been initialized');
 		await super.onInit();
+		this.defineCapability("month_day.period_start",{"title": {"en": "Period Start Day" }});
 		this.defineCapability("period_day.period_day");
 		this.defineCapability("period_day.period_duration",{"title": { "en": "Period Duration" }});
 		this.defineCapability("measure_monetary.account_balance",{"title": { "en": "Account Balance" }, "units": { "en": "£" }});
@@ -26,11 +27,10 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("meter_power.day_export", {"title": { "en": "Day Export" },"decimals": 3});
 		this.defineCapability("measure_monetary.day_import_value",{"title": { "en": "Day Import Cost" },"decimals": 2,"units": {"en": "£"}});
 		this.defineCapability("measure_monetary.day_export_value",{"title": { "en": "Day Export Value" },"decimals": 2,"units": {"en": "£"}});
-		this.defineCapability("month_day.period_start",{"title": {"en": "Period Start Day" }});
 		this.defineCapability("date_time.period_start",{"title": {"en": "This Period Start" }});
 		this.defineCapability("date_time.next_period_start",{"title": {"en": "Next Start Day" }});
 
-		await this.applyCapabilities();
+		await this.applyCapabilities(false);
 		await this.applyStoreValues();
 
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
@@ -124,7 +124,19 @@ module.exports = class energyAccount extends krakenDevice {
 		if (firstTime) {
 			billingPeriodStartDay = (await this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2,'0');
 		}
-		await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
+		try {
+			await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
+			this.homey.log(`energyAccount.processEvent: triggerCapabilityListener success`);
+		} catch (error) {
+			this.homey.log(`energyAccount.processEvent: triggerCapabilityListener error`);
+			if (error.message.includes('month_day.period_start')) {
+				this.homey.log(`energyAccount.processEvent: registering capability listener`);
+				this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
+					await this.updatePeriodDay(value);
+				});
+				await this.updatePeriodDay(billingPeriodStartDay);
+			}
+		}
 
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.accountWrapper.getCurrentBalance();
@@ -203,25 +215,25 @@ module.exports = class energyAccount extends krakenDevice {
 			projectedBill = (billValue / elapsedDays) * periodLength; 
 		}
 
-		updates = (await this.updateCapabilityValue("period_day.period_duration", periodLength)) || updates;
-		updates = (await this.setCapabilityValue("measure_monetary.account_balance", currentBalance)) || updates;
+		this.updateCapability("period_day.period_duration", periodLength);
+		this.updateCapability("measure_monetary.account_balance", currentBalance);
+		this.updateCapability("date_time.period_start", currentPeriodStartDate.toISO());
+		this.updateCapability("date_time.next_period_start", nextPeriodStartDate.toISO());
+		this.updateCapability("meter_power.export", liveMeterReading.export / 1000);
+		this.updateCapability("meter_power.import", liveMeterReading.consumption / 1000);
+		this.updateCapability("meter_power.period_export", periodUpdatedExport / 1000);
+		this.updateCapability("meter_power.period_import", periodUpdatedImport / 1000);
+		this.updateCapability("meter_power.day_export", dayUpdatedExport / 1000);
+		this.updateCapability("meter_power.day_import", dayUpdatedImport / 1000);
+		this.updateCapability("measure_monetary.period_export_value", periodUpdatedExportValue);
+		this.updateCapability("measure_monetary.period_import_value", periodUpdatedImportValue);
+		this.updateCapability("measure_monetary.day_export_value", dayUpdatedExportValue);
+		this.updateCapability("measure_monetary.day_import_value", dayUpdatedImportValue);
+		this.updateCapability("measure_monetary.period_standing_charge", periodUpdatedStandingCharge);
+		this.updateCapability("measure_monetary.period_bill", billValue);
+		this.updateCapability("measure_monetary.projected_bill", projectedBill);
 
-		updates = (await this.updateCapabilityValue("date_time.period_start", currentPeriodStartDate.toISO())) || updates;
-		updates = (await this.updateCapabilityValue("date_time.next_period_start", nextPeriodStartDate.toISO())) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.export", liveMeterReading.export / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.import", liveMeterReading.consumption / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.period_export", periodUpdatedExport / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.period_import", periodUpdatedImport / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.day_export", dayUpdatedExport / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("meter_power.day_import", dayUpdatedImport / 1000)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.period_export_value", periodUpdatedExportValue)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.period_import_value", periodUpdatedImportValue)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.day_export_value", dayUpdatedExportValue)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.day_import_value", dayUpdatedImportValue)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.period_standing_charge", periodUpdatedStandingCharge)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.period_bill", billValue)) || updates;
-		updates = (await this.updateCapabilityValue("measure_monetary.projected_bill", projectedBill)) || updates;
-
+		updates = await this.updateCapabilities(updates);
 		return updates;
 	}
 

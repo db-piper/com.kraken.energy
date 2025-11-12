@@ -12,7 +12,6 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
-		//const isHalfHourly = ('unitRates' in (await this.getTariffDirectionDetail(this.isExport())));
 		const isHalfHourly = await this.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
@@ -48,7 +47,7 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("item_count.dispatches", {"title": {"en": 'Planned Dispatches'}});
 		}
 
-		await this.applyCapabilities(deviceCount > 0);
+		await this.applyCapabilities(false);
 		await this.applyStoreValues();
 		
 	}	
@@ -177,42 +176,43 @@ module.exports = class productTariff extends krakenDevice {
 		}
 
 		if (true) {
-			updates = (await this.updateCapabilityValue("meter_power", currentMeterPower)) || updates;
-			updates = (await this.updateCapabilityValue("meter_power.consumption", consumption)) || updates;
-			updates = (await this.updateCapabilityValue("measure_power.average", averagePower)) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.energy_value", energyValue)) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.energy_value_taxed", energyValueTaxed)) || updates;
-			updates = (await this.updateCapabilityValue("data_presence.next_day_prices", nextDayPrices)) || updates;
-			updates = (await this.updateCapabilityValue("item_count.devices", deviceCount)) || updates;
-			updates = (await this.updateCapabilityValue("item_count.dispatches", dispatchCount)) || updates;
+			this.updateCapability("meter_power", currentMeterPower);
+			this.updateCapability("meter_power.consumption", consumption);
+			this.updateCapability("measure_power.average", averagePower);
+			this.updateCapability("measure_monetary.energy_value", energyValue);
+			this.updateCapability("measure_monetary.energy_value_taxed", energyValueTaxed);
+			this.updateCapability("data_presence.next_day_prices", nextDayPrices);
+			this.updateCapability("item_count.devices", deviceCount);
+			this.updateCapability("item_count.dispatches", dispatchCount);
 		}
 
 		if (firstTime || slotChange || newDay) {
-			updates = (await this.updateCapabilityValue("product_code", tariff.productCode)) || updates;
-			updates = (await this.updateCapabilityValue("tariff_code", tariff.tariffCode)) || updates;
-			updates = (await this.updateCapabilityValue("date_time.slot_start", this.getLocalDateTime(slotStart).toISO())) || updates;
-			updates = (await this.updateCapabilityValue("date_time.slot_end", this.getLocalDateTime(nextSlotStart).toISO())) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.unit_price", .01 * prices.preVatUnitRate)) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.unit_price_taxed", .01 * prices.unitRate)) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.standing_charge", .01 * prices.preVatStandingCharge)) || updates;
-			updates = (await this.updateCapabilityValue("measure_monetary.standing_charge_taxed", .01 * prices.standingCharge)) || updates;
-			updates = (await this.updateCapabilityValue("slot_quartile",slotPriceQuartile)) || updates;
-			updates = (await this.updateCapabilityValue("date_time.next_slot_end", nextSlotEnd)) || updates;
+			this.updateCapability("product_code", tariff.productCode);
+			this.updateCapability("tariff_code", tariff.tariffCode);
+			this.updateCapability("date_time.slot_start", this.getLocalDateTime(slotStart).toISO());
+			this.updateCapability("date_time.slot_end", this.getLocalDateTime(nextSlotStart).toISO());
+			this.updateCapability("measure_monetary.unit_price", .01 * prices.preVatUnitRate);
+			this.updateCapability("measure_monetary.unit_price_taxed", .01 * prices.unitRate);
+			this.updateCapability("measure_monetary.standing_charge", .01 * prices.preVatStandingCharge);
+			this.updateCapability("measure_monetary.standing_charge_taxed", .01 * prices.standingCharge);
+			this.updateCapability("slot_quartile",slotPriceQuartile);
+			this.updateCapability("date_time.next_slot_end", nextSlotEnd);
 			if (nextPrices.preVatUnitRate === null) {
-				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price", null)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price_taxed", null)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge", null)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge_taxed", null)) || updates;
-				updates = (await this.updateCapabilityValue("slot_quartile.next_slot_quartile", null)) || updates;
+				this.updateCapability("measure_monetary.next_unit_price", null);
+				this.updateCapability("measure_monetary.next_unit_price_taxed", null);
+				this.updateCapability("measure_monetary.next_standing_charge", null);
+				this.updateCapability("measure_monetary.next_standing_charge_taxed", null);
+				this.updateCapability("slot_quartile.next_slot_quartile", null);
 			} else {
-				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price", .01 * nextPrices.preVatUnitRate)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_unit_price_taxed", .01 * nextPrices.unitRate)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge", .01 * nextPrices.preVatStandingCharge)) || updates;
-				updates = (await this.updateCapabilityValue("measure_monetary.next_standing_charge_taxed", .01 * nextPrices.standingCharge)) || updates;
-				updates = (await this.updateCapabilityValue("slot_quartile.next_slot_quartile", nextSlotPriceQuartile)) || updates;
+				this.updateCapability("measure_monetary.next_unit_price", .01 * nextPrices.preVatUnitRate);
+				this.updateCapability("measure_monetary.next_unit_price_taxed", .01 * nextPrices.unitRate);
+				this.updateCapability("measure_monetary.next_standing_charge", .01 * nextPrices.preVatStandingCharge);
+				this.updateCapability("measure_monetary.next_standing_charge_taxed", .01 * nextPrices.standingCharge);
+				this.updateCapability("slot_quartile.next_slot_quartile", nextSlotPriceQuartile);
 			}
 		}
 
+		updates = await this.updateCapabilities(updates);
 		return updates;
 
 	}
