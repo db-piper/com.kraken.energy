@@ -136,81 +136,71 @@ module.exports = class productTariff extends krakenDevice {
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const direction = this.isExport();
-		const propertyName = direction ? "export" : "consumption";
-		const currentMeterPower = liveMeterReading[propertyName] / 1000;
 		const eventTime = new Date(atTime);
 		const tariff = await this.getTariffDirectionDetail(direction);
-		const prices = await this.getTariffDirectionPrices(atTime, direction);
-		const slotStart = new Date(prices.thisSlotStart);
-		const nextSlotStart = new Date(prices.nextSlotStart);	
-		const slotPriceQuartile = prices.quartile;
-		const durationHours = (eventTime - slotStart) / (60 * 60 * 1000);
-		const recordedSlotEnd = this.getCapabilityValue("date_time.slot_end");
-		const lastMeterPower = this.getCapabilityValue("meter_power");
-		const nextPrices = await this.getNextTariffSlotPrices(prices.nextSlotStart, prices.isHalfHourly, direction);
-		const nextSlotPriceQuartile = nextPrices.quartile;
-		const nextDayPrices = await this.getTomorrowsPricesPresent(atTime, direction);
-		const nextSlotEnd = (nextPrices.nextSlotStart === null) ? null : this.getLocalDateTime(new Date(nextPrices.nextSlotStart)).toISO();
+		const tariffPrices = await this.getTariffDirectionPrices(atTime, direction);
+		const nextTariffPrices = await this.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
+		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const deviceCount = await this.getDeviceCount();
-		const dispatchCount = plannedDispatches.length;
-
-		let slotChange = true;
-		let consumption = 0;
-		let averagePower = 0;
-		let recordedUnitPrice = 0;
-		let recordedUnitPriceTaxed = 0;
-		let energyValue = 0;
-		let energyValueTaxed = 0;
-
+		const dispatchCount = plannedDispatches.length
+		const recordedSlotEnd = this.getCapabilityValue("date_time.slot_end");
+		const recordedSlotStart = this.getCapabilityValue("date_time.slot_start");
 		const firstTime = recordedSlotEnd === null;
+		const propertyName = direction ? "export" : "consumption";
+		const newEnergyReading = +liveMeterReading[propertyName];																//Wh as integer
+		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));					//Boolean
+		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));								//Decimal hours
+		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * await this.getCapabilityValue("meter_power");		//Wh
+		const slotEnergy = firstTime ? 0 : (1000 * this.getCapabilityValue("meter_power.consumption"));									//Wh
+		const slotValue = firstTime ? 0 : this.getCapabilityValue("measure_monetary.energy_value");											//£ Untaxed
+		const slotValueTaxed = firstTime ? 0 : this.getCapabilityOptions("measure_monetary.energy_value_taxed");				//£
+		const productCode = tariff.productCode;
+		const tariffCode = tariff.tariffCode;
+		const unitPrice = .01 * tariffPrices.preVatUnitRate;																		//£ Untaxed
+		const unitPriceTaxed = .01 * tariffPrices.unitRate;																			//£
+		const standingCharge = .01 * tariff.preVatStandingCharge;																//£ Untaxed
+		const standingChargeTaxed = .01 * tariff.standingCharge;																//£
+		const deltaEnergy = newEnergyReading - lastEnergyReading;																//Wh
+		const deltaEnergyValue = unitPrice * (deltaEnergy / 1000);															//Untaxed £.kWh
+		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);										//Taxed £.kWh
+		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;					//kWh 
+		const updatedSlotValue = deltaEnergyValue + (slotChange ? 0 : slotValue);
+		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);
+		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;							//W
+		const slotQuartile = tariffPrices.quartile;
+		const slotStart = tariffPrices.thisSlotStart;																						//ISO
+		const slotEnd = tariffPrices.nextSlotStart;																							//ISO
+		const nextUnitPrice = nextTariffAbsent ? null : .01 * nextTariffPrices.preVatUnitRate		//£ Untaxed
+		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate		//£
+		const nextStandingCharge = nextTariffAbsent ? null : .01 * nextTariffPrices.preVatStandingCharge 	//£ Untaxed
+		const nextStandingChargeTaxed = nextTariffAbsent ? null : .01* nextTariffPrices.standingCharge		//£
+		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile
+		const nextDayPresent = await this.getTomorrowsPricesPresent(atTime, direction);					//Boolean
+		const nextSlotEnd = nextTariffAbsent ? null : this.getLocalDateTime(new Date(nextTariffPrices.nextSlotStart)).toISO();
 
-		if (!firstTime) {
-			slotChange = eventTime >= new Date(recordedSlotEnd);
-			let current_consumption = this.getCapabilityValue("meter_power.consumption");
-			consumption = (currentMeterPower - lastMeterPower) + (slotChange ? 0 : current_consumption);		//kWh
-			averagePower = 1000 * consumption / durationHours;																							//W
-			recordedUnitPrice = this.getCapabilityValue("measure_monetary.unit_price");
-			recordedUnitPriceTaxed = this.getCapabilityValue("measure_monetary.unit_price_taxed")
-			energyValue = consumption * recordedUnitPrice;
-			energyValueTaxed = consumption * recordedUnitPriceTaxed;
-		}
-
-		if (true) {
-			this.updateCapability("meter_power", currentMeterPower);
-			this.updateCapability("meter_power.consumption", consumption);
-			this.updateCapability("measure_power.average", averagePower);
-			this.updateCapability("measure_monetary.energy_value", energyValue);
-			this.updateCapability("measure_monetary.energy_value_taxed", energyValueTaxed);
-			this.updateCapability("data_presence.next_day_prices", nextDayPrices);
-			this.updateCapability("item_count.devices", deviceCount);
-			this.updateCapability("item_count.dispatches", dispatchCount);
-		}
-
-		if (firstTime || slotChange || newDay) {
-			this.updateCapability("product_code", tariff.productCode);
-			this.updateCapability("tariff_code", tariff.tariffCode);
-			this.updateCapability("date_time.slot_start", this.getLocalDateTime(slotStart).toISO());
-			this.updateCapability("date_time.slot_end", this.getLocalDateTime(nextSlotStart).toISO());
-			this.updateCapability("measure_monetary.unit_price", .01 * prices.preVatUnitRate);
-			this.updateCapability("measure_monetary.unit_price_taxed", .01 * prices.unitRate);
-			this.updateCapability("measure_monetary.standing_charge", .01 * prices.preVatStandingCharge);
-			this.updateCapability("measure_monetary.standing_charge_taxed", .01 * prices.standingCharge);
-			this.updateCapability("slot_quartile",slotPriceQuartile);
-			this.updateCapability("date_time.next_slot_end", nextSlotEnd);
-			if (nextPrices.preVatUnitRate === null) {
-				this.updateCapability("measure_monetary.next_unit_price", null);
-				this.updateCapability("measure_monetary.next_unit_price_taxed", null);
-				this.updateCapability("measure_monetary.next_standing_charge", null);
-				this.updateCapability("measure_monetary.next_standing_charge_taxed", null);
-				this.updateCapability("slot_quartile.next_slot_quartile", null);
-			} else {
-				this.updateCapability("measure_monetary.next_unit_price", .01 * nextPrices.preVatUnitRate);
-				this.updateCapability("measure_monetary.next_unit_price_taxed", .01 * nextPrices.unitRate);
-				this.updateCapability("measure_monetary.next_standing_charge", .01 * nextPrices.preVatStandingCharge);
-				this.updateCapability("measure_monetary.next_standing_charge_taxed", .01 * nextPrices.standingCharge);
-				this.updateCapability("slot_quartile.next_slot_quartile", nextSlotPriceQuartile);
-			}
-		}
+		this.updateCapability("product_code", productCode );
+		this.updateCapability("tariff_code", tariffCode);
+		this.updateCapability("measure_monetary.unit_price", unitPrice);
+		this.updateCapability("measure_monetary.unit_price_taxed", unitPriceTaxed);
+		this.updateCapability("measure_monetary.standing_charge", standingCharge);
+		this.updateCapability("measure_monetary.standing_charge_taxed", standingChargeTaxed);
+		this.updateCapability("meter_power", newEnergyReading / 1000);
+		this.updateCapability("meter_power.consumption", updatedSlotEnergy);
+		this.updateCapability("measure_monetary.slot_energy_value", updatedSlotValue);
+		this.updateCapability("measure_monetary.slot_energy_value_taxed", updatedSlotValueTaxed);
+		this.updateCapability("measure_power.average", slotPower);
+		this.updateCapability("slot_quartile", slotQuartile);
+		this.updateCapability("date_time.slot_start", slotStart);
+		this.updateCapability("date_time.slot_end", slotEnd);
+		this.updateCapability("data_presence.next_day_prices",nextDayPresent);
+		this.updateCapability("measure_monetary.next_unit_price", nextUnitPrice);
+		this.updateCapability("measure_monetary.next_unit_price_taxed", nextUnitPriceTaxed);
+		this.updateCapability("measure_monetary.next_standing_charge", nextStandingCharge);
+		this.updateCapability("measure_monetary.next_standing_charge_taxed", nextStandingChargeTaxed);
+		this.updateCapability("slot_quartile.next_slot_quartile",nextQuartile);
+		this.updateCapability("date_time.next_slot_end",nextSlotEnd);
+		this.updateCapability("item_count.devices", deviceCount);
+		this.updateCapability("item_count.dispatches", dispatchCount);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;

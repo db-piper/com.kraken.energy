@@ -69,7 +69,6 @@ module.exports = class krakenDevice extends Homey.Device {
 		let updated = updates;
 		for (const capabilityName of updatedCapabilitiesNames) {
 			const value = this._updatedCapabilities.get(capabilityName);
-			this.homey.log(`krakenDevice.updateCapabilities: Update ${capabilityName} with ${value}`);
 			updated = (await this.updateCapabilityValue(capabilityName, value)) || updated; 
 		}
 		this._updatedCapabilities = new Map();
@@ -87,6 +86,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		if (this.hasCapability(capabilityName)) {
 			let oldValue = this.getCapabilityValue(capabilityName);
 			if (oldValue !== newValue) {
+				this.homey.log(`krakenDevice.updateCapabilityValue: Update ${capabilityName} with ${value}`);
 				await this.setCapabilityValue(capabilityName, newValue);
 				updated = true;
 			}
