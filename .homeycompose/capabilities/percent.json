@@ -1,6 +1,6 @@
 {
   "type": "number",
-  "title": {"en": "Tax Rate"},
+  "title": {"en": "Percent"},
   "getable": true,
   "setable": false,
   "icon": "/assets/tax.svg",

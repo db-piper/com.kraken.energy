@@ -447,7 +447,7 @@
     "percent": {
       "type": "number",
       "title": {
-        "en": "Tax Rate"
+        "en": "Percent"
       },
       "getable": true,
       "setable": false,
