@@ -285,10 +285,18 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._requiredCapabilities = new Map();
 	}
 
+	/**
+	 * Define a value to be added to the device's store
+	 * @param {string} 	name					Name of the value 
+	 * @param {any} 		value 				Value to be associated with the name
+	 */
 	defineStoreValue(name, value) {
 		this._storeValues[name] = value;
 	}
 
+	/**
+	 * Add defined values to the device's store
+	 */
 	async applyStoreValues() {
 		this.log(`krakenDevice.applyStoreValues: starting`);
 		const keys = this.getStoreKeys();

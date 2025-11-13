@@ -444,6 +444,21 @@
         }
       ]
     },
+    "percent": {
+      "type": "number",
+      "title": {
+        "en": "Tax Rate"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/tax.svg",
+      "insights": true,
+      "uiComponent": "sensor",
+      "decimals": 1,
+      "units": {
+        "en": "%"
+      }
+    },
     "period_day": {
       "type": "number",
       "title": {
