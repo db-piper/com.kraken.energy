@@ -99,6 +99,73 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+	 * Return the prices for the accounts import or export tariff
+	 * @param   {string}    atTime        String representation of the event date and time
+	 * @param   {boolean}   direction     True: export tariff; False: import tariff
+	 * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
+	 */
+	async getTariffDirectionPrices(atTime, direction) {
+		const tariff = await this.getTariffDirection(direction);
+		if (tariff !== undefined) {
+			const prices = await this.getPrices(atTime, tariff);
+			return prices;
+		} else {
+			return undefined;
+		}
+	}
+
+  /**
+	 * Get the price slot details of the next slot returning default values if not present
+	 * @param 	{string}	slotStart		Start datetime in ISO format
+	 * @param 	{boolean} direction		True - export; false - import 
+	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+	 * @returns {object}							Price slot structure with empty values if absent
+	 */
+	async getNextTariffSlotPrices(slotStart, halfHourly, direction) {
+		let nextPrices = undefined;
+		if (slotStart !== null) {
+			nextPrices = await this.getTariffDirectionPrices(slotStart, direction);
+		}
+		if (nextPrices === undefined) {
+			nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
+		}
+		return nextPrices;
+	}
+ 
+  /**
+	 * Indicate whether next day prcies are available
+	 * @param		{string}		atTime				DateTime that is sometime "today"
+	 * @param		{boolean}		direction			True for export, false for import
+	 * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
+	 */
+	async getTomorrowsPricesPresent(atTime, direction) {
+		const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({days: 1});
+		const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(),direction);
+		let present = false;
+		if (nextDayPrices === undefined) {
+			present = false;
+		} else {
+			if (('isHalfHourly' in nextDayPrices) && nextDayPrices.isHalfHourly) {
+				present = true;
+			} else {
+				present = null;
+			}
+ 		}
+		return present;
+	}
+
+  /**
+	 * Get date/time in Homey timezone
+	 * @param		{Date}				jsDate			JS Date object
+	 * @returns {DateTime}								DateTime object in Homey's timezone
+	 */
+	getLocalDateTime(jsDate) {
+		const timeZone = this._driver.homey.clock.getTimezone();
+		const dateTime = DateTime.fromJSDate(jsDate).setZone(timeZone);
+		return dateTime;
+  }
+
+  /**
    * Get the expiry date time of the last slot present in the account overview irrespective of tariff
    * @param   {boolean}       direction   True=Export, False=Import, undefined=both
    * @returns {object - JSON}             ISO date-time string of the expiry of the last slot currently in stored account overview
@@ -108,6 +175,17 @@ module.exports = class krakenAccountWrapper {
     const lastExpiry = await jsonata(transform).evaluate(this.accountData);
     return lastExpiry;
   }
+
+  	/**
+	 * Indicate whether a tariff is halfHourly or simple
+	 * @param 		{boolean} 		direction		True: export; False: import 
+	 * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
+	 */
+	async isHalfHourly(direction) {
+		const tariff = await this.getTariffDirection(direction);
+		const priceSlots = 'unitRates' in tariff;
+		return priceSlots; 
+	}
 
   /**
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
@@ -545,36 +623,6 @@ module.exports = class krakenAccountWrapper {
   hashDeviceId(deviceId) {
     return `d${deviceId.replaceAll("-","_")}`;
   }
-
-  // /**
-  //  * Return the query string to obtain current data from Octopus Mini Live Meter
-  //  * @returns {string} Stringified JSON representing the query
-  //  */
-  // async liveMeterDataQuery() {
-  //   const meterId = await this.getLiveMeterId();
-  //   const query = {
-  //     query: 
-  //       `query GetOctopusMiniReading(
-  //         $meterID: String!
-  //       ) 
-  //       {
-  //         smartMeterTelemetry(
-  //           deviceId: $meterID
-  //         ) 
-  //         {
-  //           demand
-  //           export
-  //           consumption
-  //           readAt
-  //         }
-  //       }`,
-  //     variables: {
-  //       meterID: meterId,
-  //     },
-  //     operationName: "GetOctopusMiniReading",
-  //   }
-  //   return JSON.stringify(query, null, 2);
-  // }
 
   /**
    * Return a price slot structure with appropriate values for a missing slot

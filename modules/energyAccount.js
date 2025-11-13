@@ -87,14 +87,14 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}										The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
-		const eventDateTime = this.getLocalDateTime(new Date(atTime));
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
 		return periodDay;
 	}
 
 	computePeriodStartDate(atTime, periodStartDay) {
-		const eventDateTime = this.getLocalDateTime(new Date(atTime));
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;																				
 		const periodStartDate = (currentDay < periodStartDay) ?											
@@ -111,7 +111,7 @@ module.exports = class energyAccount extends krakenDevice {
 
 	getPeriodStartDate(capabilityName, valueOnNull) {
 		const dateString = this.getCapabilityValue(capabilityName);
-		const date = (dateString === null) ? valueOnNull : this.getLocalDateTime(new Date(dateString));
+		const date = (dateString === null) ? valueOnNull : this.accountWrapper.getLocalDateTime(new Date(dateString));
 		return date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 	}
 
@@ -140,15 +140,15 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.accountWrapper.getCurrentBalance();
-		const exportPrices = await this.getTariffDirectionPrices(atTime, true);
+		const exportPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, true);
 		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = await this.getTariffDirectionPrices(atTime, false);
+		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
 
 		let currentPeriodStartDate = this.getPeriodStartDate("date_time.period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
 		let nextPeriodStartDate = this.getPeriodStartDate("date_time.next_period_start", currentPeriodStartDate.plus({ months: 1 }));
 		let newPeriod = false;
-		let eventDateTime = this.getLocalDateTime(new Date(atTime));
+		let eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 
 		if (eventDateTime > nextPeriodStartDate) {
 			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);

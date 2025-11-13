@@ -11,7 +11,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
-		const isHalfHourly = await this.isHalfHourly(this.isExport());
+		const isHalfHourly = await this.accountWrapper.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
 		const deviceCount = await this.accountWrapper.getDeviceCount();
@@ -96,7 +96,7 @@ module.exports = class productTariff extends krakenDevice {
 			this.log(`productTariff.isHalfHourlyTariff: Already in store`)
 			halfHourly = this.getStoreValue("isHalfHourly");
 		} else {
-			const tariff = this.getTariffDirectionDetail(direction);
+			const tariff = this.accountWrapper.getTariffDirection(direction);
 			if (tariff !== undefined) {
 				halfHourly = ('unitRates' in tariff);
 				this.log(`productTariff.isHalfHourlyTariff: Not in store, if tariff: ${halfHourly}`);
@@ -131,11 +131,11 @@ module.exports = class productTariff extends krakenDevice {
 
 		const direction = this.isExport();
 		const eventTime = new Date(atTime);
-		const tariff = await this.getTariffDirectionDetail(direction);
-		const tariffPrices = await this.getTariffDirectionPrices(atTime, direction);
-		const nextTariffPrices = await this.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
+		const tariff = await this.accountWrapper.getTariffDirection(direction);
+		const tariffPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, direction);
+		const nextTariffPrices = await this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
-		const deviceCount = await this.getDeviceCount();
+		const deviceCount = await this.accountWrapper.getDeviceCount();
 		const dispatchCount = plannedDispatches.length
 		const recordedSlotEnd = this.getCapabilityValue("date_time.slot_end");
 		const recordedSlotStart = this.getCapabilityValue("date_time.slot_start");
@@ -151,7 +151,7 @@ module.exports = class productTariff extends krakenDevice {
 		const tariffCode = tariff.tariffCode;
 		const unitPrice = .01 * tariffPrices.preVatUnitRate;																		//£ Untaxed
 		const unitPriceTaxed = .01 * tariffPrices.unitRate;																			//£
-		const taxRate = 100 * (unitPriceTaxed - unitPrice) / unitPrice;
+		const taxRate = 100 * (unitPriceTaxed - unitPrice) / unitPrice;													//%
 		const standingChargeTaxed = .01 * tariff.standingCharge;																//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;																//Wh
 		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);										//Taxed £.kWh
@@ -161,10 +161,10 @@ module.exports = class productTariff extends krakenDevice {
 		const slotQuartile = tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;																						//ISO
 		const slotEnd = tariffPrices.nextSlotStart;																							//ISO
-		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate		//£
-		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile
-		const nextDayPresent = await this.getTomorrowsPricesPresent(atTime, direction);					//Boolean
-		const nextSlotEnd = nextTariffAbsent ? null : this.getLocalDateTime(new Date(nextTariffPrices.nextSlotStart)).toISO();
+		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;		//£
+		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
+		const nextDayPresent = await this.accountWrapper.getTomorrowsPricesPresent(atTime, direction);					//Boolean
+		const nextSlotEnd = nextTariffAbsent ? null : this.accountWrapper.getLocalDateTime(new Date(nextTariffPrices.nextSlotStart)).toISO();
 
 		this.updateCapability("product_code", productCode );
 		this.updateCapability("tariff_code", tariffCode);
