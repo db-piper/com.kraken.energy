@@ -86,7 +86,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		if (this.hasCapability(capabilityName)) {
 			let oldValue = this.getCapabilityValue(capabilityName);
 			if (oldValue !== newValue) {
-				this.homey.log(`krakenDevice.updateCapabilityValue: Update ${capabilityName} with ${value}`);
+				this.homey.log(`krakenDevice.updateCapabilityValue: Update ${capabilityName} with ${newValue} from ${oldValue}`);
 				await this.setCapabilityValue(capabilityName, newValue);
 				updated = true;
 			}
