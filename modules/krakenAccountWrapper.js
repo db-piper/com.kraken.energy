@@ -555,7 +555,7 @@ module.exports = class krakenAccountWrapper {
       let dispatches = [];
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
-        if (deviceKey in response.data) {
+        if ((deviceKey in response.data) && (Array.isArray(response.data[deviceKey]))) {
           for (const dispatch of response.data[deviceKey]) {
             dispatches.push(dispatch);
           }
