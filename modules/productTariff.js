@@ -36,10 +36,12 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
 			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
 		}
-		if (deviceCount > 0){
+		if (deviceCount > 0) {
 			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
 			this.defineCapability("item_count.dispatches", {"title": {"en": 'Planned Dispatches'}});
 		}
+		this.defineCapability("date_time.full_slot_start", {"title": {"en": "SlotStartH"}, "uiComponent": null}, []);
+		this.defineCapability("date_time.full_slot_end", {"title": {"en": "SlotEndH"}, "uiComponent": null}, []);
 
 		await this.applyCapabilities(true);
 		await this.applyStoreValues();
@@ -137,8 +139,8 @@ module.exports = class productTariff extends krakenDevice {
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const deviceCount = await this.accountWrapper.getDeviceCount();
 		const dispatchCount = plannedDispatches.length
-		const recordedSlotEnd = this.getCapabilityValue("date_time.slot_end");
-		const recordedSlotStart = this.getCapabilityValue("date_time.slot_start");
+		const recordedSlotEnd = this.getCapabilityValue("date_time.full_slot_end");
+		const recordedSlotStart = this.getCapabilityValue("date_time.full_slot_start");
 		const firstTime = recordedSlotEnd === null;
 		const propertyName = direction ? "export" : "consumption";
 		const newEnergyReading = +liveMeterReading[propertyName];																//Wh as integer
@@ -160,11 +162,17 @@ module.exports = class productTariff extends krakenDevice {
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;							//W
 		const slotQuartile = tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;																						//ISO
-		const slotEnd = tariffPrices.nextSlotStart;																							//ISO
+		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
+		const slotEnd = tariffPrices.nextSlotStart;			
+		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");																				//ISO
 		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;		//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
 		const nextDayPresent = await this.accountWrapper.getTomorrowsPricesPresent(atTime, direction);					//Boolean
-		const nextSlotEnd = nextTariffAbsent ? null : this.accountWrapper.getLocalDateTime(new Date(nextTariffPrices.nextSlotStart)).toISO();
+		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;						//ISO
+		let shortNextEnd = null;
+		if (!nextTariffAbsent) {
+			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
+		}
 
 		this.updateCapability("product_code", productCode );
 		this.updateCapability("tariff_code", tariffCode);
@@ -176,12 +184,14 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("measure_power.average", slotPower);
 		this.updateCapability("slot_quartile", slotQuartile);
 		this.updateCapability("percent.tax_rate", taxRate);
-		this.updateCapability("date_time.slot_start", slotStart);
-		this.updateCapability("date_time.slot_end", slotEnd);
+		this.updateCapability("date_time.slot_start", shortStart);
+		this.updateCapability("date_time.full_slot_start", slotStart);
+		this.updateCapability("date_time.slot_end", shortEnd);
+		this.updateCapability("date_time.full_slot_end", slotEnd);
 		this.updateCapability("data_presence.next_day_prices",nextDayPresent);
 		this.updateCapability("measure_monetary.next_unit_price_taxed", nextUnitPriceTaxed);
 		this.updateCapability("slot_quartile.next_slot_quartile",nextQuartile);
-		this.updateCapability("date_time.next_slot_end",nextSlotEnd);
+		this.updateCapability("date_time.next_slot_end",shortNextEnd);
 		this.updateCapability("item_count.devices", deviceCount);
 		this.updateCapability("item_count.dispatches", dispatchCount);
 

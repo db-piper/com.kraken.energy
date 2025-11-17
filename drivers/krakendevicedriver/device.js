@@ -141,18 +141,18 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Establish a capability definition to be applied to a device
-	 * @param {string} 	name				Name of the capability 
-	 * @param {object} 	overrides 	Object defining capability options to be set
+	 * @param {string} 		name				Name of the capability 
+	 * @param {object} 		overrides 	Object defining capability options to be set
+	 * @param {string[]}	force				List of option names to be forced to update		
 	 */
-  defineCapability(name, overrides = null) {
-		this._requiredCapabilities.set(name, overrides);
+  defineCapability(name, overrides = {}, force = []) {
+		this._requiredCapabilities.set(name, {overrides: overrides, force: force});
 	}
 
 	/**
 	 * Constrain the capabilities of a device to match the required list of capabilities
-	 * @param {boolean}		forceOptions	Capability options will be applied too all capabilities, not just newly added ones 
 	 */
-	async applyCapabilities(forceOptions = false) {
+	async applyCapabilities() {
 		this.homey.log(`krakenDevice.applyCapabilities: starting`);
 		const definedCapabilitiesNames = this.getCapabilities();
 		const requiredCapabilitiesNames = Array.from(this._requiredCapabilities.keys());
@@ -165,20 +165,32 @@ module.exports = class krakenDevice extends Homey.Device {
 		}
 
 		for (const requiredCapabilityName of requiredCapabilitiesNames) {
-			if (!(definedCapabilitiesNames.includes(requiredCapabilityName))) {		// Required capability is not defined
+			if (!(definedCapabilitiesNames.includes(requiredCapabilityName))) {				// Required capability is not defined - add it
 				this.homey.log(`krakenDevice.restrictCapabilities: Add capability ${requiredCapabilityName}`);
 				await this.addCapability(requiredCapabilityName);
+				const capabilityOptions = this._requiredCapabilities.get(requiredCapabilityName).overrides;
+				await this.setCapabilityOptions(requiredCapabilityName, capabilityOptions);
 				addedCapabilityNames.push(requiredCapabilityName);
 			}
 		}
 
-		const setOptionsNames = forceOptions ? requiredCapabilitiesNames : addedCapabilityNames;
-		for (const setOptionsName of setOptionsNames) {
-			const overrides = this._requiredCapabilities.get(setOptionsName);
-			if (overrides !== null) {
-				await this.setCapabilityOptions(setOptionsName, overrides);
-				this.homey.log(`krakenDevice.restrictCapabilities: Change capability options ${setOptionsName} overrides ${JSON.stringify(overrides)}`);
-			}				
+		for (const setOptionsName of requiredCapabilitiesNames) {							// Each requiredCapabilityName
+			if (!addedCapabilityNames.includes(setOptionsName)) {								//		Not just added - so we are interested in a force list
+				const forceNames = this._requiredCapabilities.get(setOptionsName).force;
+				if (forceNames.length !== 0){																			//				Capability has a force list
+					const overrides = this._requiredCapabilities.get(setOptionsName).overrides;
+					let appliedOverrides = {};
+					for (const forceName of forceNames) {														//						For each force name
+						if (forceName in overrides) {																	//								There is an override for this name
+							appliedOverrides[forceName] = overrides[forceName];					//										Prepare to apply the override
+						}
+					}
+					if (Object.getOwnPropertyNames(appliedOverrides).length > 0) {	//						There some options being forced
+						this.homey.log(`krakenDevice.restrictCapabilities: Change options on ${setOptionsName} overrides ${JSON.stringify(appliedOverrides)}`);
+						await this.setCapabilityOptions(setOptionsName, appliedOverrides);
+					}
+				}
+			}
 		}
 		
 		this._requiredCapabilities = new Map();
