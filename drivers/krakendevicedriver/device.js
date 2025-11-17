@@ -94,20 +94,20 @@ module.exports = class krakenDevice extends Homey.Device {
 		return updated;
 	}
 
-	/**
-	 * Update capability options on the named capability of this device
-	 * @param			{string}				capabilityName		The name of the capability whose options are to be set
-	 * @param			{object}				capabilityOptions	JSON object with capability name, value pairs
-	 * @returns		{boolean}													True if the capability is found
-	 */
-	async updateCapabilityOptions(capabilityName, capabilityOptions) {
-		if (this.hasCapability(capabilityName)) {
-			await this.setCapabilityOptions(capabilityName, capabilityOptions);
-			return true;
-		} else {
-			return false;
-		}
-	}
+	// /**
+	//  * Update capability options on the named capability of this device
+	//  * @param			{string}				capabilityName		The name of the capability whose options are to be set
+	//  * @param			{object}				capabilityOptions	JSON object with capability name, value pairs
+	//  * @returns		{boolean}													True if the capability is found
+	//  */
+	// async updateCapabilityOptions(capabilityName, capabilityOptions) {
+	// 	if (this.hasCapability(capabilityName)) {
+	// 		await this.setCapabilityOptions(capabilityName, capabilityOptions);
+	// 		return true;
+	// 	} else {
+	// 		return false;
+	// 	}
+	// }
 
 	/**
 	 * Define the standard interface for processEvent.
