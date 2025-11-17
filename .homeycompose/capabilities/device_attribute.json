@@ -1,0 +1,8 @@
+{
+  "type": "string",
+  "title": {"en": "Device"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/devices.svg",
+  "insights": false
+}

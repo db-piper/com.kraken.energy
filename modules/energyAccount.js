@@ -62,6 +62,7 @@ module.exports = class energyAccount extends krakenDevice {
 	async onDeleted() {
 		this.log('energyAccount Device:onDeleted - has been deleted');
 	}
+
 	/**
 	 * onSettings is called when the user updates the device's settings.
 	 * @param 	{object} 		event 						 	The onSettings event data

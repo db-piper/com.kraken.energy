@@ -1,0 +1,10 @@
+{
+  "type": "string",
+  "title": {"en": "Duration"},
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/timer.svg",
+  "insights": false,
+  "uiComponent": "sensor",
+  "decimals": 0
+}   
