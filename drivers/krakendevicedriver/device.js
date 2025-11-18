@@ -131,7 +131,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	/**
 	 * Indicate whether the hour has changed between two event times
 	 * @param     {jsDate}   	newTime   The later time
-	 * @param     {jaDate}   	oldTime   The earlier time
+	 * @param     {jsDate}   	oldTime   The earlier time
 	 * @returns   {boolean}            	True if the UTC hour of the two datetimes is different
 	 */
 	hourChange(newTime, oldTime) {

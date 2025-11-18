@@ -295,6 +295,28 @@
       "icon": "/assets/event.svg",
       "insights": false
     },
+    "device_attribute": {
+      "type": "string",
+      "title": {
+        "en": "Device"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/devices.svg",
+      "insights": false
+    },
+    "duration": {
+      "type": "string",
+      "title": {
+        "en": "Duration"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/timer.svg",
+      "insights": false,
+      "uiComponent": "sensor",
+      "decimals": 0
+    },
     "item_count": {
       "type": "number",
       "title": {

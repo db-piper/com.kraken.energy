@@ -29,6 +29,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.day_export_value",{"title": { "en": "Day Export Value" },"decimals": 2,"units": {"en": "£"}});
 		this.defineCapability("date_time.period_start",{"title": {"en": "This Period Start" }});
 		this.defineCapability("date_time.next_period_start",{"title": {"en": "Next Start Day" }});
+		this.defineCapability("date_time.full_period_start", {"title": {"en": "Full Start Date"}, "uiComponent": null}, ["uiComponent"]);
+		this.defineCapability("date_time.full_next_period", {"title": {"en": "Full Next Start"}, "uiComponent": null}, ["uiComponent"]);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -146,8 +148,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
 
-		let currentPeriodStartDate = this.getPeriodStartDate("date_time.period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
-		let nextPeriodStartDate = this.getPeriodStartDate("date_time.next_period_start", currentPeriodStartDate.plus({ months: 1 }));
+		let currentPeriodStartDate = this.getPeriodStartDate("date_time.full_period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
+		let nextPeriodStartDate = this.getPeriodStartDate("date_time.full_next_period", currentPeriodStartDate.plus({ months: 1 }));
 		let newPeriod = false;
 		let eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 
@@ -218,8 +220,11 @@ module.exports = class energyAccount extends krakenDevice {
 
 		this.updateCapability("period_day.period_duration", periodLength);
 		this.updateCapability("measure_monetary.account_balance", currentBalance);
-		this.updateCapability("date_time.period_start", currentPeriodStartDate.toISO());
-		this.updateCapability("date_time.next_period_start", nextPeriodStartDate.toISO());
+		this.updateCapability("date_time.period_start", currentPeriodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
+		this.updateCapability("date_time.next_period_start", nextPeriodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
+
 		this.updateCapability("meter_power.export", liveMeterReading.export / 1000);
 		this.updateCapability("meter_power.import", liveMeterReading.consumption / 1000);
 		this.updateCapability("meter_power.period_export", periodUpdatedExport / 1000);
