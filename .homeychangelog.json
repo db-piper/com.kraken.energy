@@ -67,5 +67,8 @@
   },
   "1.0.28": {
     "en": "Implement queued capability update architecture and fix capability listener not found error"
+  },
+  "1.0.29": {
+    "en": "Simplify Product Tariff device updates; remove \"untaxed\" capabilities and add \"tax rate\" capability; shorten date/time formats on all devices; refactor and tidy code"
   }
 }
