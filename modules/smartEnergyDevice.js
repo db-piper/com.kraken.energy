@@ -12,9 +12,12 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		await super.onInit();
 		this.defineCapability("device_attribute.name", {"title": {"en": "Device Name"}});
     this.defineCapability("device_attribute.status", {"title": {"en": "Current Status"}});
-    this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Planned Dispatches"}});
-    this.defineCapability("date_time.next_dispatch_start", {"title": {"en": "Next Dispatch"}});
-    this.defineCapability("duration.dispatch_duration", {"title": {"en": "Dispatch Duration"}});
+    this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Planned Dispatches"}});		//Integer
+		this.defineCapability("data_presence.in_dispatch", {"title": {"en": "Dispatching Now"}});						//Boolean
+		this.defineCapability("date_time.current_dispatch_start", {"title": {"en": "Dispatch Start"}});			//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.current_dispatch_end", {"title": {"en": "Dispatch End"}});					//DD/mm HH:MM [dd/LL T]
+    this.defineCapability("duration.remaining_duration", {"title": {"en": "Remaining Duration"}});			//HH:MM (duration.toFormat(hh:mm))
+    this.defineCapability("date_time.next_dispatch_start", {"title": {"en": "Next Dispatch"}});					//DD/mm HH:MM [dd/LL T]
 
     await this.applyCapabilities();
 		await this.applyStoreValues();

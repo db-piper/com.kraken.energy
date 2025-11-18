@@ -2,9 +2,9 @@
 
 const Homey = require('homey');
 const productTariff = require('../../modules/productTariff');
-//const miniMeter = require('../../modules/miniMeter');
 const energyAccount = require('../../modules/energyAccount');
 const managerEvent = require('../../modules/managerEvent');
+const smartEnergyDevice = require('../../modules/smartEnergyDevice');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -34,12 +34,25 @@ module.exports = class krakenDriver extends Homey.Driver {
   onMapDeviceClass(device) {
     const deviceClass = device.getStoreValue("octopusClass");
     let nodeClass = undefined;
+    // const classSwitch = {
+    //   "octopusTariff": productTariff,
+    //   "octopusAccount": energyAccount,
+    //   "smartDevice": smartEnergyDevice
+    // };
+    // if (device in classSwitch){
+    //   nodeClass = classSwitch[device];
+    //   this.log(`krakenDriver.onMapDeviceClass: device nickname ${deviceClass} nodeClass ${nodeClass.name}`);
+    // }
+    // return nodeClass;
     switch (deviceClass) {
       case "octopusTariff":
         nodeClass = productTariff;
         break;
       case "octopusAccount":
         nodeClass = energyAccount;
+        break;
+      case "smartDevice":
+        nodeClass = smartEnergyDevice;
         break;
       default:
     }
