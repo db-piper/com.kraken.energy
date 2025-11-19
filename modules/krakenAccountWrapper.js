@@ -21,6 +21,14 @@ module.exports = class krakenAccountWrapper {
     this._driver = driver;
     this._dataFetcher = new dataFetcher(this._driver);
     this._accountData = undefined;
+    this._valid_device_status_codes = [
+      "SMART_CONTROL_CAPABLE", 
+      "SMART_CONTROL_IN_PROGRESS", 
+      "BOOSTING", 
+      "SMART_CONTROL_OFF", 
+      "SMART_CONTROL_NOT_AVAILABLE", 
+      "LOST_CONNECTION"
+    ];
   }
 
   /**
@@ -83,7 +91,7 @@ module.exports = class krakenAccountWrapper {
   }
 
   async getDeviceIds() {
-    let transform = '[data.devices[status.currentState in ["SMART_CONTROL_CAPABLE", "SMART_CONTROL_IN_PROGRESS", "BOOSTING", "SMART_CONTROL_OFF", "SMART_CONTROL_NOT_AVAILABLE", "LOST_CONNECTION"]].id]';
+    let transform = `[data.devices[status.currentState in ${JSON.stringify(this._valid_device_status_codes)}].id]`;
     return await jsonata(transform).evaluate(this.accountData);
   }
 
@@ -464,7 +472,7 @@ module.exports = class krakenAccountWrapper {
     } else {
       this._driver.homey.log(`Account data ID: ${this.accountData.data.account.id}`);
       const expression = jsonata(this.mpanProductTariffsTransform());
-      const deviceDefinitions = await expression.evaluate(this.accountData);
+      const tariffDeviceDefinitions = await expression.evaluate(this.accountData);
       // const octopusMini = {
       //   name: "Octopus Mini",
       //   data: {
@@ -476,20 +484,20 @@ module.exports = class krakenAccountWrapper {
       //   },
       //   icon: "/meter.svg"
       // };
-      const octopusAccount = {
-        name: "Octopus Account",
-        data: {
-          id: `${this.accountId} Octopus Account`
-        },
-        settings: {},
-        store: {
-          octopusClass: "octopusAccount"
-        },
-        icon: "/account.svg"
-      };
-      //deviceDefinitions.push(octopusMini, octopusAccount);
-      deviceDefinitions.push(octopusAccount);
-      return deviceDefinitions;
+      // const octopusAccount = {
+      //   name: "Octopus Account",
+      //   data: {
+      //     id: `${this.accountId} Octopus Account`
+      //   },
+      //   settings: {},
+      //   store: {
+      //     octopusClass: "octopusAccount"
+      //   },
+      //   icon: "/account.svg"
+      // };
+      // //deviceDefinitions.push(octopusMini, octopusAccount);
+      // tariffDeviceDefinitions.push(octopusAccount);
+      return tariffDeviceDefinitions;
 
     }
 
@@ -501,36 +509,61 @@ module.exports = class krakenAccountWrapper {
    */
   mpanProductTariffsTransform() {
     //let accountNumber = this.accountId;
-    let transform = `data[].account.electricityAgreements.{
-        "name" : $join(
-          [
-            meterPoint.agreements.tariff.isExport ? "Export" : "Import",
-            " Tariff"
-          ]),
-        "data" : {
-          "id": $join(
-            [
-              "${this.accountId}",
-              " ",
-              meterPoint.agreements.tariff.isExport ? "Export" : "Import"
-            ])
+    let transform = `
+      $append(
+        data[].account.electricityAgreements.{
+              "name" : $join(
+                [
+                  meterPoint.agreements.tariff.isExport ? "Export" : "Import",
+                  " Tariff"
+                ]),
+              "data" : {
+                "id": $join(
+                  [
+                    "${this.accountId}",
+                    " ",
+                    meterPoint.agreements.tariff.isExport ? "Export" : "Import"
+                  ])
+                },
+              "settings" : {
+              },
+              "store" : {
+                "isExport" : meterPoint.agreements.tariff.isExport,
+                "octopusClass" : "octopusTariff",
+                "isHalfHourly":meterPoint.agreements.tariff.$exists(unitRates)
+              },
+              "icon" : $join (
+                [
+                  "/",
+                  meterPoint.agreements.tariff.isExport ? "export" : "import",
+                  ".svg"
+                ]
+              )
+            }
+        ,$append(
+          data[]{
+            "name": "Octopus Account",
+            "data": {
+              "id": "${this.accountId} Octopus Account"
+            },
+            "settings": {},
+            "store": {
+              "octopusClass": "octopusAccount"
+            },
+            "icon": "/account.svg"
           },
-        "settings" : {
-        },
-        "store" : {
-          "isExport" : meterPoint.agreements.tariff.isExport,
-          "octopusClass" : "octopusTariff",
-          "isHalfHourly":meterPoint.agreements.tariff.$exists(unitRates)
-        },
-        "icon" : $join (
-          [
-            "/",
-            meterPoint.agreements.tariff.isExport ? "export" : "import",
-            ".svg"
-          ]
+          data[].devices[status.currentState in ${JSON.stringify(this._valid_device_status_codes)}].{
+            "name": name,
+            "data": {
+              "id": id
+            },
+            "store": {
+              "octopusClass":"smartDevice"
+            },
+            "icon": "device.svg"
+          }
         )
-      }`
-    this._driver.homey.log(`krakenAccountWrapper.mpanProductTariffsTransform: ${JSON.stringify(transform)}`);
+      )`
     return transform
   }
 
