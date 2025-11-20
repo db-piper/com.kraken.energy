@@ -60,6 +60,22 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	}
 
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
+		
+		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
+
+		const deviceId = this.getStoreValue("deviceId");
+		const deviceData = await this.accountWrapper.getDevice(deviceId);
+		const deviceName = deviceData.name;
+		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
+
+		this.homey.log(`smartEnergyDevice.processEvent: ID ${deviceId} Name ${deviceName} Status: ${deviceStatus}`);
+
+		this.updateCapabilityValue("device_attribute.name", deviceName);
+		this.updateCapabilityValue("device_attribute.status", deviceStatus);
+
+		updates = this.updateCapabilities(updates);
+
+		return updates;
 	}
 
 }

@@ -138,7 +138,12 @@ module.exports = class productTariff extends krakenDevice {
 		const nextTariffPrices = await this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const deviceCount = await this.accountWrapper.getDeviceCount();
-		const dispatchCount = plannedDispatches.length
+		const deviceKeys = Object.getOwnPropertyNames(plannedDispatches);
+		let dispatchCount = 0;
+		for (const deviceKey of deviceKeys) {
+			dispatchCount += plannedDispatches[deviceKey].length;
+		}
+		//const dispatchCount = plannedDispatches.length
 		const recordedSlotEnd = this.getCapabilityValue("date_time.full_slot_end");
 		const recordedSlotStart = this.getCapabilityValue("date_time.full_slot_start");
 		const firstTime = recordedSlotEnd === null;

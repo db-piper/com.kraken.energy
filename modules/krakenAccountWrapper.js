@@ -22,13 +22,19 @@ module.exports = class krakenAccountWrapper {
     this._dataFetcher = new dataFetcher(this._driver);
     this._accountData = undefined;
     this._valid_device_status_codes = [
-      "SMART_CONTROL_CAPABLE", 
-      "SMART_CONTROL_IN_PROGRESS", 
-      "BOOSTING", 
-      "SMART_CONTROL_OFF", 
-      "SMART_CONTROL_NOT_AVAILABLE", 
+      "SMART_CONTROL_CAPABLE",
+      "SMART_CONTROL_IN_PROGRESS",
+      "BOOSTING",
+      "SMART_CONTROL_OFF",
       "LOST_CONNECTION"
     ];
+    this._valid_device_status_translations = {
+      SMART_CONTROL_CAPABLE: `Capable`,
+      SMART_CONTROL_IN_PROGRESS: `In Progress`,
+      BOOSTING: `Boosting`,
+      SMART_CONTROL_OFF: `Control Off`,
+      LOST_CONNECTION: `Lost Connection`
+    };
   }
 
   /**
@@ -91,7 +97,8 @@ module.exports = class krakenAccountWrapper {
   }
 
   async getDeviceIds() {
-    let transform = `[data.devices[status.currentState in ${JSON.stringify(this._valid_device_status_codes)}].id]`;
+    const statusCodes = JSON.stringify(Object.getOwnPropertyNames(this._valid_device_status_translations));
+    const transform = `[data.devices[status.currentState in ${statusCodes}].id]`;
     return await jsonata(transform).evaluate(this.accountData);
   }
 
@@ -107,70 +114,70 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-	 * Return the prices for the accounts import or export tariff
-	 * @param   {string}    atTime        String representation of the event date and time
-	 * @param   {boolean}   direction     True: export tariff; False: import tariff
-	 * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
-	 */
-	async getTariffDirectionPrices(atTime, direction) {
-		const tariff = await this.getTariffDirection(direction);
-		if (tariff !== undefined) {
-			const prices = await this.getPrices(atTime, tariff);
-			return prices;
-		} else {
-			return undefined;
-		}
-	}
+   * Return the prices for the accounts import or export tariff
+   * @param   {string}    atTime        String representation of the event date and time
+   * @param   {boolean}   direction     True: export tariff; False: import tariff
+   * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
+   */
+  async getTariffDirectionPrices(atTime, direction) {
+    const tariff = await this.getTariffDirection(direction);
+    if (tariff !== undefined) {
+      const prices = await this.getPrices(atTime, tariff);
+      return prices;
+    } else {
+      return undefined;
+    }
+  }
 
   /**
-	 * Get the price slot details of the next slot returning default values if not present
-	 * @param 	{string}	slotStart		Start datetime in ISO format
-	 * @param 	{boolean} direction		True - export; false - import 
-	 * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
-	 * @returns {object}							Price slot structure with empty values if absent
-	 */
-	async getNextTariffSlotPrices(slotStart, halfHourly, direction) {
-		let nextPrices = undefined;
-		if (slotStart !== null) {
-			nextPrices = await this.getTariffDirectionPrices(slotStart, direction);
-		}
-		if (nextPrices === undefined) {
-			nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
-		}
-		return nextPrices;
-	}
- 
-  /**
-	 * Indicate whether next day prcies are available
-	 * @param		{string}		atTime				DateTime that is sometime "today"
-	 * @param		{boolean}		direction			True for export, false for import
-	 * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
-	 */
-	async getTomorrowsPricesPresent(atTime, direction) {
-		const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({days: 1});
-		const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(),direction);
-		let present = false;
-		if (nextDayPrices === undefined) {
-			present = false;
-		} else {
-			if (('isHalfHourly' in nextDayPrices) && nextDayPrices.isHalfHourly) {
-				present = true;
-			} else {
-				present = null;
-			}
- 		}
-		return present;
-	}
+   * Get the price slot details of the next slot returning default values if not present
+   * @param 	{string}	slotStart		Start datetime in ISO format
+   * @param 	{boolean} direction		True - export; false - import 
+   * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
+   * @returns {object}							Price slot structure with empty values if absent
+   */
+  async getNextTariffSlotPrices(slotStart, halfHourly, direction) {
+    let nextPrices = undefined;
+    if (slotStart !== null) {
+      nextPrices = await this.getTariffDirectionPrices(slotStart, direction);
+    }
+    if (nextPrices === undefined) {
+      nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
+    }
+    return nextPrices;
+  }
 
   /**
-	 * Get date/time in Homey timezone
-	 * @param		{Date}				jsDate			JS Date object
-	 * @returns {DateTime}								DateTime object in Homey's timezone
-	 */
-	getLocalDateTime(jsDate) {
-		const timeZone = this._driver.homey.clock.getTimezone();
-		const dateTime = DateTime.fromJSDate(jsDate).setZone(timeZone);
-		return dateTime;
+   * Indicate whether next day prcies are available
+   * @param		{string}		atTime				DateTime that is sometime "today"
+   * @param		{boolean}		direction			True for export, false for import
+   * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
+   */
+  async getTomorrowsPricesPresent(atTime, direction) {
+    const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({ days: 1 });
+    const nextDayPrices = await this.getTariffDirectionPrices(nextDay.toISO(), direction);
+    let present = false;
+    if (nextDayPrices === undefined) {
+      present = false;
+    } else {
+      if (('isHalfHourly' in nextDayPrices) && nextDayPrices.isHalfHourly) {
+        present = true;
+      } else {
+        present = null;
+      }
+    }
+    return present;
+  }
+
+  /**
+   * Get date/time in Homey timezone
+   * @param		{Date}				jsDate			JS Date object
+   * @returns {DateTime}								DateTime object in Homey's timezone
+   */
+  getLocalDateTime(jsDate) {
+    const timeZone = this._driver.homey.clock.getTimezone();
+    const dateTime = DateTime.fromJSDate(jsDate).setZone(timeZone);
+    return dateTime;
   }
 
   /**
@@ -184,16 +191,16 @@ module.exports = class krakenAccountWrapper {
     return lastExpiry;
   }
 
-  	/**
-	 * Indicate whether a tariff is halfHourly or simple
-	 * @param 		{boolean} 		direction		True: export; False: import 
-	 * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
-	 */
-	async isHalfHourly(direction) {
-		const tariff = await this.getTariffDirection(direction);
-		const priceSlots = 'unitRates' in tariff;
-		return priceSlots; 
-	}
+  /**
+ * Indicate whether a tariff is halfHourly or simple
+ * @param 		{boolean} 		direction		True: export; False: import 
+ * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
+ */
+  async isHalfHourly(direction) {
+    const tariff = await this.getTariffDirection(direction);
+    const priceSlots = 'unitRates' in tariff;
+    return priceSlots;
+  }
 
   /**
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
@@ -223,6 +230,20 @@ module.exports = class krakenAccountWrapper {
       };
     }
     return prices;
+  }
+
+  async getDevice(id) {
+    const deviceTransform = `data.devices[id="${id}"]`;
+    const device = await jsonata(deviceTransform).evaluate(this.accountData);
+    return device;
+  }
+
+  translateDeviceStatus(status) {
+    let translation = null;
+    if (status in this._valid_device_status_translations) {
+      translation = this._valid_device_status_translations[status];
+    }
+    return translation;
   }
 
   /**
@@ -435,6 +456,24 @@ module.exports = class krakenAccountWrapper {
       accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
       success = accountData !== undefined;
       if (success) {
+        //TODO REMOVE THIS GASH CODE
+        accountData.data.devices = [
+          {
+            id: "00000000-000a-4000-8020-15ffff00d84d",
+            name: null,
+            status: {
+              currentState: "SMART_CONTROL_NOT_AVAILABLE"
+            }
+          },
+          {
+            id: "00000000-0009-4000-8020-0000000181f6",
+            name: "Hypervolt Home 3",
+            status: {
+              currentState: "SMART_CONTROL_IN_PROGRESS"
+            }
+          }
+        ];
+        //TODO END GASH
         this._accountData = accountData;
       }
     }
@@ -450,6 +489,25 @@ module.exports = class krakenAccountWrapper {
     const accountQuery = this.accountDataQuery(this.accountId, this.deviceIds);
     const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
+      //TODO: REMOVE THIS GASH CODE
+      accountData.data.devices = [
+        {
+          id: "00000000-000a-4000-8020-15ffff00d84d",
+          name: null,
+          status: {
+            currentState: "SMART_CONTROL_NOT_AVAILABLE"
+          }
+        },
+        {
+          id: "00000000-0009-4000-8020-0000000181f6",
+          name: "Hypervolt Home 3",
+          status: {
+            currentState: "SMART_CONTROL_IN_PROGRESS"
+          }
+        }
+      ];
+      //TODO: END GASH
+      //this._driver.homey.log(JSON.stringify(this.accountData, null, 2));
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
       return true;
@@ -470,46 +528,20 @@ module.exports = class krakenAccountWrapper {
     if (meterId === undefined || meterId === null || meterId.length == 0) {
       return [];
     } else {
-      this._driver.homey.log(`Account data ID: ${this.accountData.data.account.id}`);
-      const expression = jsonata(this.mpanProductTariffsTransform());
+      const expression = jsonata(this.homeyDevicesTransform());
       const tariffDeviceDefinitions = await expression.evaluate(this.accountData);
-      // const octopusMini = {
-      //   name: "Octopus Mini",
-      //   data: {
-      //     id: `${this.accountId} Octopus Mini`
-      //   },
-      //   settings: {},
-      //   store: {
-      //     octopusClass: "octopusMini"
-      //   },
-      //   icon: "/meter.svg"
-      // };
-      // const octopusAccount = {
-      //   name: "Octopus Account",
-      //   data: {
-      //     id: `${this.accountId} Octopus Account`
-      //   },
-      //   settings: {},
-      //   store: {
-      //     octopusClass: "octopusAccount"
-      //   },
-      //   icon: "/account.svg"
-      // };
-      // //deviceDefinitions.push(octopusMini, octopusAccount);
-      // tariffDeviceDefinitions.push(octopusAccount);
       return tariffDeviceDefinitions;
-
     }
-
   }
 
   /**
    * Get the Jsonata transform to abstract product tariff for all MPAN on the account
    * @returns {string} Jsonata query to perform the transform
    */
-  mpanProductTariffsTransform() {
+  homeyDevicesTransform() {
     //let accountNumber = this.accountId;
-    let transform = `
+    const statusCodes = JSON.stringify(Object.getOwnPropertyNames(this._valid_device_status_translations));
+    const transform = `
       $append(
         data[].account.electricityAgreements.{
               "name" : $join(
@@ -552,13 +584,14 @@ module.exports = class krakenAccountWrapper {
             },
             "icon": "/account.svg"
           },
-          data[].devices[status.currentState in ${JSON.stringify(this._valid_device_status_codes)}].{
+          data[].devices[status.currentState in ${statusCodes}].{
             "name": name,
             "data": {
               "id": id
             },
             "store": {
-              "octopusClass":"smartDevice"
+              "octopusClass": "smartDevice",
+              "deviceId": id
             },
             "icon": "device.svg"
           }
@@ -576,8 +609,8 @@ module.exports = class krakenAccountWrapper {
     const deviceIds = await this.getDeviceIds();
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds);
     const result = {
-      reading : undefined,
-      dispatches : undefined
+      reading: undefined,
+      dispatches: {}
     };
     const response = await this._dataFetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
@@ -585,17 +618,39 @@ module.exports = class krakenAccountWrapper {
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         result.reading = readingArray[0];
       }
-      let dispatches = [];
+      //TODO: GASH
+      let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
+      let gashDispatches = {
+        "d00000000_0009_4000_8020_0000000181f6": [
+          {
+            "end": today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+            "energyAddedKwh": -11.618,
+            "start": today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
+            "type": "SMART"
+          },
+          {
+            "end": today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
+            "energyAddedKwh": -3.417,
+            "start": today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
+            "type": "SMART"
+          },
+          {
+            "end": today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
+            "energyAddedKwh": -70.3,
+            "start": today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
+            "type": "SMART"
+          }
+        ],
+        "d00000000_000a_4000_8020_15ffff00d84d": null
+      };
+      response.data["d00000000_0009_4000_8020_0000000181f6"] = gashDispatches["d00000000_0009_4000_8020_0000000181f6"];
+      //TODO: END GASH
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
-        if ((deviceKey in response.data) && (Array.isArray(response.data[deviceKey]))) {
-          for (const dispatch of response.data[deviceKey]) {
-            dispatches.push(dispatch);
-          }
-          this._driver.log(JSON.stringify(dispatches));
+        if (Array.isArray(response.data[deviceKey])) {
+          result.dispatches[deviceKey] = response.data[deviceKey];
         }
       }
-      result.dispatches = dispatches;
     }
     return result;
   }
@@ -609,7 +664,7 @@ module.exports = class krakenAccountWrapper {
   buildDispatchQuery(meterId, deviceIds) {
     const operationName = 'getHighFrequencyData';
     let variableDeclarations = '$meterId: String!';
-    let queryDeclarations = 
+    let queryDeclarations =
       `smartMeterTelemetry(
         deviceId: $meterId
       ) 
@@ -654,7 +709,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}                Hashed deviceId usable as a GQL query label        
    */
   hashDeviceId(deviceId) {
-    return `d${deviceId.replaceAll("-","_")}`;
+    return `d${deviceId.replaceAll("-", "_")}`;
   }
 
   /**
@@ -686,7 +741,6 @@ module.exports = class krakenAccountWrapper {
     const timeZone = this._driver.homey.clock.getTimezone();
     const date = DateTime.fromISO(dateString, { zone: timeZone, setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
     const monthDay = date.minus({ days: 1 }).day;
-    this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: monthDay: ${monthDay}`);
     return monthDay;
   }
 
@@ -721,7 +775,7 @@ module.exports = class krakenAccountWrapper {
         data.
           devices[
             status.
-              currentState = "SMART_CONTROL_IN_PROGRESS"
+              currentState in ${JSON.stringify(this._valid_device_status_codes)}
           ].
         id
       ]`;
@@ -735,7 +789,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {boolean}                       True indicates that the data must be refreshed 
    */
   async checkAccountDataRefresh(atTime) {
-    this._driver.log(`krakenAccountWrapper.checkAccountDataRefresh: starting`);
     let dataRefresh = true;
     if (this._accountData !== undefined) {
       const timeZone = this._driver.homey.clock.getTimezone();
