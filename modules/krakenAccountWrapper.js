@@ -621,27 +621,27 @@ module.exports = class krakenAccountWrapper {
       //TODO: GASH
       let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
       let gashDispatches = {
-        "d00000000_0009_4000_8020_0000000181f6": [
+        d00000000_0009_4000_8020_0000000181f6: [
           {
-            "end": today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-            "energyAddedKwh": -11.618,
-            "start": today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
-            "type": "SMART"
+            end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+            energyAddedKwh: -11.618,
+            start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
+            type: "SMART"
           },
           {
-            "end": today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
-            "energyAddedKwh": -3.417,
-            "start": today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
-            "type": "SMART"
+            end: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
+            energyAddedKwh: -3.417,
+            start: today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
+            type: "SMART"
           },
           {
-            "end": today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
-            "energyAddedKwh": -70.3,
-            "start": today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
-            "type": "SMART"
+            end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
+            energyAddedKwh: -70.3,
+            start: today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
+            type: "SMART"
           }
         ],
-        "d00000000_000a_4000_8020_15ffff00d84d": null
+        d00000000_000a_4000_8020_15ffff00d84d: null
       };
       response.data["d00000000_0009_4000_8020_0000000181f6"] = gashDispatches["d00000000_0009_4000_8020_0000000181f6"];
       //TODO: END GASH
@@ -653,6 +653,33 @@ module.exports = class krakenAccountWrapper {
       }
     }
     return result;
+  }
+
+  futureDispatches(atTime, plannedDispatches) {
+    const eventTime = this.getLocalDateTime(new Date(atTime));
+    //TODO: Use adjusted Start Time (shifted back to previous 30 minute interval)
+    const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
+    this._driver.homey.log(`krakenAccountWrapper.futureDispatches: selected: ${JSON.stringify(selectedItems)}`);
+    return selectedItems;
+    // let selectedItems = [];
+    // for (const dispatch of plannedDispatches) {
+    //   const startTime = this.getLocalDateTime(new Date(dispatch.start));
+    //   if (eventTime < startTime) {
+    //     selectedItems.push(dispatch);
+    //   }
+    // }
+    // return selectedItems;
+  }
+  
+  /**
+   * Advance a time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
+   * @param {string}    time     String datetime to be advanced in ISO format
+   */
+  advanceTime(time) {
+    const dateTime = this.getLocalDateTime(new Date(time));
+    const newMinute = (dateTime.minute < 30) ? 0 : 30;
+    dateTime.set({minute: newMinute, second: 0, millisecond: 0});
+    return dateTime
   }
 
   /**

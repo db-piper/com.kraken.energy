@@ -12,7 +12,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		await super.onInit();
 		this.defineCapability("device_attribute.name", {"title": {"en": "Device Name"}});
     this.defineCapability("device_attribute.status", {"title": {"en": "Current Status"}});
-    this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Planned Dispatches"}});		//Integer
+    this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Future Dispatches"}});			//Integer
 		this.defineCapability("data_presence.in_dispatch", {"title": {"en": "Dispatching Now"}});						//Boolean
 		this.defineCapability("date_time.current_dispatch_start", {"title": {"en": "Dispatch Start"}});			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.current_dispatch_end", {"title": {"en": "Dispatch End"}});					//DD/mm HH:MM [dd/LL T]
@@ -64,14 +64,19 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const deviceId = this.getStoreValue("deviceId");
+		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
 		const deviceData = await this.accountWrapper.getDevice(deviceId);
 		const deviceName = deviceData.name;
 		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
-
+		//const dispatches = plannedDispatches[deviceKey];
+		const futureDispatches = this.accountWrapper.futureDispatches(atTime, plannedDispatches[deviceKey]);
+		const dispatchCount = futureDispatches.length;								// Future planned dispatches based on event time and adjusted start times
 		this.homey.log(`smartEnergyDevice.processEvent: ID ${deviceId} Name ${deviceName} Status: ${deviceStatus}`);
+		//this.homey.log(`smartEnergyDevice.processEvent: Device Key ${deviceKey}, Dispatch Count ${dispatchCount}`);
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);
+	  this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
 
 		updates = this.updateCapabilities(updates);
 
