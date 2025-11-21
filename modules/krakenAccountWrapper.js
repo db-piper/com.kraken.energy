@@ -661,25 +661,47 @@ module.exports = class krakenAccountWrapper {
     const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
     this._driver.homey.log(`krakenAccountWrapper.futureDispatches: selected: ${JSON.stringify(selectedItems)}`);
     return selectedItems;
-    // let selectedItems = [];
-    // for (const dispatch of plannedDispatches) {
-    //   const startTime = this.getLocalDateTime(new Date(dispatch.start));
-    //   if (eventTime < startTime) {
-    //     selectedItems.push(dispatch);
-    //   }
-    // }
-    // return selectedItems;
+  }
+
+  currentDispatch(atTime, plannedDispatches) {
+    const eventTime = this.getLocalDateTime(new Date(atTime));
+    const selectedDispatches = plannedDispatches.filter((dispatch) => 
+      (this.advanceTime(dispatch.start) < eventTime) &&
+      (this.extendTime(dispatch.end) > eventTime)   
+    );
+    return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
   
   /**
-   * Advance a time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
-   * @param {string}    time     String datetime to be advanced in ISO format
+   * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
+   * @param   {string}      time     String datetime to be advanced, in ISO format
+   * @returns {DateTime}             <time> advanced to the preceding 30 minute boundary
    */
   advanceTime(time) {
     const dateTime = this.getLocalDateTime(new Date(time));
+    return this.advanceDateTime(dateTime);
+  }
+
+  /**
+   * Extend an end time to the following 30 minute boundary (00 or 30 minutes past the hour)
+   * @param   {string}        time    String datetime to be extend, in ISO format 
+   * @returns {DateTime}              <time> extended to the following 30 minute boundary
+   */
+  extendTime(time) {
+    //Advance the time by 30 minutes, then retard the result
+    const dateTime = this.getLocalDateTime(new Date(time)).plus({minutes: 30});
+    return this.advanceDateTime(dateTime);
+  }
+
+  /**
+   * Retard a dateTime to the nearest preceding 30 minute boundary (00 or 30 minutes past the hour)
+   * @param   {DateTime}    dateTime  Datetime to be retarded
+   * @returns {DateTime}              Retarded datetime
+   */
+  advanceDateTime(dateTime) {
     const newMinute = (dateTime.minute < 30) ? 0 : 30;
-    dateTime.set({minute: newMinute, second: 0, millisecond: 0});
-    return dateTime
+    const advancedTime = dateTime.set({minute: newMinute, second: 0, millisecond: 0});
+    return advancedTime;
   }
 
   /**

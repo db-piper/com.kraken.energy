@@ -29,8 +29,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.day_export_value",{"title": { "en": "Day Export Value" },"decimals": 2,"units": {"en": "£"}});
 		this.defineCapability("date_time.period_start",{"title": {"en": "This Period Start" }});
 		this.defineCapability("date_time.next_period_start",{"title": {"en": "Next Start Day" }});
-		this.defineCapability("date_time.full_period_start", {"title": {"en": "Full Start Date"}, "uiComponent": null}, ["uiComponent"]);
-		this.defineCapability("date_time.full_next_period", {"title": {"en": "Full Next Start"}, "uiComponent": null}, ["uiComponent"]);
+		this.defineCapability("date_time.full_period_start", {"title": {"en": "Full Start Date"}, "uiComponent": null});
+		this.defineCapability("date_time.full_next_period", {"title": {"en": "Full Next Start"}, "uiComponent": null});
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();

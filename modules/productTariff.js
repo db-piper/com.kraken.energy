@@ -43,7 +43,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("date_time.full_slot_start", {"title": {"en": "SlotStartH"}, "uiComponent": null}, []);
 		this.defineCapability("date_time.full_slot_end", {"title": {"en": "SlotEndH"}, "uiComponent": null}, []);
 
-		await this.applyCapabilities(true);
+		await this.applyCapabilities();
 		await this.applyStoreValues();
 		
 	}	

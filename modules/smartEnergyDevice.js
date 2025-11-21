@@ -68,17 +68,34 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const deviceData = await this.accountWrapper.getDevice(deviceId);
 		const deviceName = deviceData.name;
 		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
-		//const dispatches = plannedDispatches[deviceKey];
-		const futureDispatches = this.accountWrapper.futureDispatches(atTime, plannedDispatches[deviceKey]);
-		const dispatchCount = futureDispatches.length;								// Future planned dispatches based on event time and adjusted start times
-		this.homey.log(`smartEnergyDevice.processEvent: ID ${deviceId} Name ${deviceName} Status: ${deviceStatus}`);
-		//this.homey.log(`smartEnergyDevice.processEvent: Device Key ${deviceKey}, Dispatch Count ${dispatchCount}`);
+		const deviceDispatches = plannedDispatches[deviceKey];
+		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
+		const dispatchCount = futureDispatches.length;
+		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);   //dispatch or undefined
+		const inDispatch = currentDispatch !== undefined;
+
+		//this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
+		let startTime = null;
+		let endTime = null;
+		let duration = null;
+		
+		if (inDispatch) {
+			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
+			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T"); 
+			const extendedEndTime = this.accountWrapper.extendTime(currentDispatch.end);
+			const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
+			duration = extendedEndTime.diff(eventTime,['hours', 'minutes']).toFormat("hh:mm");
+		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);
 	  this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
+		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
+		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
+		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
+		this.updateCapabilityValue("duration.remaining_duration", duration);
 
-		updates = this.updateCapabilities(updates);
+		updates = await this.updateCapabilities(updates);
 
 		return updates;
 	}
