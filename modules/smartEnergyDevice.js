@@ -19,6 +19,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.defineCapability("date_time.current_early_start", {"title": {"en": "Advanced Start"}});				//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.current_extended_end", {"title": {"en": "Extended Finish"}});			//DD/mm HH:MM [dd/LL T]
     this.defineCapability("duration.remaining_duration", {"title": {"en": "Remaining Duration"}});			//HH:MM (duration.toFormat(hh:mm))
+		this.defineCapability("duration.next_dispatch_countdown", {"title": {"en": "Next Dispatch Countdown"}});	//HH:MM
     this.defineCapability("date_time.next_dispatch_start", {"title": {"en": "Next Planned Start"}});		//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.next_early_start", {"title": {"en": "Next Advanced Start"}});			//DD/mm HH:MM [dd/LL T]
 
@@ -66,6 +67,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
+		const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
 		const deviceData = await this.accountWrapper.getDevice(deviceId);
@@ -82,25 +84,28 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let endTime = null;
 		let advancedStartTime = null;
 		let extendedEndTime = null;
-		let duration = null;
+		let duration = "00:00";
 		let nextDispatchStart = null;
 		let nextAdvancedStart = null;
+		let countDownStart = eventTime;
+		let countDown = null;
 		
-		//TODO: Work out how to handle dispatch extension to 30 minute boundaries
 		if (inDispatch) {
 			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
 			advancedStartTime = this.accountWrapper.advanceTime(currentDispatch.start).toFormat("dd/LL T");
 			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T");
 			const extendedEndDateTime = this.accountWrapper.extendTime(currentDispatch.end);
+			countDownStart = extendedEndDateTime;
 			extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
-			const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 			duration = extendedEndDateTime.diff(eventTime,['hours', 'minutes']).toFormat("hh:mm");
 		}
 
 		if (dispatchCount > 0) {
-			this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`)
+			this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`);
+			const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
 			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
-			nextAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start).toFormat("dd/LL T");
+			nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
+			countDown = nextDispatchAdvancedStart.diff(countDownStart,['hours', 'minutes']).toFormat("hh:mm");
 		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
@@ -114,6 +119,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("duration.remaining_duration", duration);
 		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
 		this.updateCapabilityValue("date_time.next_early_start", nextAdvancedStart);
+		this.updateCapabilityValue("duration.next_dispatch_countdown", countDown);
 
 		updates = await this.updateCapabilities(updates);
 
