@@ -215,7 +215,7 @@ module.exports = class energyAccount extends krakenDevice {
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
 			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
-			projectedBill = (billValue / elapsedDays) * periodLength; 
+			projectedBill = (elapsedDays > 1) ? (billValue / elapsedDays) * periodLength : null; 
 		}
 
 		this.updateCapability("period_day.period_duration", periodLength);
