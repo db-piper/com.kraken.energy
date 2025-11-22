@@ -18,7 +18,7 @@
       "id": "login_credentials",
       "template": "login_credentials",
       "options": {
-        "logo": "/assets/icon.svg",
+        "logo": "assets/images/octopus-home-mini-small.png",
         "title": {
           "en": "Energy Account Details"
         },
@@ -43,10 +43,14 @@
       "id": "login_credentials",
       "template": "login_credentials",
       "options" : { 
-        "logo": "/assets/icon.svg",
+        "logo": "assets/images/octopus-home-mini-small.png",
         "title": {
           "en": "Energy Account Details"
-        }
+        },
+        "usernameLabel": { "en": "Account Number" },
+        "usernamePlaceholder": { "en": "A-9A999999" },
+        "passwordLabel": { "en": "Account API Key" },
+        "passwordPlaceholder": { "en": "sk_live_... 32 characters" }
       }
     }
   ]

@@ -14,7 +14,6 @@ module.exports = class productTariff extends krakenDevice {
 		const isHalfHourly = await this.accountWrapper.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
-		const deviceCount = await this.accountWrapper.getDeviceCount();
 
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
@@ -35,10 +34,6 @@ module.exports = class productTariff extends krakenDevice {
 			this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
 			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
 			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
-		}
-		if (deviceCount > 0) {
-			this.defineCapability("item_count.devices", {"title": {"en": 'Device Count'}});
-			this.defineCapability("item_count.dispatches", {"title": {"en": 'Planned Dispatches'}});
 		}
 		this.defineCapability("date_time.full_slot_start", {"title": {"en": "SlotStartH"}, "uiComponent": null}, []);
 		this.defineCapability("date_time.full_slot_end", {"title": {"en": "SlotEndH"}, "uiComponent": null}, []);
@@ -137,13 +132,6 @@ module.exports = class productTariff extends krakenDevice {
 		const tariffPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, direction);
 		const nextTariffPrices = await this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
-		const deviceCount = await this.accountWrapper.getDeviceCount();
-		const deviceKeys = Object.getOwnPropertyNames(plannedDispatches);
-		let dispatchCount = 0;
-		for (const deviceKey of deviceKeys) {
-			dispatchCount += plannedDispatches[deviceKey].length;
-		}
-		//const dispatchCount = plannedDispatches.length
 		const recordedSlotEnd = this.getCapabilityValue("date_time.full_slot_end");
 		const recordedSlotStart = this.getCapabilityValue("date_time.full_slot_start");
 		const firstTime = recordedSlotEnd === null;
@@ -197,8 +185,6 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("measure_monetary.next_unit_price_taxed", nextUnitPriceTaxed);
 		this.updateCapability("slot_quartile.next_slot_quartile",nextQuartile);
 		this.updateCapability("date_time.next_slot_end",shortNextEnd);
-		this.updateCapability("item_count.devices", deviceCount);
-		this.updateCapability("item_count.dispatches", dispatchCount);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;
