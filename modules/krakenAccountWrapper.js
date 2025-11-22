@@ -707,7 +707,7 @@ module.exports = class krakenAccountWrapper {
    */
   extendTime(time) {
     //Advance the time by 30 minutes, then retard the result
-    const dateTime = this.getLocalDateTime(new Date(time)).plus({minutes: 30});
+    const dateTime = this.getLocalDateTime(new Date(time)).plus({minutes: 29});
     return this.advanceDateTime(dateTime);
   }
 

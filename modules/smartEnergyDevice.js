@@ -14,10 +14,13 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     this.defineCapability("device_attribute.status", {"title": {"en": "Current Status"}});
     this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Future Dispatches"}});			//Integer
 		this.defineCapability("data_presence.in_dispatch", {"title": {"en": "Dispatching Now"}});						//Boolean
-		this.defineCapability("date_time.current_dispatch_start", {"title": {"en": "Dispatch Start"}});			//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("date_time.current_dispatch_end", {"title": {"en": "Dispatch End"}});					//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.current_dispatch_start", {"title": {"en": "Planned Start"}});			//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.current_dispatch_end", {"title": {"en": "Planned Finish"}});				//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.current_early_start", {"title": {"en": "Advanced Start"}});				//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.current_extended_end", {"title": {"en": "Extended Finish"}});			//DD/mm HH:MM [dd/LL T]
     this.defineCapability("duration.remaining_duration", {"title": {"en": "Remaining Duration"}});			//HH:MM (duration.toFormat(hh:mm))
-    this.defineCapability("date_time.next_dispatch_start", {"title": {"en": "Next Dispatch"}});					//DD/mm HH:MM [dd/LL T]
+    this.defineCapability("date_time.next_dispatch_start", {"title": {"en": "Next Planned Start"}});		//DD/mm HH:MM [dd/LL T]
+		this.defineCapability("date_time.next_early_start", {"title": {"en": "Next Advanced Start"}});			//DD/mm HH:MM [dd/LL T]
 
     await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -77,21 +80,27 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 		let startTime = null;
 		let endTime = null;
+		let advancedStartTime = null;
+		let extendedEndTime = null;
 		let duration = null;
 		let nextDispatchStart = null;
+		let nextAdvancedStart = null;
 		
 		//TODO: Work out how to handle dispatch extension to 30 minute boundaries
 		if (inDispatch) {
 			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
-			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T"); 
-			const extendedEndTime = this.accountWrapper.extendTime(currentDispatch.end);
+			advancedStartTime = this.accountWrapper.advanceTime(currentDispatch.start).toFormat("dd/LL T");
+			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T");
+			const extendedEndDateTime = this.accountWrapper.extendTime(currentDispatch.end);
+			extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
 			const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
-			duration = extendedEndTime.diff(eventTime,['hours', 'minutes']).toFormat("hh:mm");
+			duration = extendedEndDateTime.diff(eventTime,['hours', 'minutes']).toFormat("hh:mm");
 		}
 
 		if (dispatchCount > 0) {
 			this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`)
 			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
+			nextAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start).toFormat("dd/LL T");
 		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
@@ -100,8 +109,11 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
 		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
 		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
+		this.updateCapabilityValue("date_time.current_early_start", advancedStartTime);
+		this.updateCapabilityValue("date_time.current_extended_end",extendedEndTime);
 		this.updateCapabilityValue("duration.remaining_duration", duration);
 		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
+		this.updateCapabilityValue("date_time.next_early_start", nextAdvancedStart);
 
 		updates = await this.updateCapabilities(updates);
 
