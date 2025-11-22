@@ -71,20 +71,27 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const deviceDispatches = plannedDispatches[deviceKey];
 		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
-		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);   //dispatch or undefined
+		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);    //dispatch or undefined
+		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)					//dispatch or undefined
 		const inDispatch = currentDispatch !== undefined;
 
-		//this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		let startTime = null;
 		let endTime = null;
 		let duration = null;
+		let nextDispatchStart = null;
 		
+		//TODO: Work out how to handle dispatch extension to 30 minute boundaries
 		if (inDispatch) {
 			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
 			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T"); 
 			const extendedEndTime = this.accountWrapper.extendTime(currentDispatch.end);
 			const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 			duration = extendedEndTime.diff(eventTime,['hours', 'minutes']).toFormat("hh:mm");
+		}
+
+		if (dispatchCount > 0) {
+			this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`)
+			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
 		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
@@ -94,6 +101,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
 		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
 		this.updateCapabilityValue("duration.remaining_duration", duration);
+		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
 
 		updates = await this.updateCapabilities(updates);
 

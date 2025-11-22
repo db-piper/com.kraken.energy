@@ -655,6 +655,24 @@ module.exports = class krakenAccountWrapper {
     return result;
   }
 
+  /**
+   * Return the dispatch with the earliest start time or undefined
+   * @param       {[JSON]}    dispatchArray     Array of dispatches
+   * @returns     {JSON}                        Selected dispatch or undefined
+   */
+  async earliestDispatch(dispatchArray) {
+    this._driver.homey.log(`krakenAccountWrapper.earliestDispatch: ${JSON.stringify(dispatchArray)}`);
+    const expression = jsonata(
+      `$filter($, function($v, $i, $a) {
+          $toMillis($v.start) = $min($a.$toMillis(start))
+        }
+      )`
+    );
+    const result = await expression.evaluate(dispatchArray);
+    this._driver.homey.log(`krakenAccountWrapper.earliestDispatch: ${JSON.stringify(result)}`);
+    return result;    
+  }
+
   futureDispatches(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     //TODO: Use adjusted Start Time (shifted back to previous 30 minute interval)
