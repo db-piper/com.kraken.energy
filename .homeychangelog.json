@@ -70,5 +70,8 @@
   },
   "1.0.29": {
     "en": "Simplify Product Tariff device updates; remove \"untaxed\" capabilities and add \"tax rate\" capability; shorten date/time formats on all devices; refactor and tidy code"
+  },
+  "1.0.30": {
+    "en": "First test release of Smart Energy Devices; dynamic capability improvements; projected bill calculation refinement"
   }
 }
