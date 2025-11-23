@@ -34,29 +34,15 @@ module.exports = class krakenDriver extends Homey.Driver {
   onMapDeviceClass(device) {
     const deviceClass = device.getStoreValue("octopusClass");
     let nodeClass = undefined;
-    // const classSwitch = {
-    //   "octopusTariff": productTariff,
-    //   "octopusAccount": energyAccount,
-    //   "smartDevice": smartEnergyDevice
-    // };
-    // if (deviceClass in classSwitch){
-    //   nodeClass = classSwitch[device];
-    //   this.log(`krakenDriver.onMapDeviceClass: device nickname ${deviceClass} nodeClass ${nodeClass.name}`);
-    // }
-    // return nodeClass;
-    switch (deviceClass) {
-      case "octopusTariff":
-        nodeClass = productTariff;
-        break;
-      case "octopusAccount":
-        nodeClass = energyAccount;
-        break;
-      case "smartDevice":
-        nodeClass = smartEnergyDevice;
-        break;
-      default:
+    const classSwitch = {
+      "octopusTariff": productTariff,
+      "octopusAccount": energyAccount,
+      "smartDevice": smartEnergyDevice
+    };
+    if (deviceClass in classSwitch){
+      nodeClass = classSwitch[deviceClass];
+      this.log(`krakenDriver.onMapDeviceClass: device nickname ${deviceClass} nodeClass ${nodeClass.name}`);
     }
-    this.log(`krakenDriver.onMapDeviceClass: device nickname: ${deviceClass} nodeClass ${nodeClass.name}`);
     return nodeClass;
   }
 
