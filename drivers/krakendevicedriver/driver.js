@@ -39,7 +39,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     //   "octopusAccount": energyAccount,
     //   "smartDevice": smartEnergyDevice
     // };
-    // if (device in classSwitch){
+    // if (deviceClass in classSwitch){
     //   nodeClass = classSwitch[device];
     //   this.log(`krakenDriver.onMapDeviceClass: device nickname ${deviceClass} nodeClass ${nodeClass.name}`);
     // }
