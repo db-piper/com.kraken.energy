@@ -21,14 +21,15 @@ module.exports = class krakenAccountWrapper {
     this._driver = driver;
     this._dataFetcher = new dataFetcher(this._driver);
     this._accountData = undefined;
-    this._valid_device_status_codes = [
-      "SMART_CONTROL_CAPABLE",
-      "SMART_CONTROL_IN_PROGRESS",
-      "BOOSTING",
-      "SMART_CONTROL_OFF",
-      "LOST_CONNECTION"
-    ];
+    // this._valid_device_status_codes = [
+    //   "SMART_CONTROL_CAPABLE",
+    //   "SMART_CONTROL_IN_PROGRESS",
+    //   "BOOSTING",
+    //   "SMART_CONTROL_OFF",
+    //   "LOST_CONNECTION"
+    // ];
     this._valid_device_status_translations = {
+      SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
       SMART_CONTROL_CAPABLE: `Capable`,
       SMART_CONTROL_IN_PROGRESS: `In Progress`,
       BOOSTING: `Boosting`,
@@ -328,7 +329,7 @@ module.exports = class krakenAccountWrapper {
    * Return the GraphQL query string to obtain the Octopus Account Information
    * @returns {string} Stringified JSON representing the query
    */
-  accountDataQuery(accountId, deviceIds = []) {
+  accountDataQuery(accountId) {
     const query = {
       query: `query GetAccount($accountNumber: String!) {
         account(accountNumber: $accountNumber) {
@@ -436,6 +437,7 @@ module.exports = class krakenAccountWrapper {
           deviceType
           status {
             currentState
+            current
           }
         }
       }`,
@@ -447,6 +449,11 @@ module.exports = class krakenAccountWrapper {
     return JSON.stringify(query, null, 2);
   }
 
+  /**
+   * Test whether the specified API access parameters give access to the Kraken data
+   * @param     {string}      accountId     The account reference specified
+   * @param     {string}      apiKey        The apiKey for the account 
+  */
   async testAccessParameters(accountId, apiKey) {
     const token = await this._dataFetcher.testApiKey(apiKey);
     let accountData = undefined;
@@ -456,24 +463,24 @@ module.exports = class krakenAccountWrapper {
       accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
       success = accountData !== undefined;
       if (success) {
-        // //TODO REMOVE THIS GASH CODE
-        // accountData.data.devices = [
-        //   {
-        //     id: "00000000-000a-4000-8020-15ffff00d84d",
-        //     name: null,
-        //     status: {
-        //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
-        //     }
-        //   },
-        //   {
-        //     id: "00000000-0009-4000-8020-0000000181f6",
-        //     name: "Hypervolt Home 3",
-        //     status: {
-        //       currentState: "SMART_CONTROL_IN_PROGRESS"
-        //     }
-        //   }
-        // ];
-        // //TODO END GASH
+        //TODO REMOVE THIS GASH CODE
+        accountData.data.devices = [
+          {
+            id: "00000000-000a-4000-8020-15ffff00d84d",
+            name: null,
+            status: {
+              currentState: "SMART_CONTROL_NOT_AVAILABLE"
+            }
+          },
+          {
+            id: "00000000-0009-4000-8020-0000000181f6",
+            name: "Hypervolt Home 3",
+            status: {
+              currentState: "SMART_CONTROL_IN_PROGRESS"
+            }
+          }
+        ];
+        //TODO END GASH
         this._accountData = accountData;
       }
     }
@@ -481,32 +488,32 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Test whether the API Key gives access to the Account and store the Account data if successful
+   * Access the account data using the current access parameters and make the data retrieved current
    * @returns {boolean}           True iff account data retrieved
    */
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
-    const accountQuery = this.accountDataQuery(this.accountId, this.deviceIds);
+    const accountQuery = this.accountDataQuery(this.accountId);
     const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-      // //TODO: REMOVE THIS GASH CODE
-      // accountData.data.devices = [
-      //   {
-      //     id: "00000000-000a-4000-8020-15ffff00d84d",
-      //     name: null,
-      //     status: {
-      //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
-      //     }
-      //   },
-      //   {
-      //     id: "00000000-0009-4000-8020-0000000181f6",
-      //     name: "Hypervolt Home 3",
-      //     status: {
-      //       currentState: "SMART_CONTROL_IN_PROGRESS"
-      //     }
-      //   }
-      // ];
-      // //TODO: END GASH
+      //TODO: REMOVE THIS GASH CODE
+      accountData.data.devices = [
+        {
+          id: "00000000-000a-4000-8020-15ffff00d84d",
+          name: null,
+          status: {
+            currentState: "SMART_CONTROL_NOT_AVAILABLE"
+          }
+        },
+        {
+          id: "00000000-0009-4000-8020-0000000181f6",
+          name: "Hypervolt Home 3",
+          status: {
+            currentState: "SMART_CONTROL_IN_PROGRESS"
+          }
+        }
+      ];
+      //TODO: END GASH
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
       return true;
@@ -617,33 +624,33 @@ module.exports = class krakenAccountWrapper {
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         result.reading = readingArray[0];
       }
-      // //TODO: GASH
-      // let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
-      // let xDispatches = {
-      //   d00000000_0009_4000_8020_0000000181f6: [
-      //     {
-      //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
-      //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
-      //       energyAddedKwh: -70.3,
-      //       start: today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
-      //       type: "SMART"
-      //     }
-      //   ],
-      //   d00000000_000a_4000_8020_15ffff00d84d: null
-      // };
-      // response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
-      // //TODO: END GASH
+      //TODO: GASH
+      let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
+      let xDispatches = {
+        d00000000_0009_4000_8020_0000000181f6: [
+          {
+            end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+            energyAddedKwh: -11.618,
+            start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
+            energyAddedKwh: -3.417,
+            start: today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
+            energyAddedKwh: -70.3,
+            start: today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
+            type: "SMART"
+          }
+        ],
+        d00000000_000a_4000_8020_15ffff00d84d: null
+      };
+      response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
+      //TODO: END GASH
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (Array.isArray(response.data[deviceKey])) {
@@ -820,33 +827,33 @@ module.exports = class krakenAccountWrapper {
     return pence * .01;
   }
 
-  /**
-   * Get the count of devices registered to the account that are smart control capable
-   * @returns {integer}       Number of devices registered
-   */
-  async getDeviceCount() {
-    const transform = this.getDeviceCountTransform();
-    const expression = jsonata(transform);
-    const deviceIds = await expression.evaluate(this.accountData);
-    return deviceIds.length;
-  }
+  // /**
+  //  * Get the count of devices registered to the account that are smart control capable
+  //  * @returns {integer}       Number of devices registered
+  //  */
+  // async getDeviceCount() {
+  //   const transform = this.getDeviceCountTransform();
+  //   const expression = jsonata(transform);
+  //   const deviceIds = await expression.evaluate(this.accountData);
+  //   return deviceIds.length;
+  // }
 
-  /**
-   * Get the transform to return the device ids of devices that are smart control capable
-   * @returns {string[]}        Jsonata transform string
-   */
-  getDeviceCountTransform() {
-    const transform =
-      `[
-        data.
-          devices[
-            status.
-              currentState in ${JSON.stringify(this._valid_device_status_codes)}
-          ].
-        id
-      ]`;
-    return transform;
-  }
+  // /**
+  //  * Get the transform to return the device ids of devices that are smart control capable
+  //  * @returns {string[]}        Jsonata transform string
+  //  */
+  // getDeviceCountTransform() {
+  //   const transform =
+  //     `[
+  //       data.
+  //         devices[
+  //           status.
+  //             currentState in ${JSON.stringify(this._valid_device_status_codes)}
+  //         ].
+  //       id
+  //     ]`;
+  //   return transform;
+  // }
 
   /**
    * Indicate that at least 24 hours has passed, or that the end time of the last slot of a half-hourly charged tariff is past.

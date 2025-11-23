@@ -206,7 +206,7 @@
   "drivers": [
     {
       "name": {
-        "en": "Metering Devices"
+        "en": "Kraken Devices"
       },
       "class": "sensor",
       "capabilities": [],
