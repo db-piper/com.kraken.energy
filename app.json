@@ -147,7 +147,7 @@
           "en": "Dispatch Starts"
         },
         "hint": {
-          "en": "Triggers when a Dispatch to a Smart Energy Device starts."
+          "en": "Triggers when a Dispatch to the Smart Energy Device starts."
         },
         "args": [
           {
@@ -163,7 +163,7 @@
           "en": "Dispatch Ends"
         },
         "hint": {
-          "en": "Triggers when a Dispatch to a Smart Energy Device ends."
+          "en": "Triggers when a Dispatch to the Smart Energy Device ends."
         },
         "args": [
           {

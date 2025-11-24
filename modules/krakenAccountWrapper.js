@@ -628,15 +628,21 @@ module.exports = class krakenAccountWrapper {
       //       type: "SMART"
       //     },
       //     {
-      //       end: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:00:00+00:00",
+      //       end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+      //       energyAddedKwh: -11.618,
+      //       start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
+      //       type: "SMART"
+      //     },
+      //     {
+      //       end: today.set({ hour: 20, minute: 15 }).toISO(), //"2025-10-25T20:00:00+00:00",
       //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 19, minute: 30 }).toISO(), //"2025-10-25T19:30:00+00:00",
+      //       start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T19:30:00+00:00",
       //       type: "SMART"
       //     },
       //     {
       //       end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
       //       energyAddedKwh: -70.3,
-      //       start: today.set({ hour: 20, minute: 30 }).toISO(), //"2025-10-25T20:30:00+00:00",
+      //       start: today.set({ hour: 21, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
       //       type: "SMART"
       //     }
       //   ],
