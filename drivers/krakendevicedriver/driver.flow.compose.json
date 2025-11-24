@@ -46,32 +46,6 @@
       "hint": {
         "en": "A new invoicing period has started and an invoice will be issued shortly."
       },
-      "tokens": [
-        {
-          "name": "date_time.period_start",
-          "type": "string",
-          "title": {"en": "This Invoicing Period Start"},
-          "example": {"en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"}
-        },
-        {
-          "name": "period_day.period_duration",
-          "type": "number",
-          "title": {"en": "New Invoicing Period Duration"},
-          "example": {"en": "Normally 30 or 31 days; February 28 or 29 days"}
-        },
-        {
-          "name": "measure_monetary.account_balance",
-          "type": "number",
-          "title": {"en": "Account Balance"},
-          "example": {"en": "Account balance at the start of the new period in £"}
-        },
-        {
-          "name": "date_time.next_period_start",
-          "type": "string",
-          "title": {"en": "Next Invoicing Period Start"},
-          "example": {"en": "A date string in ISO standard format (YYYY-MM-DDTHH:MM:SS.SSS+HH:MM)"}
-        }
-      ],
       "$filter": "capabilities=date_time.period_start"
     },
     {
@@ -90,23 +64,9 @@
         "en": "Dispatch Starts"
       },
       "hint": {
-        "en": "Triggers when a Dispatch to a Smart Energy Device starts."
+        "en": "Triggers when a Dispatch to the Smart Energy Device starts."
       },      
-      "tokens": [
-        {
-          "name": "date_time.current_extended_end",
-          "type": "string",
-          "title": {"en": "End Date/Time"},
-          "example": {"en": "In the format mm/DD HH:MM - for example 11/25 04:30"}
-        },
-        {
-          "name": "duration.remaining_duration",
-          "type": "string",
-          "title": {"en": "Time Remaining"},
-          "example": {"en": "In the format HH:MM - for example 01:27"}
-        }
-      ],
-      "$filter": "capabilities=data_presence.in_dispatch"
+      "$filter": "capabilities=device_attribute.name"
     },
     {
       "id": "data_presence.in_dispatch_false",
@@ -114,23 +74,9 @@
         "en": "Dispatch Ends"
       },
       "hint": {
-        "en": "Triggers when a Dispatch to a Smart Energy Device ends."
+        "en": "Triggers when a Dispatch to the Smart Energy Device ends."
       },      
-      "tokens": [
-        {
-          "name": "date_time.next_early_start",
-          "type": "string",
-          "title": {"en": "Next Start Time."},
-          "example": {"en": "In the format mm/DD HH:MM - for example 11/25 02:30."}
-        },
-        {
-          "name": "duration.next_dispatch_countdown",
-          "type": "string",
-          "title": {"en": "Time Until Next Start"},
-          "example": {"en": "In the format HH:MM - for example 01:27"}
-        }
-      ],
-      "$filter": "capabilities=data_presence.in_dispatch"
+      "$filter": "capabilities=device_attribute.name"
     }
   ],
   "conditions":[

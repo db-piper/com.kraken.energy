@@ -102,7 +102,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		}
 
 		if (dispatchCount > 0) {
-			this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`);
+			//this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`);
 			const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
 			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
 			nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
@@ -112,8 +112,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("device_attribute.name", deviceName);
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);
 	  this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
-		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
-		this.updateCapabilityValue("alarm_power", inDispatch);
 		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
 		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
 		this.updateCapabilityValue("date_time.current_early_start", advancedStartTime);
@@ -122,6 +120,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
 		this.updateCapabilityValue("date_time.next_early_start", nextAdvancedStart);
 		this.updateCapabilityValue("duration.next_dispatch_countdown", countDown);
+		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
+		this.updateCapabilityValue("alarm_power", inDispatch);
 
 		updates = await this.updateCapabilities(updates);
 

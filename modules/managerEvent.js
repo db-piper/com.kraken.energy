@@ -134,7 +134,7 @@ module.exports = class managerEvent {
     let updates = new Array();
     if (readyToProcess) {
       const liveData = await this._accountWrapper.getLiveMeterData();
-      this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
+      //this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
       if ((liveData.reading !== undefined) && (liveData.dispatches !== undefined)) {
         for (const device of this.driver.getDevices()) {
           this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
