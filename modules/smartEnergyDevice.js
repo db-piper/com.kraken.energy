@@ -14,6 +14,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     this.defineCapability("device_attribute.status", {"title": {"en": "Current Status"}});
     this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Future Dispatches"}});			//Integer
 		this.defineCapability("data_presence.in_dispatch", {"title": {"en": "Dispatching Now"}});						//Boolean
+		this.defineCapability("alarm_power", {"title": {"en": "In Dispatch"}, "uiComponent": null});				//Boolean
 		this.defineCapability("date_time.current_dispatch_start", {"title": {"en": "Planned Start"}});			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.current_dispatch_end", {"title": {"en": "Planned Finish"}});				//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.current_early_start", {"title": {"en": "Advanced Start"}});				//DD/mm HH:MM [dd/LL T]
@@ -112,6 +113,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);
 	  this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
 		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
+		this.updateCapabilityValue("alarm_power", inDispatch);
 		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
 		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
 		this.updateCapabilityValue("date_time.current_early_start", advancedStartTime);
