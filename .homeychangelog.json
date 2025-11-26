@@ -82,5 +82,8 @@
   },
   "1.0.33": {
     "en": "Add WHEN flow cards for when... Dispatch Starts and when... Dispatch Ends"
+  },
+  "1.0.34": {
+    "en": "Harden code to handle devices created in error when test data was released in error"
   }
 }
