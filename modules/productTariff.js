@@ -122,7 +122,7 @@ module.exports = class productTariff extends krakenDevice {
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
+	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 

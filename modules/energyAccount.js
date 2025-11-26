@@ -118,7 +118,7 @@ module.exports = class energyAccount extends krakenDevice {
 		return date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 	}
 
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
+	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 

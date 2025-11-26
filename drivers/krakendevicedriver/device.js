@@ -101,7 +101,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
+	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 		return false;
 	}
 

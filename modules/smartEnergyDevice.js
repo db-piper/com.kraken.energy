@@ -64,7 +64,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.log('smartEnergyDevice:onSettings - settings were changed');
 	}
 
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = undefined) {
+	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 		
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
