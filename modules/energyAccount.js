@@ -141,6 +141,17 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 		}
 
+		// //Need to get the deviceId from somewhere or work over all device ids
+		// const deviceId = this.getStoreValue("deviceId");
+		// const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
+		// const deviceDispatches = plannedDispatches[deviceKey];
+		// const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);    //dispatch or undefined
+		// const inDispatch = currentDispatch !== undefined;
+		// //Now get the minimum tariff cost - value calculations for the import tariff use the minimum rate iff (inDispatch)
+		// this.homey.log(`energyAccount.processEvent: inDispatch ${inDispatch}`);
+
+
+
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, true);

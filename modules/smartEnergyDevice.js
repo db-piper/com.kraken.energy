@@ -72,10 +72,14 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
 		const deviceData = await this.accountWrapper.getDevice(deviceId);
+		if (deviceData === undefined) {
+			await this.setUnavailable("bad device; please delete.");
+			return false;
+		}
 		const deviceName = deviceData.name;
 		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
-		const deviceDispatches = plannedDispatches[deviceKey];
-		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
+		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [] ;
+ 		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
 		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);    //dispatch or undefined
 		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)					//dispatch or undefined
