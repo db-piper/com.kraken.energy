@@ -3,38 +3,6 @@
 const Homey = require('homey');
 const productTariff = require('./modules/productTariff');
 
-/**
- * DONE: "New Period" trigger card on Octopus Account device
- * DONE: Better icon for energyAccount device
- * DONE: Work out git usage
- * DONE: Projected bill algorithm
- * DONE: In the pairing process confirm there is a live meter id available; if not return no devices
- * DONE: Device Repair Functionality
- * DONE: Work out how to "subclass" Tariff devices with different sets of capabilities.
- * DONE: Fix the single slot problem for Tracker Tariff by counting <<today's slots>>
- * DONE: Work out and implement capability changes for single slot Tracker
- * DONE: Release new version with these changes
- * DONE: Make accountWrapper more directly available to krakenDevices (getAccountWrapper property)
- * DONE: Make use of the getAccountWrapper property
- * DONE: Research and understand dispatches on intelligent tariffs
- * DONE: Implement basic dispatch fetching code and relevant error processing in GetAccountData
- * DONE: Put flexPlannedDispatches in with LiveMeterData query to ensure frequency of reading
- * TODO: Implement Intelligent Device device class that includes current and next slot timing
- * TODO: Reflect flexPlannedDispatches as changes to Price in Tariff and Account devices
- * TODO: Remove Device count and Dispatches count from Tariff device if Device count is zero
- * TODO: Refactor krakenAccountWrapper so that all JSONATA stuff is in it's own class
- * TODO: Change GQL Query Builder functions to return {object} not {string}; stringify query inside dataFetcher.getDataUsingGraphQL
- * TODO: Review the impact of changing the Period Start Day - changed to estimated Bill, for example
- * TODO: Review all classes, complete comments and remove redundant functions
- * TODO: Review subject factoring for device classes and krakenAccountWrapper
- * TODO: Convert to TypeScript
- * TODO: Subclass the productTariff class to differentiate half-hourly and non-halfhourly tariffs
- * TODO: Add support for Octopus Saving periods including auto-registration
- * TODO: Consider use of the Home Assistant hack for free-energy periods (how reliable is it??)
- * TODO: Research Energy Saving and FreeElectricityEvents in Kraken via GQL (customerFlexibilityCampaignEvents and savingsSessions)
- * TODO: Tariff efficiency measures on half-hourly tariff based on power consumed in each Quartile range (new device?)
- */
-
 module.exports = class krakenApp extends Homey.App {
 
   /**

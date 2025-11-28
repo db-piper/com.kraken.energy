@@ -4,4 +4,4 @@ Tariff devices allow you to track the energy consumed or exported using the impo
 
 The Account device tracks the status of your account, including periodic invoices and account balance.
 
-For Intelligent Tariff customers, Smart Energy Devices track the Planned Dispatches for a smart devices that are registered on the account.
+For Intelligent Tariff customers, Smart Energy Devices track the Planned Dispatches for smart devices that are registered on the account.

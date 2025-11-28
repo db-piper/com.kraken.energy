@@ -600,6 +600,30 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+   * Return the minimum price for the tariff for the day
+   * @param   {string}    atTime    Datetime of the current event
+   * @param   {boolean}   isExport  True iff export tariff, false otherwise
+   * @returns {float}               The minimum price for the day  
+   */
+  async minimumDayPrice(atTime, isExport) {
+    const tariff = await this.getTariffDirection(isExport);
+    //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: atTime ${atTime} isExport ${isExport}`);
+    //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: tariff ${JSON.stringify(tariff)}`);
+    let minimumPrice = 0;
+    if ('unitRates' in tariff) {
+      const dateTime = this.getLocalDateTime(new Date(atTime)).plus({days: 1}).set({hour: 0, minute: 0, second: 0, millisecond: 0}).toISO();
+      const expression = jsonata(`$min(unitRates[$toMillis("${dateTime}")>$toMillis(validFrom)].value)`);
+      minimumPrice = await expression.evaluate(tariff);
+      //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: dateTime ${dateTime} ${minimumPrice}`);
+    } else if ('nightRate' in tariff) {
+      minimumPrice = tariff.nightRate;
+    } else {
+      minimumPrice = tariff.dayRate;
+    }
+    return minimumPrice;
+  }
+
+  /**
    * Return live meter data from the instantiated live meter device
    * @returns {object} reading JSON object representing the current data
    */
@@ -680,7 +704,6 @@ module.exports = class krakenAccountWrapper {
 
   futureDispatches(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
-    //TODO: Use adjusted Start Time (shifted back to previous 30 minute interval)
     const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
     //this._driver.homey.log(`krakenAccountWrapper.futureDispatches: selected: ${JSON.stringify(selectedItems)}`);
     return selectedItems;
@@ -807,8 +830,7 @@ module.exports = class krakenAccountWrapper {
    * Get the month day number (1-31) on which the charging period commences
    * @returns {integer}       Day number (1-31)
    */
-  async getBillingPeriodStartDay() {
-    //TODO: Consider using JSONata to do this for consistency and robustness
+  getBillingPeriodStartDay() {
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
     const timeZone = this._driver.homey.clock.getTimezone();
     const date = DateTime.fromISO(dateString, { zone: timeZone, setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });

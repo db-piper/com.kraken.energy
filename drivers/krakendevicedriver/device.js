@@ -50,6 +50,17 @@ module.exports = class krakenDevice extends Homey.Device {
     this.log('krakenDevice:onDeleted has been deleted');
   }
 
+	getCurrentDispatch(atTime, plannedDispatches) {
+		let dispatches = [];
+		for (const deviceHash of Object.keys(plannedDispatches)) {
+			for (const dispatch of plannedDispatches[deviceHash]) {
+				dispatches.push(dispatch);
+			}
+		}
+		const currentDispatch = this.accountWrapper.currentDispatch(atTime, dispatches);
+		return currentDispatch;
+	}
+
 	/**
 	 * Queue the update of the value of the named capability
 	 * @param {string} 	capabilityName 		Name of the capability to be updated

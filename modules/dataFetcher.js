@@ -78,24 +78,6 @@ module.exports = class dataFetcher {
   }
 
   /**
-   * Check that all error codes from a query are in the list of acceptable errors
-   * @param     {object}    result            The query result with an Errors item  
-   * @param     {string[]}  acceptableErrors  Array of acceptable error code strings of the form "KT-aa-nnnn" 
-   * @returns   {boolean}                     True if all result error codes exist in acceptable errors array
-   */
-  isAllIgnorable(result, acceptableErrors) {
-    let ignorable = true;
-    for (const queryError of result.errors) {
-      let queryErrorCode = queryError.extensions.errorCode;
-      ignorable &= acceptableErrors.includes(queryErrorCode);
-      if (!ignorable) {
-        break;
-      }
-    }
-    return ignorable;
-  }
-
-  /**
    * Return the query string to obtain the Kraken API Token
    * @returns {string} Stringified JSON representing the query
    */
