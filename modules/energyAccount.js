@@ -31,8 +31,13 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
-		this.defineCapability("meter_power.import_half_hourly", { "title": { "en": "Chunked Energy" }, "uiComponent": null });
-		this.defineCapability("measure_monetary.import_half_hourly", { "title": { "en": "Chunked Cost" }, "uiComponent": null });
+
+		this.defineCapability("meter_power.chunk_import", { "title": {"en": "Chunk Import"}, "decimals": 3});
+		this.defineCapability("meter_power.chunk_import_consumption", { "title": {"en": "Chunk Consumption"}, "decimals": 3});
+		this.defineCapability("measure_monetary.chunk_import_value", {"title": {"en": "Chunk Value"}, "decimals": 2, "units": {"en": "£"}});
+		this.defineCapability("measure_monetary.chunk_accumulated_value", {"title": {"en": "Chunk Accum Value"}, "decimals": 2, "units": {"en": "£"}});
+		//this.defineCapability("measure_monetary.chunk_period_value", {"title": {"en": "Chunk Period Value"}, "units": {"en": "£"}});
+		//this.defineCapability("measure_monetary.chunk_day_value", {"title": {"en": "Chunk Day Value"}, "units": {"en": "£"}});
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -80,8 +85,16 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	async updatePeriodDay(startDay) {
-		const periodDay = this.computePeriodDay((new Date).toISOString(), Number(startDay));
+		const atTime = (new Date()).toISOString();
+		const periodDay = this.computePeriodDay(atTime, Number(startDay));
+		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
+		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({months: 1}).toISO(), startDay);
 		await this.setCapabilityValue("period_day.period_day", periodDay);
+		await this.setCapabilityValue("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
+		await this.setCapabilityValue("date_time.full_period_start", periodStartDate.toISO());
+		await this.setCapabilityValue("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
+		await this.setCapabilityValue("date_time.full_next_period", nextStartDate.toISO());
+
 		//TODO: Reset next period start to reflect the new start day;
 	}
 
@@ -92,15 +105,15 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}										The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0});
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
+		this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
 		return periodDay;
 	}
 
 	computePeriodStartDate(atTime, periodStartDay) {
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
-		eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
 			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :
@@ -118,6 +131,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const dateString = this.getCapabilityValue(capabilityName);
 		const date = (dateString === null) ? valueOnNull : this.accountWrapper.getLocalDateTime(new Date(dateString));
 		return date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+		//TODO: define and apply constant midnight in device.js
 	}
 
 	async initialiseBillingPeriodStartDay() {
@@ -146,21 +160,13 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
+		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
 		const billingPeriodStartDay = await this.initialiseBillingPeriodStartDay();
-		const firstTime = billingPeriodStartDay === null;
+		this.homey.log(`energyAccount.processEvent: billingPeriodStart: ${billingPeriodStartDay} first: ${firstTime}`);
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 		const minPrice = await this.accountWrapper.minimumDayPrice(atTime, false);				// Pence
 		this.homey.log(`energyAccount.processEvent: currentDispatch ${JSON.stringify(currentDispatch)} inDispatch ${inDispatch} minPrice ${minPrice}`);
-
-		//Have 30 minute old energy and cost capabilities
-		//On :00 and :30
-		//Incremental_energy is current_reading - 30_minute_old_energy
-		//Incremental_cost is Incremental_energy * current_price (tariff or dispatch)
-		//Adjusted_Total_Cost is 30_minute_old_cost + incremental_Cost
-		//Reset "real cost" capability to be Adjusted_Total_Cost
-		//30_minute_old_cost = adjusted total cost
-		//30_minute_old_energy = current reading
 
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		const currentBalance = this.accountWrapper.getCurrentBalance();
@@ -191,6 +197,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const periodCurrentImportValue = await this.getCapabilityValue("measure_monetary.period_import_value");
 		const dayCurrentImport = 1000 * await this.getCapabilityValue("meter_power.day_import");
 		const dayCurrentImportValue = await this.getCapabilityValue("measure_monetary.day_import_value");
+		const chunkImport = 1000 * await this.getCapabilityValue("meter_power.chunk_import");
+		let chunkAccumulatedValue = await this.getCapabilityValue("measure_monetary.chunk_accumulated_value");
 
 		let deltaExport = 0;
 		let deltaExportValue = 0;
@@ -209,6 +217,8 @@ module.exports = class energyAccount extends krakenDevice {
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
 		let projectedBill = 0;
+		let chunkConsumption = 0;
+		let chunkValue = 0;
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -223,17 +233,37 @@ module.exports = class energyAccount extends krakenDevice {
 
 			if (importTariffPresent) {
 				deltaImport = liveMeterReading.consumption - currentImport;
-				//const importPrice = inDispatch ? minPrice / 100 : importPrices.unitRate / 100;
-				//Change the price, below, to use importPrice const
-				deltaImportValue = (deltaImport / 1000) * (importPrices.unitRate / 100);
+				const importPrice = inDispatch ? minPrice : importPrices.unitRate;
+				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);
+				this.homey.log(`energyAccount.processEvent: deltaImport ${deltaImport} importPrice ${importPrice} deltaImportValue ${deltaImportValue}`);
 				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);
 				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);
+				this.homey.log(`energyAccount.processEvent: period Import: ${periodUpdatedImport} value ${periodUpdatedImportValue}`);
 				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);
 				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);
+				this.homey.log(`energyAccount.processEvent: day Import: ${dayUpdatedImport} value ${dayUpdatedImportValue}`);
 				dayImportStandingCharge = importPrices.standingCharge;
+				chunkConsumption = liveMeterReading.consumption - chunkImport;
+				//chunkValue is whole chunk consumption so far at the import price (potentially less than tariff price) 
+				chunkValue = (chunkConsumption / 1000) * (importPrice / 100);
+				//chunkAccumulatedValue is incremental consumption, each increment priced at the tariff OR dispatch price
+				chunkAccumulatedValue = chunkAccumulatedValue + deltaImportValue;
+				//iff dispatch is inserted in the current half hour, cAV will be part priced at the tariff rate, part at dispatch rate
+				//cV is always priced at the prevailing rate (allowing for early start/deferred end)
+				this.homey.log(`energyAccount.processEvent: chunk Cons: ${chunkConsumption} value ${chunkValue} accum ${chunkAccumulatedValue}`);
+				if ([0, 30].includes(eventDateTime.minute)) {
+					//const minPriceValue = (chunkConsumption / 1000) * (minPrice / 100);
+					const valueReduction = chunkValue - chunkAccumulatedValue;
+					this.homey.log(`energyAccount.processEvent: value ${chunkValue} accum ${chunkAccumulatedValue} reduction ${valueReduction}`);
+					periodUpdatedImportValue = periodUpdatedImportValue + valueReduction;
+					dayUpdatedImportValue = dayUpdatedImportValue + valueReduction;
+					chunkAccumulatedValue = 0;
+					this.homey.log(`energyAccount.processEvent: chunk: CONS ${chunkConsumption} VR ${valueReduction} PIV ${periodUpdatedImportValue} DIV ${dayUpdatedImportValue}`);
+				}
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
+			this.homey.log(`energyAccount.processEvent: periodDay: ${periodDay}`);
 			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
@@ -261,6 +291,13 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.period_standing_charge", periodUpdatedStandingCharge);
 		this.updateCapability("measure_monetary.period_bill", billValue);
 		this.updateCapability("measure_monetary.projected_bill", projectedBill);
+		this.updateCapability("measure_monetary.chunk_accumulated_value", chunkAccumulatedValue);
+
+		if ([0,30].includes(eventDateTime.minute) || firstTime) {
+			this.updateCapability("meter_power.chunk_import", liveMeterReading.consumption / 1000);
+			this.updateCapability("meter_power.chunk_import_consumption", chunkConsumption / 1000);
+			this.updateCapability("measure_monetary.chunk_import_value", chunkValue);
+		}
 
 		updates = await this.updateCapabilities(updates);
 		return updates;
