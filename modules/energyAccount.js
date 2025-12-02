@@ -29,7 +29,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
-		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price"}, "decimals": 2, "units": {"en": "£"}});
+		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price"}, "decimals": 4, "units": {"en": "£"}});
 		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch"}});
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
@@ -287,7 +287,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.period_bill", billValue);
 		this.updateCapability("measure_monetary.projected_bill", projectedBill);
 		this.updateCapability("measure_monetary.chunk_accumulated_value", chunkAccumulatedValue);
-		this.updateCapability("measure_monetary.unit_price", importPrice);
+		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
 		this.updateCapability("data_presence.in_dispatch", inDispatch);
 
 		if ([0,30].includes(eventDateTime.minute) || firstTime) {
