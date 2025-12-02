@@ -29,15 +29,14 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
+		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price"}, "decimals": 2, "units": {"en": "£"}});
+		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch"}});
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
-
-		this.defineCapability("meter_power.chunk_import", { "title": {"en": "Chunk Import"}, "decimals": 3});
-		this.defineCapability("meter_power.chunk_import_consumption", { "title": {"en": "Chunk Consumption"}, "decimals": 3});
-		this.defineCapability("measure_monetary.chunk_import_value", {"title": {"en": "Chunk Value"}, "decimals": 2, "units": {"en": "£"}});
-		this.defineCapability("measure_monetary.chunk_accumulated_value", {"title": {"en": "Chunk Accum Value"}, "decimals": 2, "units": {"en": "£"}});
-		//this.defineCapability("measure_monetary.chunk_period_value", {"title": {"en": "Chunk Period Value"}, "units": {"en": "£"}});
-		//this.defineCapability("measure_monetary.chunk_day_value", {"title": {"en": "Chunk Day Value"}, "units": {"en": "£"}});
+		this.defineCapability("meter_power.chunk_import", { "title": {"en": "Chunk Import"}, "decimals": 3, "uiComponent": null});
+		this.defineCapability("meter_power.chunk_import_consumption", { "title": {"en": "Chunk Consumption"}, "decimals": 3, "uiComponent": "sensor"});
+		this.defineCapability("measure_monetary.chunk_import_value", {"title": {"en": "Chunk Value"}, "decimals": 2, "units": {"en": "£"}, "uiComponent": "sensor"});
+		this.defineCapability("measure_monetary.chunk_accumulated_value", {"title": {"en": "Chunk Accum Value"}, "decimals": 2, "units": {"en": "£"}, "uiComponent": null});
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -219,6 +218,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let projectedBill = 0;
 		let chunkConsumption = 0;
 		let chunkValue = 0;
+		let importPrice = null;
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -233,37 +233,32 @@ module.exports = class energyAccount extends krakenDevice {
 
 			if (importTariffPresent) {
 				deltaImport = liveMeterReading.consumption - currentImport;
-				const importPrice = inDispatch ? minPrice : importPrices.unitRate;
+				importPrice = inDispatch ? minPrice : importPrices.unitRate;
 				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);
-				this.homey.log(`energyAccount.processEvent: deltaImport ${deltaImport} importPrice ${importPrice} deltaImportValue ${deltaImportValue}`);
+				//this.homey.log(`energyAccount.processEvent: deltaImport ${deltaImport} unitRate ${importPrices.unitRate} importPrice ${importPrice} deltaImportValue ${deltaImportValue}`);
 				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);
 				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);
-				this.homey.log(`energyAccount.processEvent: period Import: ${periodUpdatedImport} value ${periodUpdatedImportValue}`);
+				//this.homey.log(`energyAccount.processEvent: period Import: ${periodUpdatedImport} value ${periodUpdatedImportValue}`);
 				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);
 				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);
-				this.homey.log(`energyAccount.processEvent: day Import: ${dayUpdatedImport} value ${dayUpdatedImportValue}`);
+				//this.homey.log(`energyAccount.processEvent: day Import: ${dayUpdatedImport} value ${dayUpdatedImportValue}`);
 				dayImportStandingCharge = importPrices.standingCharge;
 				chunkConsumption = liveMeterReading.consumption - chunkImport;
-				//chunkValue is whole chunk consumption so far at the import price (potentially less than tariff price) 
 				chunkValue = (chunkConsumption / 1000) * (importPrice / 100);
-				//chunkAccumulatedValue is incremental consumption, each increment priced at the tariff OR dispatch price
 				chunkAccumulatedValue = chunkAccumulatedValue + deltaImportValue;
-				//iff dispatch is inserted in the current half hour, cAV will be part priced at the tariff rate, part at dispatch rate
-				//cV is always priced at the prevailing rate (allowing for early start/deferred end)
-				this.homey.log(`energyAccount.processEvent: chunk Cons: ${chunkConsumption} value ${chunkValue} accum ${chunkAccumulatedValue}`);
+				//this.homey.log(`energyAccount.processEvent: chunk Cons: ${chunkConsumption} value ${chunkValue} accum ${chunkAccumulatedValue}`);
 				if ([0, 30].includes(eventDateTime.minute)) {
-					//const minPriceValue = (chunkConsumption / 1000) * (minPrice / 100);
 					const valueReduction = chunkValue - chunkAccumulatedValue;
-					this.homey.log(`energyAccount.processEvent: value ${chunkValue} accum ${chunkAccumulatedValue} reduction ${valueReduction}`);
+					//this.homey.log(`energyAccount.processEvent: value ${chunkValue} accum ${chunkAccumulatedValue} reduction ${valueReduction}`);
 					periodUpdatedImportValue = periodUpdatedImportValue + valueReduction;
 					dayUpdatedImportValue = dayUpdatedImportValue + valueReduction;
 					chunkAccumulatedValue = 0;
-					this.homey.log(`energyAccount.processEvent: chunk: CONS ${chunkConsumption} VR ${valueReduction} PIV ${periodUpdatedImportValue} DIV ${dayUpdatedImportValue}`);
+					//this.homey.log(`energyAccount.processEvent: chunk: CONS ${chunkConsumption} VR ${valueReduction} PIV ${periodUpdatedImportValue} DIV ${dayUpdatedImportValue}`);
 				}
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
-			this.homey.log(`energyAccount.processEvent: periodDay: ${periodDay}`);
+			//this.homey.log(`energyAccount.processEvent: periodDay: ${periodDay}`);
 			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
@@ -292,6 +287,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.period_bill", billValue);
 		this.updateCapability("measure_monetary.projected_bill", projectedBill);
 		this.updateCapability("measure_monetary.chunk_accumulated_value", chunkAccumulatedValue);
+		this.updateCapability("measure_monetary.unit_price", importPrice);
+		this.updateCapability("data_presence.in_dispatch", inDispatch);
 
 		if ([0,30].includes(eventDateTime.minute) || firstTime) {
 			this.updateCapability("meter_power.chunk_import", liveMeterReading.consumption / 1000);
