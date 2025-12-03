@@ -611,7 +611,7 @@ module.exports = class krakenAccountWrapper {
     //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: tariff ${JSON.stringify(tariff)}`);
     let minimumPrice = 0;
     if ('unitRates' in tariff) {
-      const dateTime = this.getLocalDateTime(new Date(atTime)).plus({days: 1}).set({hour: 0, minute: 0, second: 0, millisecond: 0}).toISO();
+      const dateTime = this.getLocalDateTime(new Date(atTime)).plus({ days: 1 }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).toISO();
       const expression = jsonata(`$min(unitRates[$toMillis("${dateTime}")>$toMillis(validFrom)].value)`);
       minimumPrice = await expression.evaluate(tariff);
       //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: dateTime ${dateTime} ${minimumPrice}`);
@@ -704,7 +704,7 @@ module.exports = class krakenAccountWrapper {
     );
     const result = await expression.evaluate(dispatchArray);
     //this._driver.homey.log(`krakenAccountWrapper.earliestDispatch: ${JSON.stringify(result)}`);
-    return result;    
+    return result;
   }
 
   futureDispatches(atTime, plannedDispatches) {
@@ -716,13 +716,13 @@ module.exports = class krakenAccountWrapper {
 
   currentDispatch(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
-    const selectedDispatches = plannedDispatches.filter((dispatch) => 
+    const selectedDispatches = plannedDispatches.filter((dispatch) =>
       (this.advanceTime(dispatch.start) < eventTime) &&
-      (this.extendTime(dispatch.end) > eventTime)   
+      (this.extendTime(dispatch.end) > eventTime)
     );
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
-  
+
   /**
    * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
    * @param   {string}      time     String datetime to be advanced, in ISO format
@@ -740,7 +740,7 @@ module.exports = class krakenAccountWrapper {
    */
   extendTime(time) {
     //Advance the time by 30 minutes, then retard the result
-    const dateTime = this.getLocalDateTime(new Date(time)).plus({minutes: 29});
+    const dateTime = this.getLocalDateTime(new Date(time)).plus({ minutes: 29 });
     return this.advanceDateTime(dateTime);
   }
 
@@ -751,7 +751,7 @@ module.exports = class krakenAccountWrapper {
    */
   advanceDateTime(dateTime) {
     const newMinute = (dateTime.minute < 30) ? 0 : 30;
-    const advancedTime = dateTime.set({minute: newMinute, second: 0, millisecond: 0});
+    const advancedTime = dateTime.set({ minute: newMinute, second: 0, millisecond: 0 });
     return advancedTime;
   }
 

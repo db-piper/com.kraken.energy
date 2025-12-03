@@ -13,35 +13,35 @@ module.exports = class productTariff extends krakenDevice {
 
 		const isHalfHourly = await this.accountWrapper.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
-		const slotLabelWord  = isHalfHourly ? "Slot" : "Day";
+		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
 
 		this.defineCapability("product_code");
 		this.defineCapability("tariff_code");
-		this.defineCapability("measure_monetary.unit_price_taxed",{"title": {"en": '£/kWh'}, "decimals": 4, "units": {"en": "£",}});
-		this.defineCapability("measure_monetary.standing_charge_taxed",{"title":{"en": 'Daily Charge',},"decimals": 4,"units":{"en": "£",}});
-		this.defineCapability("meter_power",{"title": {"en": 'Cumulative kWh'}, "decimals": 3});
-		this.defineCapability("meter_power.consumption",{"title":{"en": `${slotLabelWord} Energy kWh`}, "decimals": 3});
-		this.defineCapability("measure_monetary.energy_value_taxed",{"title": {"en": `${slotLabelWord} Energy £ `}, "decimals": 4, "units": {"en": "£",}});
-		this.defineCapability("measure_power.average",{"title":{"en": `${slotLabelWord} Ave. Power`}});
+		this.defineCapability("measure_monetary.unit_price_taxed", { "title": { "en": '£/kWh' }, "decimals": 4, "units": { "en": "£", } });
+		this.defineCapability("measure_monetary.standing_charge_taxed", { "title": { "en": 'Daily Charge', }, "decimals": 4, "units": { "en": "£", } });
+		this.defineCapability("meter_power", { "title": { "en": 'Cumulative kWh' }, "decimals": 3 });
+		this.defineCapability("meter_power.consumption", { "title": { "en": `${slotLabelWord} Energy kWh` }, "decimals": 3 });
+		this.defineCapability("measure_monetary.energy_value_taxed", { "title": { "en": `${slotLabelWord} Energy £ ` }, "decimals": 4, "units": { "en": "£", } });
+		this.defineCapability("measure_power.average", { "title": { "en": `${slotLabelWord} Ave. Power` } });
 		if (isHalfHourly) {
-			this.defineCapability("slot_quartile",{"title": {"en": "Price Quartile"}});
+			this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } });
 		}
-		this.defineCapability("percent.tax_rate", {"title": {"en": "Tax Rate"}});
-		this.defineCapability("date_time.slot_start", {"title":{"en": `${slotLabelWord} Start`}});
-		this.defineCapability("date_time.slot_end",{"title":{"en": `${slotLabelWord} End`,}});
+		this.defineCapability("percent.tax_rate", { "title": { "en": "Tax Rate" } });
+		this.defineCapability("date_time.slot_start", { "title": { "en": `${slotLabelWord} Start` } });
+		this.defineCapability("date_time.slot_end", { "title": { "en": `${slotLabelWord} End`, } });
 		if (isHalfHourly) {
-			this.defineCapability("measure_monetary.next_unit_price_taxed",{"title": {"en": 'Next £/kWh',}, "units": {"en": "£", "fr": "€"}, "decimals": 4});
-			this.defineCapability("slot_quartile.next_slot_quartile", {"title": {"en": "Next Price Quartile"}});
-			this.defineCapability("data_presence.next_day_prices",{"title": {"en": "Tomorrow's Prices"}});
-			this.defineCapability("date_time.next_slot_end", {"title": {"en": 'Next Slot End'}});
+			this.defineCapability("measure_monetary.next_unit_price_taxed", { "title": { "en": 'Next £/kWh', }, "units": { "en": "£", "fr": "€" }, "decimals": 4 });
+			this.defineCapability("slot_quartile.next_slot_quartile", { "title": { "en": "Next Price Quartile" } });
+			this.defineCapability("data_presence.next_day_prices", { "title": { "en": "Tomorrow's Prices" } });
+			this.defineCapability("date_time.next_slot_end", { "title": { "en": 'Next Slot End' } });
 		}
-		this.defineCapability("date_time.full_slot_start", {"title": {"en": "SlotStartH"}, "uiComponent": null}, []);
-		this.defineCapability("date_time.full_slot_end", {"title": {"en": "SlotEndH"}, "uiComponent": null}, []);
+		this.defineCapability("date_time.full_slot_start", { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
+		this.defineCapability("date_time.full_slot_end", { "title": { "en": "SlotEndH" }, "uiComponent": null }, []);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
-		
-	}	
+
+	}
 
 	/**
 	 * onAdded is called when the user adds the device, called just after pairing.
@@ -156,7 +156,7 @@ module.exports = class productTariff extends krakenDevice {
 		const slotQuartile = tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;																						//ISO
 		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
-		const slotEnd = tariffPrices.nextSlotStart;			
+		const slotEnd = tariffPrices.nextSlotStart;
 		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");																				//ISO
 		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;		//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
@@ -167,7 +167,7 @@ module.exports = class productTariff extends krakenDevice {
 			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
 
-		this.updateCapability("product_code", productCode );
+		this.updateCapability("product_code", productCode);
 		this.updateCapability("tariff_code", tariffCode);
 		this.updateCapability("measure_monetary.unit_price_taxed", unitPriceTaxed);
 		this.updateCapability("measure_monetary.standing_charge_taxed", standingChargeTaxed);
@@ -181,10 +181,10 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("date_time.full_slot_start", slotStart);
 		this.updateCapability("date_time.slot_end", shortEnd);
 		this.updateCapability("date_time.full_slot_end", slotEnd);
-		this.updateCapability("data_presence.next_day_prices",nextDayPresent);
+		this.updateCapability("data_presence.next_day_prices", nextDayPresent);
 		this.updateCapability("measure_monetary.next_unit_price_taxed", nextUnitPriceTaxed);
-		this.updateCapability("slot_quartile.next_slot_quartile",nextQuartile);
-		this.updateCapability("date_time.next_slot_end",shortNextEnd);
+		this.updateCapability("slot_quartile.next_slot_quartile", nextQuartile);
+		this.updateCapability("date_time.next_slot_end", shortNextEnd);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;

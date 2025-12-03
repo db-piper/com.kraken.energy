@@ -148,12 +148,12 @@ module.exports = class managerEvent {
     return updates;
   }
 
-/**
- * Indicate that the day has changed between two timestamps in extended ISO format
- * @param   {string}  laterTime     The new timestamp
- * @param   {string}  earlierTime   The old timestamp
- * @returns {boolean}               True when the day has changed
- */
+  /**
+   * Indicate that the day has changed between two timestamps in extended ISO format
+   * @param   {string}  laterTime     The new timestamp
+   * @param   {string}  earlierTime   The old timestamp
+   * @returns {boolean}               True when the day has changed
+   */
   changeOfDay(laterTime, earlierTime) {
     //BUG: Using the JS Date class does not work because Homey always works in UTC. Reimplemented with Luxon
     // const newDate = (new Date(laterTime)).getDate();

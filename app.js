@@ -11,7 +11,7 @@ module.exports = class krakenApp extends Homey.App {
   async onInit() {
     this.homey.log('krakenApp.onInit: App has been initialized');
     this.registerConditionRunListener('slot_relative_price', productTariff.prototype.getCurrentlyCheaper);
-	}
+  }
 
   /**
    * Register the specified function on the device class as the listener for the named condition flow card 
@@ -36,7 +36,7 @@ module.exports = class krakenApp extends Homey.App {
     const result = handlerFunction.call(args.device, args);
     return result;
   }
-  
+
   /**
    * onUninit is called when the app is terminating.
    */
