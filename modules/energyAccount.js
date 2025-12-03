@@ -10,6 +10,8 @@ module.exports = class energyAccount extends krakenDevice {
 	async onInit() {
 		this.log('energyAccount Device:onInit - energyAccount device has been initialized');
 		await super.onInit();
+
+		const dispatchable = this.accountWrapper.getDeviceIds().length > 0;
 		this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });
 		this.defineCapability("period_day.period_day");
 		this.defineCapability("period_day.period_duration", { "title": { "en": "Period Duration" } });
@@ -30,7 +32,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price"}, "decimals": 4, "units": {"en": "£"}});
-		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch"}});
+		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch"}, "uiComponent": dispatchable ? "sensor": null}, ['uiComponent']);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
 		this.defineCapability("meter_power.chunk_import", { "title": {"en": "Chunk Import"}, "decimals": 3, "uiComponent": null});

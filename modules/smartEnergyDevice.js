@@ -10,6 +10,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	async onInit() {
 		this.log('smartEnergyDevice:onInit - smartEnergyDevice has been initialized');
 		await super.onInit();
+		
 		this.defineCapability("device_attribute.name", {"title": {"en": "Device Name"}});
     this.defineCapability("device_attribute.status", {"title": {"en": "Current Status"}});
     this.defineCapability("item_count.planned_dispatches", {"title": {"en": "Future Dispatches"}});			//Integer
