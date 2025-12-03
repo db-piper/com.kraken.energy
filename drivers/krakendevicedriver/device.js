@@ -67,6 +67,9 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {any} 		newValue 					New value to be assigned to the capability
 	 */
 	updateCapability(capabilityName, newValue) {
+		if (!this.hasOwnProperty("_updatedCapabilities")) {
+			this._updatedCapabilities = new Map();
+		}
 		this._updatedCapabilities.set(capabilityName, newValue);
 	}
 
@@ -142,6 +145,9 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {string[]}	force				List of option names to be forced to update		
 	 */
   defineCapability(name, overrides = {}, force = []) {
+		if (!this.hasOwnProperty("_requiredCapabilities")) {
+			this._requiredCapabilities = new Map();
+		}
 		this._requiredCapabilities.set(name, {overrides: overrides, force: force});
 	}
 
@@ -198,6 +204,9 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {any} 		value 				Value to be associated with the name
 	 */
 	defineStoreValue(name, value) {
+		if (!this.hasOwnProperty("_storeValues")) {
+			this._storeValues = {};
+		}		
 		this._storeValues[name] = value;
 	}
 
