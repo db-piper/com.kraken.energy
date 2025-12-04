@@ -85,5 +85,8 @@
   },
   "1.0.34": {
     "en": "Harden code to handle devices created in error when test data was released in error"
+  },
+  "1.0.35": {
+    "en": "Implement Dispatches in the Energy Account device; fix bug #12 by strengthening code"
   }
 }
