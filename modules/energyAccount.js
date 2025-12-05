@@ -85,18 +85,25 @@ module.exports = class energyAccount extends krakenDevice {
 		this.log('energyAccount Device:onSettings - settings were changed');
 	}
 
+  /**
+   * Update capability values that depend on the period day to be consistent
+   * @param   {integer}   startDay    The day number of the period start (1-31)
+   * @returns {boolean}               Indicates if any capabilities are actually updated
+   */
 	async updatePeriodDay(startDay) {
 		const atTime = (new Date()).toISOString();
 		const periodDay = this.computePeriodDay(atTime, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
 		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({months: 1}).toISO(), startDay);
-		await this.setCapabilityValue("period_day.period_day", periodDay);
-		await this.setCapabilityValue("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
-		await this.setCapabilityValue("date_time.full_period_start", periodStartDate.toISO());
-		await this.setCapabilityValue("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
-		await this.setCapabilityValue("date_time.full_next_period", nextStartDate.toISO());
 
-		//TODO: Reset next period start to reflect the new start day;
+    this.updateCapability("period_day.period_day", periodDay);
+    this.updateCapability("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
+    this.updateCapability("date_time.full_period_start", periodStartDate.toISO());
+    this.updateCapability("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
+    this.updateCapability("date_time.full_next_period", nextStartDate.toISO());
+
+    const updates = await this.updateCapabilities(false);
+    return updates;
 	}
 
 	/**
@@ -137,8 +144,8 @@ module.exports = class energyAccount extends krakenDevice {
 
 	async initialiseBillingPeriodStartDay() {
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
-		const firstTime = billingPeriodStartDay === null;
-		if (firstTime) {
+		//const firstTime = billingPeriodStartDay === null;
+		if (billingPeriodStartDay === null) {
 			billingPeriodStartDay = (this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2, '0');
 		}
 		try {
