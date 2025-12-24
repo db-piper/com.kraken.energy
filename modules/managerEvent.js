@@ -155,10 +155,6 @@ module.exports = class managerEvent {
    * @returns {boolean}               True when the day has changed
    */
   changeOfDay(laterTime, earlierTime) {
-    //BUG: Using the JS Date class does not work because Homey always works in UTC. Reimplemented with Luxon
-    // const newDate = (new Date(laterTime)).getDate();
-    // const oldDate = (new Date(earlierTime)).getDate();
-    // return newDate != oldDate;
     const timeZone = this.driver.homey.clock.getTimezone();
     const newDay = DateTime.fromJSDate(new Date(laterTime)).setZone(timeZone).day;
     const oldDay = DateTime.fromJSDate(new Date(earlierTime)).setZone(timeZone).day;
