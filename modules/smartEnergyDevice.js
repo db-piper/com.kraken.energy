@@ -97,7 +97,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let nextAdvancedStart = null;
 		let countDownStart = eventTime;
 		let countDown = null;
-		let dispatchMinutes = this.getCapabilityValue("item_count.dispatch_minutes");
+		let dispatchMinutes = newDay ? 0 : this.getCapabilityValue("item_count.dispatch_minutes");
 
 		if (inDispatch) {
 			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
@@ -107,7 +107,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			countDownStart = extendedEndDateTime;
 			extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
 			duration = extendedEndDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
-			dispatchMinutes = (newDay ? 0 : dispatchMinutes) + 1;
+			dispatchMinutes = dispatchMinutes + 1;
 		}
 
 		if (dispatchCount > 0) {
