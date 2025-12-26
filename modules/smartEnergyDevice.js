@@ -24,7 +24,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.defineCapability("duration.next_dispatch_countdown", { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
 		this.defineCapability("date_time.next_dispatch_start", { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.next_early_start", { "title": { "en": "Next Advanced Start" } });			//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("item_count.dispatch_minutes", { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mm" } }, ['title', 'units']);				//Integer	
+		this.defineCapability("item_count.dispatch_minutes", { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
