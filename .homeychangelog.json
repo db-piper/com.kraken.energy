@@ -91,5 +91,8 @@
   },
   "1.0.36": {
     "en": "Add new capability to Smart Device counting the number of dispatched minutes per day"
+  },
+  "1.0.37": {
+    "en": "Improved dispatch minutes counter algorithm"
   }
 }
