@@ -456,24 +456,24 @@ module.exports = class krakenAccountWrapper {
       accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
       success = accountData !== undefined;
       if (success) {
-        //TODO REMOVE THIS GASH CODE
-        accountData.data.devices = [
-          {
-            id: "00000000-000a-4000-8020-15ffff00d84d",
-            name: null,
-            status: {
-              currentState: "SMART_CONTROL_NOT_AVAILABLE"
-            }
-          },
-          {
-            id: "00000000-0009-4000-8020-0000000181f6",
-            name: "TEST TEST TEST",
-            status: {
-              currentState: "SMART_CONTROL_IN_PROGRESS"
-            }
-          }
-        ];
-        //TODO END GASH
+        // //TODO REMOVE THIS GASH CODE
+        // accountData.data.devices = [
+        //   {
+        //     id: "00000000-000a-4000-8020-15ffff00d84d",
+        //     name: null,
+        //     status: {
+        //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
+        //     }
+        //   },
+        //   {
+        //     id: "00000000-0009-4000-8020-0000000181f6",
+        //     name: "TEST TEST TEST",
+        //     status: {
+        //       currentState: "SMART_CONTROL_IN_PROGRESS"
+        //     }
+        //   }
+        // ];
+        // //TODO END GASH
         this._accountData = accountData;
       }
     }
@@ -489,24 +489,24 @@ module.exports = class krakenAccountWrapper {
     const accountQuery = this.accountDataQuery(this.accountId);
     const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-      //TODO: REMOVE THIS GASH CODE
-      accountData.data.devices = [
-        {
-          id: "00000000-000a-4000-8020-15ffff00d84d",
-          name: null,
-          status: {
-            currentState: "SMART_CONTROL_NOT_AVAILABLE"
-          }
-        },
-        {
-          id: "00000000-0009-4000-8020-0000000181f6",
-          name: "TEST TEST TEST",
-          status: {
-            currentState: "SMART_CONTROL_IN_PROGRESS"
-          }
-        }
-      ];
-      //TODO: END GASH
+      // //TODO: REMOVE THIS GASH CODE
+      // accountData.data.devices = [
+      //   {
+      //     id: "00000000-000a-4000-8020-15ffff00d84d",
+      //     name: null,
+      //     status: {
+      //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
+      //     }
+      //   },
+      //   {
+      //     id: "00000000-0009-4000-8020-0000000181f6",
+      //     name: "TEST TEST TEST",
+      //     status: {
+      //       currentState: "SMART_CONTROL_IN_PROGRESS"
+      //     }
+      //   }
+      // ];
+      // //TODO: END GASH
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
       return true;
@@ -641,44 +641,44 @@ module.exports = class krakenAccountWrapper {
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         result.reading = readingArray[0];
       }
-      //TODO: REMOVE THIS GASH CODE
-      let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
-      let xDispatches = {
-        d00000000_0009_4000_8020_0000000181f6: [
-          {
-            end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-            energyAddedKwh: -11.618,
-            start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
-            type: "SMART"
-          },
-          {
-            end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-            energyAddedKwh: -11.618,
-            start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
-            type: "SMART"
-          },
-          {
-            end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
-            energyAddedKwh: -3.417,
-            start: today.set({ hour: 18, minute: 15 }).toISO(), //"2025-10-25T19:30:00+00:00",
-            type: "SMART"
-          }, {
-            end: today.set({ hour: 19, minute: 45 }).toISO(), //"2025-10-25T17:45:00+00:00",
-            energyAddedKwh: -3.417,
-            start: today.set({ hour: 19, minute: 10 }).toISO(), //"2025-10-25T19:30:00+00:00",
-            type: "SMART"
-          },
-          {
-            end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
-            energyAddedKwh: -70.3,
-            start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
-            type: "SMART"
-          }
-        ],
-        d00000000_000a_4000_8020_15ffff00d84d: null
-      };
-      response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
-      //TODO: END GASH
+      // //TODO: REMOVE THIS GASH CODE
+      // let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
+      // let xDispatches = {
+      //   d00000000_0009_4000_8020_0000000181f6: [
+      //     {
+      //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+      //       energyAddedKwh: -11.618,
+      //       start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
+      //       type: "SMART"
+      //     },
+      //     {
+      //       end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+      //       energyAddedKwh: -11.618,
+      //       start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
+      //       type: "SMART"
+      //     },
+      //     {
+      //       end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
+      //       energyAddedKwh: -3.417,
+      //       start: today.set({ hour: 18, minute: 15 }).toISO(), //"2025-10-25T19:30:00+00:00",
+      //       type: "SMART"
+      //     }, {
+      //       end: today.set({ hour: 19, minute: 45 }).toISO(), //"2025-10-25T17:45:00+00:00",
+      //       energyAddedKwh: -3.417,
+      //       start: today.set({ hour: 19, minute: 10 }).toISO(), //"2025-10-25T19:30:00+00:00",
+      //       type: "SMART"
+      //     },
+      //     {
+      //       end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
+      //       energyAddedKwh: -70.3,
+      //       start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
+      //       type: "SMART"
+      //     }
+      //   ],
+      //   d00000000_000a_4000_8020_15ffff00d84d: null
+      // };
+      // response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
+      // //TODO: END GASH
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (Array.isArray(response.data[deviceKey])) {
