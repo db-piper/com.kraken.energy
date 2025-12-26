@@ -646,6 +646,12 @@ module.exports = class krakenAccountWrapper {
       // let xDispatches = {
       //   d00000000_0009_4000_8020_0000000181f6: [
       //     {
+      //       end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
+      //       energyAddedKwh: -11.618,
+      //       start: today.set({ hour: 12, minute: 36 }).toISO(), //"2025-10-25T12:36:00+00:00",
+      //       type: "SMART"
+      //     },
+      //     {
       //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
       //       energyAddedKwh: -11.618,
       //       start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
@@ -721,6 +727,14 @@ module.exports = class krakenAccountWrapper {
       (this.extendTime(dispatch.end) > eventTime)
     );
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
+  }
+
+  inDispatchToDevice(atTime, dispatch) {
+    const eventTime = this.getLocalDateTime(new Date(atTime));
+    const startTime = this.getLocalDateTime(new Date(dispatch.start));
+    const endTime = this.getLocalDateTime(new Date(dispatch.end));
+    this._driver.homey.log(`krakenAccountWrapper.inDispatchToDevice: ${JSON.stringify(dispatch)} ${eventTime.toISO()} ${startTime.toISO()} ${endTime.toISO()}`);
+    return (startTime < eventTime) && (endTime > eventTime);
   }
 
   /**
