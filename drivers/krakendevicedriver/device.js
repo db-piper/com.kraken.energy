@@ -13,6 +13,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._requiredCapabilities = new Map();
 		this._updatedCapabilities = new Map();
 		this._storeValues = {};
+		this._MAX_DISPATCH_MINUTES = 360;
 	}
 
 	/**

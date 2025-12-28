@@ -31,14 +31,15 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
-		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price"}, "decimals": 4, "units": {"en": "£"}});
-		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch"}, "uiComponent": dispatchable ? "sensor": null}, ['uiComponent']);
+		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price" }, "decimals": 4, "units": { "en": "£" } });
+		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch" }, "uiComponent": dispatchable ? "sensor" : null }, ['uiComponent']);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
-		this.defineCapability("meter_power.chunk_import", { "title": {"en": "Chunk Import"}, "decimals": 3, "uiComponent": null});
-		this.defineCapability("meter_power.chunk_import_consumption", { "title": {"en": "Chunk Consumption"}, "decimals": 3, "uiComponent": "sensor"});
-		this.defineCapability("measure_monetary.chunk_import_value", {"title": {"en": "Chunk Value"}, "decimals": 2, "units": {"en": "£"}, "uiComponent": "sensor"});
-		this.defineCapability("measure_monetary.chunk_accumulated_value", {"title": {"en": "Chunk Accum Value"}, "decimals": 2, "units": {"en": "£"}, "uiComponent": null});
+		this.defineCapability("meter_power.chunk_import", { "title": { "en": "Chunk Import" }, "decimals": 3, "uiComponent": null });
+		this.defineCapability("meter_power.chunk_import_consumption", { "title": { "en": "Chunk Consumption" }, "decimals": 3, "uiComponent": "sensor" });
+		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": "sensor" });
+		this.defineCapability("measure_monetary.chunk_accumulated_value", { "title": { "en": "Chunk Accum Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": null });
+		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 0, "units": { "en": "%" }, "uiComponent": dispatchable ? "sensor" : null });
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -85,25 +86,25 @@ module.exports = class energyAccount extends krakenDevice {
 		this.log('energyAccount Device:onSettings - settings were changed');
 	}
 
-  /**
-   * Update capability values that depend on the period day to be consistent
-   * @param   {integer}   startDay    The day number of the period start (1-31)
-   * @returns {boolean}               Indicates if any capabilities are actually updated
-   */
+	/**
+	 * Update capability values that depend on the period day to be consistent
+	 * @param   {integer}   startDay    The day number of the period start (1-31)
+	 * @returns {boolean}               Indicates if any capabilities are actually updated
+	 */
 	async updatePeriodDay(startDay) {
 		const atTime = (new Date()).toISOString();
 		const periodDay = this.computePeriodDay(atTime, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
-		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({months: 1}).toISO(), startDay);
+		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toISO(), startDay);
 
-    this.updateCapability("period_day.period_day", periodDay);
-    this.updateCapability("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
-    this.updateCapability("date_time.full_period_start", periodStartDate.toISO());
-    this.updateCapability("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
-    this.updateCapability("date_time.full_next_period", nextStartDate.toISO());
+		this.updateCapability("period_day.period_day", periodDay);
+		this.updateCapability("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability("date_time.full_period_start", periodStartDate.toISO());
+		this.updateCapability("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability("date_time.full_next_period", nextStartDate.toISO());
 
-    const updates = await this.updateCapabilities(false);
-    return updates;
+		const updates = await this.updateCapabilities(false);
+		return updates;
 	}
 
 	/**
@@ -113,7 +114,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}										The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0});
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
 		this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
@@ -229,6 +230,12 @@ module.exports = class energyAccount extends krakenDevice {
 		let chunkValue = 0;
 		let importPrice = null;
 
+		let totalDispatchMinutes = 0;
+		for (const device of this.accountWrapper.getDevices()) {
+			totalDispatchMinutes += device.getCapabilityValue("item_count.dispatch_minutes");
+		}
+		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
+
 		if (!firstTime) {
 			if (exportTariffPresent) {
 				deltaExport = liveMeterReading.export - currentExport;
@@ -298,8 +305,10 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.chunk_accumulated_value", chunkAccumulatedValue);
 		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
 		this.updateCapability("data_presence.in_dispatch", inDispatch);
+		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 
-		if ([0,30].includes(eventDateTime.minute) || firstTime) {
+
+		if ([0, 30].includes(eventDateTime.minute) || firstTime) {
 			this.updateCapability("meter_power.chunk_import", liveMeterReading.consumption / 1000);
 			this.updateCapability("meter_power.chunk_import_consumption", chunkConsumption / 1000);
 			this.updateCapability("measure_monetary.chunk_import_value", chunkValue);
