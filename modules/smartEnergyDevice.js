@@ -84,7 +84,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
 		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);    //dispatch or undefined
-		this.homey.log(`smartEnergyDevice.processEvent: currentDispatch: ${JSON.stringify(currentDispatch)}`);
 		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)					//dispatch or undefined
 		const inDispatchChunk = currentDispatch !== undefined;																		//receiving reduced price domestic energy
 
@@ -108,13 +107,11 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
 			duration = extendedEndDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
 			if (this.accountWrapper.inDispatchToDevice(atTime, currentDispatch)) {
-				this.homey.log(`smartEnergyDevice.processEvent: in dispatch to device at ${atTime}`);
 				dispatchMinutes = dispatchMinutes + 1;
 			}
 		}
 
 		if (dispatchCount > 0) {
-			//this.homey.log(`smartEnergyDevice.processEvent: Next Dispatch ${JSON.stringify(nextDispatch)}`);
 			const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
 			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
 			nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
