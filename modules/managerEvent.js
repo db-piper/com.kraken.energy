@@ -1,12 +1,13 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
+const krakenDriver = require("../drivers/krakendevicedriver/driver");
 const { DateTime } = require("luxon");
 
 module.exports = class managerEvent {
   /**
    * Establish the event interval and manage the execution of events by devices
-   * @param {Homey.Driver} driver controlling the devices
+   * @param {krakenDriver} driver controlling the devices
    */
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
@@ -96,7 +97,7 @@ module.exports = class managerEvent {
 
   /**
    * Get the current Homey.driver instance
-   * @returns {object - Homey.driver} current driver instance
+   * @returns {krakenDriver} current driver instance
    */
   get driver() {
     return this._driver;
@@ -136,7 +137,8 @@ module.exports = class managerEvent {
       const liveData = await this._accountWrapper.getLiveMeterData();
       //this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
       if ((liveData.reading !== undefined) && (liveData.dispatches !== undefined)) {
-        for (const device of this.driver.getDevices()) {
+        const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
+        for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
           this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
           updates.push(await device.processEvent(atTime, this.newDay(atTime), liveData.reading, liveData.dispatches));
         }

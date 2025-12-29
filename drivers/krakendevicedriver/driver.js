@@ -129,4 +129,19 @@ module.exports = class krakenDriver extends Homey.Driver {
     return success;
   }
 
+  /**
+   * Returns devices sorted by a custom priority list
+   * @param   {string[]}        orderedKeys Class names of the devices in the priority order
+   * @returns {Homey.Device[]}              Array of devices sorted by the priority list
+   */
+  getDevicesOrderedBy(orderedKeys) {
+    const rankMap = Object.fromEntries(orderedKeys.map((key, i) => [key, i]));
+
+    return [...this.getDevices()].sort((a, b) => {
+      const rankA = rankMap[a.getStoreValue("octopusClass")] ?? Infinity;
+      const rankB = rankMap[b.getStoreValue("octopusClass")] ?? Infinity;
+      return rankA - rankB;
+    });
+  }
+
 };

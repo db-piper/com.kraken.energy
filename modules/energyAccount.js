@@ -39,7 +39,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("meter_power.chunk_import_consumption", { "title": { "en": "Chunk Consumption" }, "decimals": 3, "uiComponent": "sensor" });
 		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": "sensor" });
 		this.defineCapability("measure_monetary.chunk_accumulated_value", { "title": { "en": "Chunk Accum Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": null });
-		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 0, "units": { "en": "%" }, "uiComponent": dispatchable ? "sensor" : null });
+		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" }, "uiComponent": "sensor" }, ['title', 'decimals', 'uiComponent']);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -231,10 +231,14 @@ module.exports = class energyAccount extends krakenDevice {
 		let importPrice = null;
 
 		let totalDispatchMinutes = 0;
-		for (const device of this.accountWrapper.getDevices()) {
-			totalDispatchMinutes += device.getCapabilityValue("item_count.dispatch_minutes");
+		for (const device of this.driver.getDevices()) {
+			if (device.getStoreValue("octopusClass") == "smartDevice") {
+				totalDispatchMinutes += device.getCapabilityValue("item_count.dispatch_minutes");
+				this.homey.log(`energyAccount.processEvent: device ${device.getName()} dispatchMinutes ${device.getCapabilityValue("item_count.dispatch_minutes")}`);
+			}
 		}
 		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
+		this.homey.log(`energyAccount.processEvent: percentDispatchLimit ${percentDispatchLimit} totalDispatchMinutes ${totalDispatchMinutes}`);
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
