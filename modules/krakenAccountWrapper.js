@@ -5,6 +5,7 @@ const dataFetcher = require('./dataFetcher');
 const { DateTime } = require('luxon');
 const AccountIdSetting = "krakenAccountId";
 const ApiKeySetting = "krakenApiKey";
+const krakenDriver = require("../drivers/krakendevicedriver/driver");
 
 module.exports = class krakenAccountWrapper {
   /**
@@ -14,7 +15,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Constructor for krakenAccountWrapper
-   * @param {object - Homey.Driver}   driver  managing the devices 
+   * @param {krakenDriver}   driver  managing the devices 
    */
   constructor(driver) {
     driver.homey.log(`krakenAccountWrapper.constructor: Instantiating`);

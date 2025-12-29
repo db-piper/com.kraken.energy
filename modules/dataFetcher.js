@@ -1,4 +1,6 @@
 'use strict';
+const krakenDriver = require("../drivers/krakendevicedriver/driver");
+const homey = require("homey");
 
 module.exports = class dataFetcher {
   /**
@@ -8,7 +10,7 @@ module.exports = class dataFetcher {
 
   /**
    * Constructor for dataFetcher. Class that performs all access to the REST API and GraphQL API 
-   * @param {object - driver}   driver  controls the devices
+   * @param {krakenDriver}   driver  controls the devices
    */
   constructor(driver) {
     driver.homey.log(`dataFetcher.constructor: Instantiating`);
@@ -23,7 +25,7 @@ module.exports = class dataFetcher {
 
   /**
    * Return the homey instance
-   * @returns {object - Homey} the homey instance
+   * @returns {homey} the homey instance
    */
   get homey() {
     return this._driver.homey;
@@ -197,7 +199,7 @@ module.exports = class dataFetcher {
    * @param {boolean} authorization the request must be run with basic authorization
    * @returns {object}              JSON result of the query or undefined
    */
-  async getDataUsingRest(url, authorization=true) {
+  async getDataUsingRest(url, authorization = true) {
     this.homey.log("dataFetcher.getDataUsingRest: Starting");
     const params = this.buildRestFetchParams(authorization);
     try {
@@ -230,8 +232,8 @@ module.exports = class dataFetcher {
 
     if (authorization) {
       params.headers = {
-          "Authorization": "Basic " + Utilities.base64Encode(this.apiKey + ":"),
-        }
+        "Authorization": "Basic " + Utilities.base64Encode(this.apiKey + ":"),
+      }
     }
 
     return params;
