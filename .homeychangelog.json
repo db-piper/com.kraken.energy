@@ -94,5 +94,8 @@
   },
   "1.0.37": {
     "en": "Improved dispatch minutes counter algorithm"
+  },
+  "1.0.38": {
+    "en": "% Consumed of Dispatch Limit capability (limit fixed at 360 minutes)"
   }
 }
