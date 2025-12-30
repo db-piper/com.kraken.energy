@@ -81,6 +81,7 @@ module.exports = class dataFetcher {
 
   /**
    * Return the query string to obtain the Kraken API Token
+   * @param   {string} apiKey  the API key to be used to obtain the Kraken API Token
    * @returns {string} Stringified JSON representing the query
    */
   getKrakenTokenQuery(apiKey) {
@@ -102,10 +103,10 @@ module.exports = class dataFetcher {
     return JSON.stringify(query, null, 2);
   }
 
-
   /**
    * Check the currency of the GraphQL API Token and refresh it if need be
-   * @returns {boolean} TRUE if a valid GraphQL API Token is available, FALSE otherwise
+   * @param   {string} apiKey   the API key to be used to obtain the Kraken API Token
+   * @returns {boolean}         TRUE if a valid GraphQL API Token is available, FALSE otherwise
    */
   async getGraphQlApiToken(apiKey) {
     this.homey.log("dataFetcher.getGraphQlApiToken - starting");
