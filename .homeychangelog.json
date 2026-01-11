@@ -97,5 +97,8 @@
   },
   "1.0.38": {
     "en": "% Consumed of Dispatch Limit capability (limit fixed at 360 minutes)"
+  },
+  "1.0.39": {
+    "en": "Fix to issue #14; root cause is not understood so this is not a full resolution."
   }
 }
