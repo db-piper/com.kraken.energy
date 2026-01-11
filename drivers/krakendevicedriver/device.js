@@ -80,6 +80,11 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {boolean}							True iff this or any preceding capability has its value changed
 	 */
 	async updateCapabilities(updates) {
+		this.log(`krakenDevice.updateCapabilities: starting`);
+		if (!this.hasOwnProperty("_updatedCapabilities")) {
+			this.log(`krakenDevice.updateCapabilities: _updatedCapabilities not found`);
+			this._updatedCapabilities = new Map();
+		}
 		const updatedCapabilitiesNames = Array.from(this._updatedCapabilities.keys());
 		let updated = updates;
 		for (const capabilityName of updatedCapabilitiesNames) {
