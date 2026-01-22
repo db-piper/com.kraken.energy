@@ -2,6 +2,7 @@
 
 const Homey = require('homey');
 const { DateTime } = require('luxon');
+const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -51,6 +52,12 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onDeleted has been deleted');
 	}
 
+	/**
+	 * Get the current dispatch for a given time from the list of planned dispatches
+	 * @param 	{string} atTime 						String representation of the event time
+	 * @param 	{object} plannedDispatches 	JSON object containing planned dispatches
+	 * @returns {object} 										Current dispatch or undefined if no dispatch currently active
+	 */
 	getCurrentDispatch(atTime, plannedDispatches) {
 		let dispatches = [];
 		for (const deviceHash of Object.keys(plannedDispatches)) {
@@ -127,7 +134,7 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Return the app's current instance of krakenAccountWrapper
-	 * @returns		{object - krakenAccountManager}		Current app instance of the account wrapper
+	 * @returns		{krakenAccountWrapper}		Current app instance of the account wrapper
 	 */
 	get accountWrapper() {
 		return this.driver.managerEvent.accountWrapper;
