@@ -157,11 +157,13 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {object} 		overrides 	Object defining capability options to be set
 	 * @param {string[]}	force				List of option names to be forced to update		
 	 */
-	defineCapability(name, overrides = {}, force = []) {
+	defineCapability(name, overrides = {}, force = [], required = true) {
 		if (!this.hasOwnProperty("_requiredCapabilities")) {
 			this._requiredCapabilities = new Map();
 		}
-		this._requiredCapabilities.set(name, { overrides: overrides, force: force });
+		if (required) {
+			this._requiredCapabilities.set(name, { overrides: overrides, force: force });
+		}
 	}
 
 	/**

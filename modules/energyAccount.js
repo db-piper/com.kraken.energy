@@ -11,36 +11,33 @@ module.exports = class energyAccount extends krakenDevice {
 		this.log('energyAccount Device:onInit - energyAccount device has been initialized');
 		await super.onInit();
 
-		const dispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
-		this.log(`energyAccount Device:onInit - dispatchable ${dispatchable}`);
-		this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });
+		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
+		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
+		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
+		this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });  //Enum, drop list interface
 		this.defineCapability("period_day.period_day");
 		this.defineCapability("period_day.period_duration", { "title": { "en": "Period Duration" } });
 		this.defineCapability("measure_monetary.account_balance", { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.projected_bill", { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
-		this.defineCapability("meter_power.import", { "title": { "en": "Cumulative Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.export", { "title": { "en": "Cumulative Export" }, "decimals": 3 });
+		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
+		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("meter_power.period_import", { "title": { "en": "Period Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.period_export", { "title": { "en": "Period Export" }, "decimals": 3 });
+		this.defineCapability("meter_power.period_export", { "title": { "en": "Period Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("measure_monetary.period_import_value", { "title": { "en": "Import Cost" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.period_export_value", { "title": { "en": "Export Value" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability("measure_monetary.period_export_value", { "title": { "en": "Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
 		this.defineCapability("measure_monetary.period_standing_charge", { "title": { "en": "Standing Charge" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.period_bill", { "title": { "en": "Bill Total" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("meter_power.day_import", { "title": { "en": "Day Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.day_export", { "title": { "en": "Day Export" }, "decimals": 3 });
+		this.defineCapability("meter_power.day_export", { "title": { "en": "Day Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("measure_monetary.day_import_value", { "title": { "en": "Day Import Cost" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
-		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
-		this.defineCapability("measure_monetary.unit_price", { "title": { "en": "Import Price" }, "decimals": 4, "units": { "en": "£" } });
-		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "In Dispatch" }, "uiComponent": dispatchable ? "sensor" : null }, ['uiComponent', 'title']);
+		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability("meter_power.chunk_import", { "title": { "en": "Chunk Import" }, "decimals": 3 });
+		this.defineCapability("meter_power.chunk_export", { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" }, "uiComponent": isDispatchable ? "sensor" : null }, ['title', 'decimals', 'uiComponent'], isDispatchable);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
-		this.defineCapability("meter_power.chunk_import", { "title": { "en": "Chunk Import" }, "decimals": 3, "uiComponent": null });
-		this.defineCapability("meter_power.chunk_import_consumption", { "title": { "en": "Chunk Consumption" }, "decimals": 3, "uiComponent": "sensor" });
-		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": "sensor" });
-		this.defineCapability("measure_monetary.chunk_accumulated_value", { "title": { "en": "Chunk Accum Value" }, "decimals": 2, "units": { "en": "£" }, "uiComponent": null });
-		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" }, "uiComponent": dispatchable ? "sensor" : null }, ['title', 'decimals', 'uiComponent']);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -184,19 +181,6 @@ module.exports = class energyAccount extends krakenDevice {
 		const exportTariffPresent = exportPrices !== undefined;
 		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
-
-		let currentPeriodStartDate = this.getPeriodStartDate("date_time.full_period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
-		let nextPeriodStartDate = this.getPeriodStartDate("date_time.full_next_period", currentPeriodStartDate.plus({ months: 1 }));
-		let newPeriod = false;
-		let eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
-
-		if (eventDateTime > nextPeriodStartDate) {
-			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
-			currentPeriodStartDate = nextPeriodStartDate;
-			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
-			newPeriod = true;
-		}
-
 		const currentExport = 1000 * await this.getCapabilityValue("meter_power.export");
 		const periodCurrentExport = 1000 * await this.getCapabilityValue("meter_power.period_export");
 		const periodCurrentExportValue = await this.getCapabilityValue("measure_monetary.period_export_value");
@@ -208,6 +192,20 @@ module.exports = class energyAccount extends krakenDevice {
 		const dayCurrentImport = 1000 * await this.getCapabilityValue("meter_power.day_import");
 		const dayCurrentImportValue = await this.getCapabilityValue("measure_monetary.day_import_value");
 		const chunkImport = 1000 * await this.getCapabilityValue("meter_power.chunk_import");
+
+		let currentPeriodStartDate = this.getPeriodStartDate("date_time.full_period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
+		let nextPeriodStartDate = this.getPeriodStartDate("date_time.full_next_period", currentPeriodStartDate.plus({ months: 1 }));
+		let eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
+
+		const newPeriod = eventDateTime > nextPeriodStartDate;
+		if (newPeriod) {
+			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
+			currentPeriodStartDate = nextPeriodStartDate;
+			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
+		}
+
+		const newChunk = [0, 30].includes(eventDateTime.minute);
+
 		let chunkAccumulatedValue = await this.getCapabilityValue("measure_monetary.chunk_accumulated_value");
 
 		let deltaExport = 0;
@@ -268,7 +266,7 @@ module.exports = class energyAccount extends krakenDevice {
 				chunkValue = (chunkConsumption / 1000) * (importPrice / 100);
 				chunkAccumulatedValue = chunkAccumulatedValue + deltaImportValue;
 				//this.homey.log(`energyAccount.processEvent: chunk Cons: ${chunkConsumption} value ${chunkValue} accum ${chunkAccumulatedValue}`);
-				if ([0, 30].includes(eventDateTime.minute)) {
+				if (newChunk) {
 					const valueReduction = chunkValue - chunkAccumulatedValue;
 					//this.homey.log(`energyAccount.processEvent: value ${chunkValue} accum ${chunkAccumulatedValue} reduction ${valueReduction}`);
 					periodUpdatedImportValue = periodUpdatedImportValue + valueReduction;
@@ -313,7 +311,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 
 
-		if ([0, 30].includes(eventDateTime.minute) || firstTime) {
+		if (newChunk || firstTime) {
 			this.updateCapability("meter_power.chunk_import", liveMeterReading.consumption / 1000);
 			this.updateCapability("meter_power.chunk_import_consumption", chunkConsumption / 1000);
 			this.updateCapability("measure_monetary.chunk_import_value", chunkValue);
