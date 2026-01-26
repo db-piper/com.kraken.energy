@@ -91,6 +91,10 @@ module.exports = class krakenAccountWrapper {
     return await jsonata(transform).evaluate(this.accountData);
   }
 
+  /**
+   * Get the IDs of the devices on the account
+   * @returns {string[]}      Array of device IDs
+   */
   async getDeviceIds() {
     const statusCodes = JSON.stringify(Object.getOwnPropertyNames(this._valid_device_status_translations));
     const transform = `[data.devices[status.currentState in ${statusCodes}].id]`;
@@ -189,10 +193,10 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
- * Indicate whether a tariff is halfHourly or simple
- * @param 		{boolean} 		direction		True: export; False: import 
- * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
- */
+   * Indicate whether a tariff is halfHourly or simple
+   * @param 		{boolean} 		direction		True: export; False: import 
+   * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
+   */
   async isHalfHourly(direction) {
     const tariff = await this.getTariffDirection(direction);
     const priceSlots = 'unitRates' in tariff;
@@ -229,12 +233,22 @@ module.exports = class krakenAccountWrapper {
     return prices;
   }
 
+  /**
+   * Return the device details for the specified device ID
+   * @param   {string}        id    Device ID
+   * @returns {object - JSON}       Device data structure or undefined if no device with the specified ID
+   */
   async getDevice(id) {
     const deviceTransform = `data.devices[id="${id}"]`;
     const device = await jsonata(deviceTransform).evaluate(this.accountData);
     return device;
   }
 
+  /**
+   * Translate the device status to a human readable string
+   * @param   {string}        status    Device status
+   * @returns {string}                  Human readable string or null if no translation available
+   */
   translateDeviceStatus(status) {
     let translation = null;
     if (status in this._valid_device_status_translations) {
@@ -717,6 +731,12 @@ module.exports = class krakenAccountWrapper {
     return result;
   }
 
+  /**
+   * Return the dispatches that start after the specified time
+   * @param       {string}    atTime            Time to check against
+   * @param       {[JSON]}    plannedDispatches Array of dispatches
+   * @returns     {[JSON]}                      Selected dispatches
+   */
   futureDispatches(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
@@ -724,6 +744,12 @@ module.exports = class krakenAccountWrapper {
     return selectedItems;
   }
 
+  /**
+   * Return the dispatch that is currently active
+   * @param       {string}    atTime            Time to check against
+   * @param       {[JSON]}    plannedDispatches Array of dispatches
+   * @returns     {JSON}                        Selected dispatch or undefined
+   */
   currentDispatch(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     const selectedDispatches = plannedDispatches.filter((dispatch) =>
@@ -733,6 +759,12 @@ module.exports = class krakenAccountWrapper {
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
 
+  /**
+   * Indicate whether the specified time is within the dispatch
+   * @param       {string}    atTime    Time to check against
+   * @param       {JSON}      dispatch  Dispatch to check against
+   * @returns     {boolean}             True if the time is within the dispatch, false otherwise
+   */
   inDispatchToDevice(atTime, dispatch) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     const startTime = this.getLocalDateTime(new Date(dispatch.start));

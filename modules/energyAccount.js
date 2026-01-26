@@ -107,9 +107,9 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * For a given date compute the number of the day in the period 
-	 * @param		{string} 		atTime					Date to compute period-day of
-	 * @param   {integer}		periodStartDay	The day in month when the period starts 
-	 * @returns {integer}										The 1-based index into the period of the date
+	 * @param   {string}    atTime            Date to compute period-day of
+	 * @param   {integer}   periodStartDay    The day in month when the period starts 
+	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
@@ -119,6 +119,12 @@ module.exports = class energyAccount extends krakenDevice {
 		return periodDay;
 	}
 
+	/**
+	 * Compute the start date of the period
+	 * @param   {string}    atTime            Date to compute period start from
+	 * @param   {integer}   periodStartDay    The day in month when the period starts 
+	 * @returns {DateTime}                    The start date of the period
+	 */
 	computePeriodStartDate(atTime, periodStartDay) {
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
@@ -128,12 +134,24 @@ module.exports = class energyAccount extends krakenDevice {
 		return periodStartDate;
 	}
 
+	/**
+	 * Compute the length of the period that started on the specified date in days
+	 * @param   {string}    atTime            Date to compute period length from
+	 * @param   {integer}   periodStartDay    The day in month when the period starts 
+	 * @returns {integer}                     The length of the period
+	 */
 	computePeriodLength(atTime, periodStartDay) {
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const lastDay = periodStartDate.endOf('month').day;
 		return lastDay;
 	}
 
+	/**
+	 * Get the start date of the current period as stored in the named capability	
+	 * @param   {string}    capabilityName    Name of the capability to get the start date from
+	 * @param   {DateTime}  valueOnNull       Value to return if the capability is null
+	 * @returns {DateTime}                    The start date of the period
+	 */
 	getPeriodStartDate(capabilityName, valueOnNull) {
 		const dateString = this.getCapabilityValue(capabilityName);
 		const date = (dateString === null) ? valueOnNull : this.accountWrapper.getLocalDateTime(new Date(dateString));
@@ -141,6 +159,10 @@ module.exports = class energyAccount extends krakenDevice {
 		//TODO: define and apply constant midnight in device.js
 	}
 
+	/**
+	 * Initialise the billing period start day
+	 * @returns {integer} The billing period start day number within the month
+	 */
 	async initialiseBillingPeriodStartDay() {
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
 		//const firstTime = billingPeriodStartDay === null;
@@ -163,6 +185,14 @@ module.exports = class energyAccount extends krakenDevice {
 		return billingPeriodStartDay;
 	}
 
+	/**
+	 * Process a event
+	 * @param   {string}    atTime            Date-time to process event for
+	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
+	 * @param   {JSON}      liveMeterReading  The live meter reading data
+	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
+	 * @returns {boolean}                     True if any capabilities were updated
+	 */
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);

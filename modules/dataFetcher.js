@@ -105,7 +105,7 @@ module.exports = class dataFetcher {
 
   /**
    * Check the currency of the GraphQL API Token and refresh it if need be
-   * @param   {string} apiKey   the API key to be used to obtain the Kraken API Token
+   * @param   {string}  apiKey  the API key to be used to obtain the Kraken API Token
    * @returns {boolean}         TRUE if a valid GraphQL API Token is available, FALSE otherwise
    */
   async getGraphQlApiToken(apiKey) {
@@ -177,7 +177,7 @@ module.exports = class dataFetcher {
    * @param {string}  queryString   GraphQL Query string to be passed as the payload
    * @param {string}  token         GraphQl access token
    * @param {boolean} authorization indicates whether an authorization header is needed
-   * @returns {object} query parameters name value pairs
+   * @returns {object}              query parameters name value pairs
    */
   buildGraphQLFetchParams(queryString, token) {
     let params = {
