@@ -53,10 +53,10 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * Get the current dispatch for a given time from the list of planned dispatches
-	 * @param 	{string} atTime 						String representation of the event time
-	 * @param 	{object} plannedDispatches 	JSON object containing planned dispatches
-	 * @returns {object} 										Current dispatch or undefined if no dispatch currently active
+	 * Get the current dispatch for a given time from the array of planned dispatches for all devices
+	 * @param 	{string} atTime 			String representation of the event time
+	 * @param 	{object} plannedDispatches 	JSON object containing planned dispatches for all devices
+	 * @returns {object} 					Current dispatch or undefined if no dispatch currently active
 	 */
 	getCurrentDispatch(atTime, plannedDispatches) {
 		let dispatches = [];
@@ -75,14 +75,16 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {any} 		newValue 					New value to be assigned to the capability
 	 */
 	updateCapability(capabilityName, newValue) {
-		if (!this.hasOwnProperty("_updatedCapabilities")) {
-			this._updatedCapabilities = new Map();
+		if (this.hasCapability(capabilityName)) {
+			if (!this.hasOwnProperty("_updatedCapabilities")) {
+				this._updatedCapabilities = new Map();
+			}
+			this._updatedCapabilities.set(capabilityName, newValue);
 		}
-		this._updatedCapabilities.set(capabilityName, newValue);
 	}
 
 	/**
-	 * Perform the queued updates to capability values
+	 * Perform the queued updates to capability values	
 	 * @param 	{boolean}		updates		True iff any preceding capability has been updated
 	 * @returns {boolean}							True iff this or any preceding capability has its value changed
 	 */
@@ -126,7 +128,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param     {string}        atTime            String representation of the event time
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
-	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
+	 * @returns   {Promise<boolean>}                Indicates if any updates have been made to the device capabilities
 	 */
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 		return false;

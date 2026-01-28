@@ -93,7 +93,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the IDs of the devices on the account
-   * @returns {string[]}      Array of device IDs
+   * @returns {Promise<string[]}      Array of device IDs
    */
   async getDeviceIds() {
     const statusCodes = JSON.stringify(Object.getOwnPropertyNames(this._valid_device_status_translations));
@@ -106,7 +106,7 @@ module.exports = class krakenAccountWrapper {
   /**
    * Return tariff details for the specified direction for the account overview
    * @param   {boolean} isExport    true - export tariff; false - import tariff
-   * @returns {string}              JSON structure of the tariff details or undefined
+   * @returns {Promise<JSON>}       JSON structure of the tariff details or undefined
    */
   async getTariffDirection(isExport) {
     const tariffTransform = this.tariffTransform(isExport);
@@ -622,7 +622,7 @@ module.exports = class krakenAccountWrapper {
    * @param   {boolean}   isExport  True iff export tariff, false otherwise
    * @returns {float}               The minimum price for the day  
    */
-  async minimumDayPrice(atTime, isExport) {
+  async minimumPriceOnDate(atTime, isExport) {
     const tariff = await this.getTariffDirection(isExport);
     //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: atTime ${atTime} isExport ${isExport}`);
     //this._driver.homey.log(`krakenAccountWrapper.minimumDayPrice: tariff ${JSON.stringify(tariff)}`);
@@ -745,7 +745,7 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the dispatch that is currently active
+   * Return the dispatch that is currently active from an array of planned dispatches, using extended times
    * @param       {string}    atTime            Time to check against
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {JSON}                        Selected dispatch or undefined
@@ -780,7 +780,7 @@ module.exports = class krakenAccountWrapper {
    */
   advanceTime(time) {
     const dateTime = this.getLocalDateTime(new Date(time));
-    return this.advanceDateTime(dateTime);
+    return this.retardDateTime(dateTime);
   }
 
   /**
@@ -791,7 +791,7 @@ module.exports = class krakenAccountWrapper {
   extendTime(time) {
     //Advance the time by 30 minutes, then retard the result
     const dateTime = this.getLocalDateTime(new Date(time)).plus({ minutes: 29 });
-    return this.advanceDateTime(dateTime);
+    return this.retardDateTime(dateTime);
   }
 
   /**
@@ -799,7 +799,7 @@ module.exports = class krakenAccountWrapper {
    * @param   {DateTime}    dateTime  Datetime to be retarded
    * @returns {DateTime}              Retarded datetime
    */
-  advanceDateTime(dateTime) {
+  retardDateTime(dateTime) {
     const newMinute = (dateTime.minute < 30) ? 0 : 30;
     const advancedTime = dateTime.set({ minute: newMinute, second: 0, millisecond: 0 });
     return advancedTime;
