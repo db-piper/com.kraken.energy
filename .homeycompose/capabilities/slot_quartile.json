@@ -1,13 +1,15 @@
 {
   "type": "number",
-  "title": {"en": "Slot Price Quartile"},
+  "title": {
+    "en": "Slot Price Quartile"
+  },
   "getable": true,
   "setable": false,
   "icon": "/assets/quartile.svg",
-  "insights": false,
+  "insights": true,
   "uiComponent": "sensor",
   "decimals": 0,
   "min": 0,
   "max": 3,
   "step": 1
-}   
+}

@@ -516,7 +516,7 @@
       "getable": true,
       "setable": false,
       "icon": "/assets/quartile.svg",
-      "insights": false,
+      "insights": true,
       "uiComponent": "sensor",
       "decimals": 0,
       "min": 0,

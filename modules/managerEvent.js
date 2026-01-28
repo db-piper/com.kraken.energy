@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const krakenDriver = require("../drivers/krakendevicedriver/driver");
 const { DateTime } = require("luxon");
 
 module.exports = class managerEvent {

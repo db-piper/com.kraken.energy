@@ -16,6 +16,7 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
+		const isHalfHourly = await this.accountWrapper.isHalfHourly(false);
 		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
 		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
 
@@ -43,6 +44,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("meter_power.chunk_export", { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
 		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
@@ -212,14 +214,15 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
-		this.homey.log(`energyAccount.processEvent: currentDispatch ${JSON.stringify(currentDispatch)} inDispatch ${inDispatch} minPrice ${minPrice}`);
 
 		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, false);							// Pence
+		this.homey.log(`energyAccount.processEvent: currentDispatch ${JSON.stringify(currentDispatch)} inDispatch ${inDispatch} minPrice ${minPrice}`);
 		const currentBalance = this.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, true);
 		const exportTariffPresent = exportPrices !== undefined;
 		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
+
 
 		const currentExport = 1000 * await this.getCapabilityValue("meter_power.export");						//watts
 		const periodCurrentExport = 1000 * await this.getCapabilityValue("meter_power.period_export");			//watts
@@ -275,6 +278,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let billValue = 0;
 		let projectedBill = 0;
 		let importPrice = 0;
+		let importQuartile = 0;
 
 		let totalDispatchMinutes = 0;
 		for (const device of this.driver.getDevices()) {
@@ -310,6 +314,10 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;										//pounds
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
+				importQuartile = importPrices.quartile;
+				if (inDispatch && percentDispatchLimit < 1) {
+					importQuartile = 0;
+				}
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
@@ -338,10 +346,11 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("meter_power.day_export", dayUpdatedExport / 1000);
 		this.updateCapability("measure_monetary.day_import_value", dayUpdatedImportValue);
 		this.updateCapability("measure_monetary.day_export_value", dayUpdatedExportValue);
-		this.updateCapability("measure_monetary.chunk_import", chunkUpdatedImport / 1000);
-		this.updateCapability("measure_monetary.chunk_export", chunkUpdatedExport / 1000);
+		this.updateCapability("meter_power.chunk_import", chunkUpdatedImport / 1000);
+		this.updateCapability("meter_power.chunk_export", chunkUpdatedExport / 1000);
 		this.updateCapability("measure_monetary.chunk_import_value", chunkUpdatedImportValue);
 		this.updateCapability("measure_monetary.chunk_export_value", chunkUpdatedExportValue);
+		this.updateCapability("slot_quartile", importQuartile);
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
 		this.updateCapability("data_presence.in_dispatch", inDispatch);

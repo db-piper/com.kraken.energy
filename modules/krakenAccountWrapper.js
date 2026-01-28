@@ -5,7 +5,6 @@ const dataFetcher = require('./dataFetcher');
 const { DateTime } = require('luxon');
 const AccountIdSetting = "krakenAccountId";
 const ApiKeySetting = "krakenApiKey";
-const krakenDriver = require("../drivers/krakendevicedriver/driver");
 
 module.exports = class krakenAccountWrapper {
   /**

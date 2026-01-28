@@ -1,10 +1,9 @@
 'use strict';
-const krakenDriver = require("../drivers/krakendevicedriver/driver");
 const homey = require("homey");
 
 module.exports = class dataFetcher {
   /**
-   * dataFetcher performs all {fetch} activity for REST and GraphQL queries. Current implementation assumes
+   * dataFetcher performs all {fetc} activity for REST and GraphQL queries. Current implementation assumes
    * octopus.energy account.
    */
 

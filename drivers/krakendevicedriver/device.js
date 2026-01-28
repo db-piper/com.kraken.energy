@@ -86,7 +86,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	/**
 	 * Perform the queued updates to capability values	
 	 * @param 	{boolean}		updates		True iff any preceding capability has been updated
-	 * @returns {boolean}							True iff this or any preceding capability has its value changed
+	 * @returns {Promise<boolean>}			True iff this or any preceding capability has its value changed
 	 */
 	async updateCapabilities(updates) {
 		this.log(`krakenDevice.updateCapabilities: starting`);
