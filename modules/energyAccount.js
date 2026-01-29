@@ -46,6 +46,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
 		this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
 		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
+		this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
 
@@ -315,7 +316,7 @@ module.exports = class energyAccount extends krakenDevice {
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
 				importQuartile = importPrices.quartile;
-				if (inDispatch && percentDispatchLimit < 1) {
+				if (inDispatch && percentDispatchLimit < 100) {
 					importQuartile = 0;
 				}
 			}

@@ -32,8 +32,12 @@
         {
           "name": "slot_quartile",
           "type": "number",
-          "title": {"en": "Price Quartile Number"},
-          "example": {"en": "From 0 (lowest prices) to 3 (highest prices)"}
+          "title": {
+            "en": "Price Quartile Number"
+          },
+          "example": {
+            "en": "From 0 (lowest prices) to 3 (highest prices)"
+          }
         }
       ],
       "$filter": "capabilities=slot_quartile"
@@ -47,6 +51,28 @@
         "en": "A new invoicing period has started and an invoice will be issued shortly."
       },
       "$filter": "capabilities=date_time.period_start"
+    },
+    {
+      "id": "period_day.period_day_changed",
+      "title": {
+        "en": "Invoice Period Day Has Changed"
+      },
+      "hint": {
+        "en": "The day nummber in the current invoicing period has changed."
+      },
+      "tokens": [
+        {
+          "name": "period_day.period_day",
+          "type": "number",
+          "title": {
+            "en": "Invoice Period Day Number"
+          },
+          "example": {
+            "en": "From 1 to 28-31 depending on the month."
+          }
+        }
+      ],
+      "$filter": "capabilities=period_day.period_day"
     },
     {
       "id": "date_time.slot_end_changed",
@@ -65,7 +91,7 @@
       },
       "hint": {
         "en": "Triggers when a Dispatch to the Smart Energy Device starts."
-      },      
+      },
       "$filter": "capabilities=device_attribute.name"
     },
     {
@@ -75,11 +101,11 @@
       },
       "hint": {
         "en": "Triggers when a Dispatch to the Smart Energy Device ends."
-      },      
+      },
       "$filter": "capabilities=device_attribute.name"
     }
   ],
-  "conditions":[
+  "conditions": [
     {
       "id": "slot_relative_price",
       "title": {

@@ -126,6 +126,34 @@
         ]
       },
       {
+        "id": "period_day.period_day_changed",
+        "title": {
+          "en": "Invoice Period Day Has Changed"
+        },
+        "hint": {
+          "en": "The day nummber in the current invoicing period has changed."
+        },
+        "tokens": [
+          {
+            "name": "period_day.period_day",
+            "type": "number",
+            "title": {
+              "en": "Invoice Period Day Number"
+            },
+            "example": {
+              "en": "From 1 to 28-31 depending on the month."
+            }
+          }
+        ],
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=period_day.period_day"
+          }
+        ]
+      },
+      {
         "id": "date_time.slot_end_changed",
         "title": {
           "en": "Current Slot End Time Has Changed"
