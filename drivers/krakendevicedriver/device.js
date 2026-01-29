@@ -65,7 +65,7 @@ module.exports = class krakenDevice extends Homey.Device {
 				dispatches.push(dispatch);
 			}
 		}
-		const currentDispatch = this.accountWrapper.currentDispatch(atTime, dispatches);
+		const currentDispatch = this.accountWrapper.currentExtendedDispatch(atTime, dispatches);
 		return currentDispatch;
 	}
 

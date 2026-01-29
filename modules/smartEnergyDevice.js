@@ -18,12 +18,12 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.defineCapability("alarm_power", { "title": { "en": "In Dispatch" }, "uiComponent": null });				//Boolean
 		this.defineCapability("date_time.current_dispatch_start", { "title": { "en": "Planned Start" } });			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("date_time.current_dispatch_end", { "title": { "en": "Planned Finish" } });				//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("date_time.current_early_start", { "title": { "en": "Advanced Start" } });				//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("date_time.current_extended_end", { "title": { "en": "Extended Finish" } });			//DD/mm HH:MM [dd/LL T]
+		//this.defineCapability("date_time.current_early_start", { "title": { "en": "Advanced Start" } });				//DD/mm HH:MM [dd/LL T]
+		//this.defineCapability("date_time.current_extended_end", { "title": { "en": "Extended Finish" } });			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("duration.remaining_duration", { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
 		this.defineCapability("duration.next_dispatch_countdown", { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
 		this.defineCapability("date_time.next_dispatch_start", { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("date_time.next_early_start", { "title": { "en": "Next Advanced Start" } });			//DD/mm HH:MM [dd/LL T]
+		//this.defineCapability("date_time.next_early_start", { "title": { "en": "Next Advanced Start" } });			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability("item_count.dispatch_minutes", { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
 
 		await this.applyCapabilities();
@@ -91,9 +91,9 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
 		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
-		const currentDispatch = this.accountWrapper.currentDispatch(atTime, deviceDispatches);    //dispatch or undefined
-		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)					//dispatch or undefined
-		const inDispatchChunk = currentDispatch !== undefined;																		//receiving reduced price domestic energy
+		const currentDispatch = this.accountWrapper.currentPlannedDispatch(atTime, deviceDispatches);   //dispatch or undefined
+		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
+		const inDispatch = currentDispatch !== undefined;                                               //receiving reduced price domestic energy
 
 		let startTime = null;
 		let endTime = null;
@@ -106,39 +106,40 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let countDown = null;
 		let dispatchMinutes = newDay ? 0 : this.getCapabilityValue("item_count.dispatch_minutes");
 
-		if (inDispatchChunk) {
-			startTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start)).toFormat("dd/LL T");
-			advancedStartTime = this.accountWrapper.advanceTime(currentDispatch.start).toFormat("dd/LL T");
-			endTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end)).toFormat("dd/LL T");
-			const extendedEndDateTime = this.accountWrapper.extendTime(currentDispatch.end);
-			countDownStart = extendedEndDateTime;
-			extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
-			duration = extendedEndDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
-			if (this.accountWrapper.inDispatchToDevice(atTime, currentDispatch)) {
-				dispatchMinutes = dispatchMinutes + 1;
+		if (inDispatch) {
+			const startDateTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start));
+			startTime = startDateTime.toFormat("dd/LL T");
+			//advancedStartTime = this.accountWrapper.advanceTime(currentDispatch.start).toFormat("dd/LL T");
+			const endDateTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end));
+			endTime = endDateTime.toFormat("dd/LL T");
+			//const extendedEndDateTime = this.accountWrapper.extendTime(currentDispatch.end);
+			countDownStart = endDateTime;
+			//extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
+			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
+			dispatchMinutes = dispatchMinutes + 1;
+			if (dispatchCount > 0) {
+				//const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
+				const nextStartDateTime = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start));
+				nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
+				//nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
+				countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 			}
 		}
 
-		if (dispatchCount > 0) {
-			const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
-			nextDispatchStart = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start)).toFormat("dd/LL T");
-			nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
-			countDown = nextDispatchAdvancedStart.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
-		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);
 		this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
 		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
 		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
-		this.updateCapabilityValue("date_time.current_early_start", advancedStartTime);
-		this.updateCapabilityValue("date_time.current_extended_end", extendedEndTime);
+		//this.updateCapabilityValue("date_time.current_early_start", advancedStartTime);
+		//this.updateCapabilityValue("date_time.current_extended_end", extendedEndTime);
 		this.updateCapabilityValue("duration.remaining_duration", duration);
 		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
-		this.updateCapabilityValue("date_time.next_early_start", nextAdvancedStart);
+		//this.updateCapabilityValue("date_time.next_early_start", nextAdvancedStart);
 		this.updateCapabilityValue("duration.next_dispatch_countdown", countDown);
-		this.updateCapabilityValue("data_presence.in_dispatch", inDispatchChunk);
-		this.updateCapabilityValue("alarm_power", inDispatchChunk);
+		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
+		this.updateCapabilityValue("alarm_power", inDispatch);
 		this.updateCapabilityValue("item_count.dispatch_minutes", dispatchMinutes);
 
 		updates = await this.updateCapabilities(updates);

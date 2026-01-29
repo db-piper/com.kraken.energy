@@ -356,7 +356,6 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
 		this.updateCapability("data_presence.in_dispatch", inDispatch);
-
 		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 

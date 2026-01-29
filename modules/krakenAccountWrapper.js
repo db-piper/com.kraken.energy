@@ -749,7 +749,7 @@ module.exports = class krakenAccountWrapper {
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {JSON}                        Selected dispatch or undefined
    */
-  currentDispatch(atTime, plannedDispatches) {
+  currentExtendedDispatch(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     const selectedDispatches = plannedDispatches.filter((dispatch) =>
       (this.advanceTime(dispatch.start) < eventTime) &&
@@ -759,18 +759,33 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Indicate whether the specified time is within the dispatch
-   * @param       {string}    atTime    Time to check against
-   * @param       {JSON}      dispatch  Dispatch to check against
-   * @returns     {boolean}             True if the time is within the dispatch, false otherwise
+   * Return the dispatch that is currently active from an array of planned dispatches using planned times
+   * @param       {string}    atTime            Time to check against
+   * @param       {[JSON]}    plannedDispatches Array of dispatches
+   * @returns     {JSON}                        Selected dispatch or undefined
    */
-  inDispatchToDevice(atTime, dispatch) {
+  currentPlannedDispatch(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
-    const startTime = this.getLocalDateTime(new Date(dispatch.start));
-    const endTime = this.getLocalDateTime(new Date(dispatch.end));
-    this._driver.homey.log(`krakenAccountWrapper.inDispatchToDevice: ${JSON.stringify(dispatch)} ${eventTime.toISO()} ${startTime.toISO()} ${endTime.toISO()}`);
-    return (startTime < eventTime) && (endTime > eventTime);
+    const selectedDispatches = plannedDispatches.filter((dispatch) =>
+      (this.getLocalDateTime(new Date(dispatch.start)) < eventTime) &&
+      (this.getLocalDateTime(new Date(dispatch.end)) > eventTime)
+    );
+    return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
+
+  // /**
+  //  * Indicate whether the specified time is within the dispatch
+  //  * @param       {string}    atTime    Time to check against
+  //  * @param       {JSON}      dispatch  Dispatch to check against
+  //  * @returns     {boolean}             True if the time is within the dispatch, false otherwise
+  //  */
+  // inDispatchToDevice(atTime, dispatch) {
+  //   const eventTime = this.getLocalDateTime(new Date(atTime));
+  //   const startTime = this.getLocalDateTime(new Date(dispatch.start));
+  //   const endTime = this.getLocalDateTime(new Date(dispatch.end));
+  //   this._driver.homey.log(`krakenAccountWrapper.inDispatchToDevice: ${JSON.stringify(dispatch)} ${eventTime.toISO()} ${startTime.toISO()} ${endTime.toISO()}`);
+  //   return (startTime < eventTime) && (endTime > eventTime);
+  // }
 
   /**
    * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
