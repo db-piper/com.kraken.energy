@@ -97,7 +97,7 @@ module.exports = class energyAccount extends krakenDevice {
 	/**
 	 * Update capability values that depend on the period day to be consistent
 	 * @param   {integer}   startDay    The day number of the period start (1-31)
-	 * @returns {boolean}               Indicates if any capabilities are actually updated
+	 * @returns {Promise<boolean>}      Indicates if any capabilities are actually updated
 	 */
 	async updatePeriodDay(startDay) {
 		const atTime = (new Date()).toISOString();
@@ -171,25 +171,26 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * Initialise the billing period start day
-	 * @returns {integer} The billing period start day number within the month
+	 * @param   {boolean}   firstTime       Indicates if this is the first time the device is being initialised
+	 * @returns {Promise <integer>}         The billing period start day number within the month
 	 */
-	async initialiseBillingPeriodStartDay() {
+	async initialiseBillingPeriodStartDay(firstTime) {
 		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
-		//const firstTime = billingPeriodStartDay === null;
-		if (billingPeriodStartDay === null) {
+		if (firstTime) {
+			this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: firstTime ${firstTime}, billingPeriodStartDay ${billingPeriodStartDay}`);
 			billingPeriodStartDay = (this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2, '0');
-		}
-		try {
-			await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
-			this.homey.log(`energyAccount.processEvent: triggerCapabilityListener success`);
-		} catch (error) {
-			this.homey.log(`energyAccount.processEvent: triggerCapabilityListener error`);
-			if (error.message.includes('month_day.period_start')) {
-				this.homey.log(`energyAccount.processEvent: registering capability listener`);
-				this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
-					await this.updatePeriodDay(value);
-				});
-				await this.updatePeriodDay(billingPeriodStartDay);
+			try {
+				await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
+				this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener success`);
+			} catch (error) {
+				this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener error`);
+				if (error.message.includes('month_day.period_start')) {
+					this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: registering capability listener`);
+					this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
+						await this.updatePeriodDay(value);
+					});
+					await this.updatePeriodDay(billingPeriodStartDay);
+				}
 			}
 		}
 		return billingPeriodStartDay;
@@ -208,7 +209,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
-		const billingPeriodStartDay = await this.initialiseBillingPeriodStartDay();
+		const billingPeriodStartDay = await this.initialiseBillingPeriodStartDay(firstTime);
 		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
 		this.homey.log(`energyAccount.processEvent: billingPeriodStart: ${billingPeriodStartDay} first: ${firstTime}`);
 
@@ -245,6 +246,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
+		this.homey.log(`energyAccount.processEvent: newPeriod ${newPeriod} eventDateTime ${eventDateTime.toISO()} nextPeriodStartDate ${nextPeriodStartDate.toISO()}`);
 		const newChunk = [0, 30].includes(eventDateTime.minute);
 
 		if (newPeriod) {
@@ -252,9 +254,7 @@ module.exports = class energyAccount extends krakenDevice {
 			currentPeriodStartDate = nextPeriodStartDate;
 			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
 		}
-
-
-		// let chunkAccumulatedValue = await this.getCapabilityValue("measure_monetary.chunk_accumulated_value");
+		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);
 
 		let deltaExport = 0;
 		let deltaExportValue = 0;
@@ -329,6 +329,7 @@ module.exports = class energyAccount extends krakenDevice {
 			projectedBill = (elapsedDays > 1) ? (billValue / elapsedDays) * periodLength : null;
 		}
 
+		this.updateCapability("period_day.period_day", periodDay);
 		this.updateCapability("period_day.period_duration", periodLength);
 		this.updateCapability("measure_monetary.account_balance", currentBalance);
 		this.updateCapability("measure_monetary.projected_bill", projectedBill);
