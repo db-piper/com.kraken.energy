@@ -117,15 +117,15 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			//extendedEndTime = extendedEndDateTime.toFormat("dd/LL T");
 			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
 			dispatchMinutes = dispatchMinutes + 1;
-			if (dispatchCount > 0) {
-				//const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
-				const nextStartDateTime = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start));
-				nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
-				//nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
-				countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
-			}
 		}
 
+		if (dispatchCount > 0) {
+			//const nextDispatchAdvancedStart = this.accountWrapper.advanceTime(nextDispatch.start);
+			const nextStartDateTime = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start));
+			nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
+			//nextAdvancedStart = nextDispatchAdvancedStart.toFormat("dd/LL T");
+			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
+		}
 
 		this.updateCapabilityValue("device_attribute.name", deviceName);
 		this.updateCapabilityValue("device_attribute.status", deviceStatus);

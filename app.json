@@ -200,6 +200,38 @@
             "filter": "driver_id=krakendevicedriver&capabilities=device_attribute.name"
           }
         ]
+      },
+      {
+        "id": "data_presence.dispatch_pricing_true",
+        "title": {
+          "en": "Dispatch Pricing Starts"
+        },
+        "hint": {
+          "en": "Triggers when an extended dispatch period to any Smart Energy Device starts."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=data_presence.dispatch_pricing"
+          }
+        ]
+      },
+      {
+        "id": "data_presence.dispatch_pricing_false",
+        "title": {
+          "en": "Dispatch Pricing Ends"
+        },
+        "hint": {
+          "en": "Triggers when an extended dispatch period to any Smart Energy Device ends."
+        },
+        "args": [
+          {
+            "type": "device",
+            "name": "device",
+            "filter": "driver_id=krakendevicedriver&capabilities=data_presence.dispatch_pricing"
+          }
+        ]
       }
     ],
     "conditions": [
@@ -524,7 +556,8 @@
       "uiComponent": "sensor",
       "min": 1,
       "max": 31,
-      "step": 1
+      "step": 1,
+      "decimals": 0
     },
     "product_code": {
       "type": "string",

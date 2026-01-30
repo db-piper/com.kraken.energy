@@ -21,13 +21,14 @@ module.exports = class energyAccount extends krakenDevice {
 		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
 
 		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
-		this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });  //Enum, drop list interface
+		//this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });  //Enum, drop list interface
+		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
+		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
+		this.defineCapability("period_day.period_start", { "title": { "en": "Period Start Day" }, "uiComponent": "slider", "setable": true, "units": { "en": "Day" } });
 		this.defineCapability("period_day.period_day");
 		this.defineCapability("period_day.period_duration", { "title": { "en": "Period Duration" } });
 		this.defineCapability("measure_monetary.account_balance", { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.projected_bill", { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
-		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
-		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("meter_power.import", { "title": { "en": "Import Reading" }, "decimals": 3 });
 		this.defineCapability("meter_power.export", { "title": { "en": "Export Reading" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("meter_power.period_import", { "title": { "en": "Period Import" }, "decimals": 3 });
@@ -54,7 +55,10 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyStoreValues();
 
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
-		this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
+		// this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
+		// 	await this.updatePeriodDay(value);
+		// });
+		this.registerCapabilityListener('period_day.period_start', async (value, opts) => {
 			await this.updatePeriodDay(value);
 		});
 
@@ -176,18 +180,19 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {Promise <integer>}         The billing period start day number within the month
 	 */
 	async initialiseBillingPeriodStartDay(firstTime) {
-		let billingPeriodStartDay = await this.getCapabilityValue("month_day.period_start");
+		let billingPeriodStartDay = await this.getCapabilityValue("period_day.period_start");
 		if (firstTime) {
 			this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: firstTime ${firstTime}, billingPeriodStartDay ${billingPeriodStartDay}`);
-			billingPeriodStartDay = (this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2, '0');
+			// billingPeriodStartDay = (this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2, '0');
+			billingPeriodStartDay = this.accountWrapper.getBillingPeriodStartDay();
 			try {
-				await this.triggerCapabilityListener('month_day.period_start', billingPeriodStartDay, {});
+				await this.triggerCapabilityListener('period_day.period_start', billingPeriodStartDay, {});
 				this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener success`);
 			} catch (error) {
 				this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener error`);
-				if (error.message.includes('month_day.period_start')) {
+				if (error.message.includes('period_day.period_start')) {
 					this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: registering capability listener`);
-					this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
+					this.registerCapabilityListener('period_day.period_start', async (value, opts) => {
 						await this.updatePeriodDay(value);
 					});
 					await this.updatePeriodDay(billingPeriodStartDay);
@@ -355,7 +360,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("slot_quartile", importQuartile);
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
-		this.updateCapability("data_presence.in_dispatch", inDispatch);
+		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
+		this.homey.log(`energyAccount.processEvent: Set dispatchPricing to ${inDispatch}`);
 		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 

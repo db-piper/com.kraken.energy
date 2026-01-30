@@ -103,6 +103,26 @@
         "en": "Triggers when a Dispatch to the Smart Energy Device ends."
       },
       "$filter": "capabilities=device_attribute.name"
+    },
+    {
+      "id": "data_presence.dispatch_pricing_true",
+      "title": {
+        "en": "Dispatch Pricing Starts"
+      },
+      "hint": {
+        "en": "Triggers when an extended dispatch period to any Smart Energy Device starts."
+      },
+      "$filter": "capabilities=data_presence.dispatch_pricing"
+    },
+    {
+      "id": "data_presence.dispatch_pricing_false",
+      "title": {
+        "en": "Dispatch Pricing Ends"
+      },
+      "hint": {
+        "en": "Triggers when an extended dispatch period to any Smart Energy Device ends."
+      },
+      "$filter": "capabilities=data_presence.dispatch_pricing"
     }
   ],
   "conditions": [

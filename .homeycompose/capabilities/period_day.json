@@ -1,6 +1,8 @@
 {
   "type": "number",
-  "title": {"en": "Period Day"},
+  "title": {
+    "en": "Period Day"
+  },
   "getable": true,
   "setable": false,
   "icon": "/assets/monthday.svg",
@@ -8,5 +10,6 @@
   "uiComponent": "sensor",
   "min": 1,
   "max": 31,
-  "step": 1
-}   
+  "step": 1,
+  "decimals": 0
+}
