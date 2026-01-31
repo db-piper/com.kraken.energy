@@ -100,5 +100,8 @@
   },
   "1.0.39": {
     "en": "Fix to issue #14; root cause is not understood so this is not a full resolution."
+  },
+  "1.0.40": {
+    "en": "Re-implement the EnergyAccount device with correct Dispatch price tracking; Update the SmartEnergyDevice to track Planned Dispatches rather than Extended Dispatches"
   }
 }
