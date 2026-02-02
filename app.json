@@ -328,7 +328,23 @@
           }
         }
       ],
-      "id": "krakendevicedriver"
+      "id": "krakendevicedriver",
+      "settings": [
+        {
+          "id": "periodStartDay",
+          "type": "number",
+          "label": {
+            "en": "Invoice Period Start Day (1-31)"
+          },
+          "value": 1,
+          "min": 1,
+          "max": 31,
+          "step": 1,
+          "units": {
+            "en": "Day"
+          }
+        }
+      ]
     }
   ],
   "capabilities": {

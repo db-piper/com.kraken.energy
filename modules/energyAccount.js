@@ -54,6 +54,9 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyCapabilities();
 		await this.applyStoreValues();
 
+		const settings = await this.getSettings();
+		this.log(`energyAccount Device:onInit - DeviceSettings: ${JSON.stringify(settings)}`);
+
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
 		// this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
 		// 	await this.updatePeriodDay(value);

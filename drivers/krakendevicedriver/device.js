@@ -119,6 +119,8 @@ module.exports = class krakenDevice extends Homey.Device {
 				await this.setCapabilityValue(capabilityName, newValue);
 				updated = true;
 			}
+		} else {
+			this.homey.log(`device.updateCapabilityValue: Capability not found ${capabilityName}`);
 		}
 		return updated;
 	}

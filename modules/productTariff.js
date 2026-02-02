@@ -11,6 +11,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
+		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
 		const isHalfHourly = await this.accountWrapper.isHalfHourly(this.isExport());
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
@@ -23,18 +24,15 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("meter_power.consumption", { "title": { "en": `${slotLabelWord} Energy kWh` }, "decimals": 3 });
 		this.defineCapability("measure_monetary.energy_value_taxed", { "title": { "en": `${slotLabelWord} Energy £ ` }, "decimals": 4, "units": { "en": "£", } });
 		this.defineCapability("measure_power.average", { "title": { "en": `${slotLabelWord} Ave. Power` } });
-		if (isHalfHourly) {
-			this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } });
-		}
+		this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
 		this.defineCapability("percent.tax_rate", { "title": { "en": "Tax Rate" } });
 		this.defineCapability("date_time.slot_start", { "title": { "en": `${slotLabelWord} Start` } });
 		this.defineCapability("date_time.slot_end", { "title": { "en": `${slotLabelWord} End`, } });
-		if (isHalfHourly) {
-			this.defineCapability("measure_monetary.next_unit_price_taxed", { "title": { "en": 'Next £/kWh', }, "units": { "en": "£", "fr": "€" }, "decimals": 4 });
-			this.defineCapability("slot_quartile.next_slot_quartile", { "title": { "en": "Next Price Quartile" } });
-			this.defineCapability("data_presence.next_day_prices", { "title": { "en": "Tomorrow's Prices" } });
-			this.defineCapability("date_time.next_slot_end", { "title": { "en": 'Next Slot End' } });
-		}
+		this.defineCapability("measure_monetary.next_unit_price_taxed", { "title": { "en": 'Next £/kWh', }, "units": { "en": "£", "fr": "€" }, "decimals": 4 }, [], isHalfHourly);
+		this.defineCapability("slot_quartile.next_slot_quartile", { "title": { "en": "Next Price Quartile" } }, [], isHalfHourly);
+		this.defineCapability("data_presence.next_day_prices", { "title": { "en": "Tomorrow's Prices" } }, [], isHalfHourly);
+		this.defineCapability("date_time.next_slot_end", { "title": { "en": 'Next Slot End' } }, [], isHalfHourly);
+		this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
 		this.defineCapability("date_time.full_slot_start", { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
 		this.defineCapability("date_time.full_slot_end", { "title": { "en": "SlotEndH" }, "uiComponent": null }, []);
 
@@ -136,36 +134,40 @@ module.exports = class productTariff extends krakenDevice {
 		const recordedSlotStart = this.getCapabilityValue("date_time.full_slot_start");
 		const firstTime = recordedSlotEnd === null;
 		const propertyName = direction ? "export" : "consumption";
-		const newEnergyReading = +liveMeterReading[propertyName];																//Wh as integer
-		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));					//Boolean
-		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));								//Decimal hours
-		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * await this.getCapabilityValue("meter_power");		//Wh
-		const slotEnergy = firstTime ? 0 : (1000 * this.getCapabilityValue("meter_power.consumption"));									//Wh
-		const slotValueTaxed = firstTime ? 0 : this.getCapabilityOptions("measure_monetary.energy_value_taxed");				//£
+		const newEnergyReading = +liveMeterReading[propertyName];														//Wh as integer
+		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));									//Boolean
+		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));				//Decimal hours
+		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * await this.getCapabilityValue("meter_power");	//Wh
+		const slotEnergy = firstTime ? 0 : (1000 * this.getCapabilityValue("meter_power.consumption"));					//Wh
+		const slotValueTaxed = firstTime ? 0 : this.getCapabilityValue("measure_monetary.energy_value_taxed");			//£
 		const productCode = tariff.productCode;
 		const tariffCode = tariff.tariffCode;
-		const unitPrice = .01 * tariffPrices.preVatUnitRate;																		//£ Untaxed
-		const unitPriceTaxed = .01 * tariffPrices.unitRate;																			//£
-		const taxRate = 100 * (unitPriceTaxed - unitPrice) / unitPrice;													//%
-		const standingChargeTaxed = .01 * tariff.standingCharge;																//£
-		const deltaEnergy = newEnergyReading - lastEnergyReading;																//Wh
-		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);										//Taxed £.kWh
-		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;					//kWh 
-		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);
-		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;							//W
+		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%
+		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, direction);
+		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
+		const unitPriceTaxed = .01 * ((isDispatchable && (!direction)) ? minPrice : tariffPrices.unitRate);		//£	
+		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} isDispatchable: ${isDispatchable} import: ${!direction}`);
+		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
+		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
+		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
+		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
+		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);				//£
+		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;								//W
 		const slotQuartile = tariffPrices.quartile;
-		const slotStart = tariffPrices.thisSlotStart;																						//ISO
+		const slotStart = tariffPrices.thisSlotStart;															//ISO
 		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;
-		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");																				//ISO
-		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;		//£
+		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");			//ISO
+		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;					//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
-		const nextDayPresent = await this.accountWrapper.getTomorrowsPricesPresent(atTime, direction);					//Boolean
-		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;						//ISO
+		const nextDayPresent = await this.accountWrapper.getTomorrowsPricesPresent(atTime, direction);			//Boolean
+		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;							//ISO
 		let shortNextEnd = null;
 		if (!nextTariffAbsent) {
 			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
+		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
+		const inDispatch = currentDispatch !== undefined;
 
 		this.updateCapability("product_code", productCode);
 		this.updateCapability("tariff_code", tariffCode);
@@ -173,7 +175,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("measure_monetary.standing_charge_taxed", standingChargeTaxed);
 		this.updateCapability("meter_power", newEnergyReading / 1000);
 		this.updateCapability("meter_power.consumption", updatedSlotEnergy);
-		this.updateCapability("measure_monetary.slot_energy_value_taxed", updatedSlotValueTaxed);
+		this.updateCapability("measure_monetary.energy_value_taxed", updatedSlotValueTaxed);
 		this.updateCapability("measure_power.average", slotPower);
 		this.updateCapability("slot_quartile", slotQuartile);
 		this.updateCapability("percent.tax_rate", taxRate);
@@ -185,6 +187,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("measure_monetary.next_unit_price_taxed", nextUnitPriceTaxed);
 		this.updateCapability("slot_quartile.next_slot_quartile", nextQuartile);
 		this.updateCapability("date_time.next_slot_end", shortNextEnd);
+		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;
