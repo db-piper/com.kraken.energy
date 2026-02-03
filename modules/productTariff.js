@@ -12,8 +12,8 @@ module.exports = class productTariff extends krakenDevice {
 		await super.onInit();
 
 		const isExport = this.isExport();
-		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && !isExport;
 		const isHalfHourly = await this.accountWrapper.isHalfHourly(isExport);
+		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && isHalfHourly;
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
 
@@ -127,7 +127,8 @@ module.exports = class productTariff extends krakenDevice {
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const direction = this.isExport();
-		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && !direction;
+		const isHalfHourly = await this.accountWrapper.isHalfHourly(direction);
+		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && isHalfHourly;
 		const eventTime = new Date(atTime);
 		const tariff = await this.accountWrapper.getTariffDirection(direction);
 		const tariffPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, direction);
