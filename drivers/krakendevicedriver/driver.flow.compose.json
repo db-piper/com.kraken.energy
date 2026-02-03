@@ -43,6 +43,28 @@
       "$filter": "capabilities=slot_quartile"
     },
     {
+      "id": "percent.dispatch_limit_changed",
+      "title": {
+        "en": "Dispatch limit usage changed"
+      },
+      "hint": {
+        "en": "The number of minutes consumed towards the dispatch limit has changed."
+      },
+      "tokens": [
+        {
+          "name": "percent.dispatch_limit",
+          "type": "number",
+          "title": {
+            "en": "Dispatch Limit Percent Usage"
+          },
+          "example": {
+            "en": "From 0 (no usage) to 100 (limit reached). Limit can be exceeded"
+          }
+        }
+      ],
+      "$filter": "capabilities=percent.dispatch_limit"
+    },
+    {
       "id": "date_time.period_start_changed",
       "title": {
         "en": "New Invoicing Period Started"
@@ -87,22 +109,22 @@
     {
       "id": "data_presence.in_dispatch_true",
       "title": {
-        "en": "Dispatch Starts"
+        "en": "Planned Dispatch Starts"
       },
       "hint": {
-        "en": "Triggers when a Dispatch to the Smart Energy Device starts."
+        "en": "Triggers when a Planned Dispatch to the Smart Energy Device starts."
       },
-      "$filter": "capabilities=device_attribute.name"
+      "$filter": "capabilities=data_presence.in_dispatch"
     },
     {
       "id": "data_presence.in_dispatch_false",
       "title": {
-        "en": "Dispatch Ends"
+        "en": "Planned Dispatch Ends"
       },
       "hint": {
-        "en": "Triggers when a Dispatch to the Smart Energy Device ends."
+        "en": "Triggers when a Planned Dispatch to the Smart Energy Device ends."
       },
-      "$filter": "capabilities=device_attribute.name"
+      "$filter": "capabilities=data_presence.in_dispatch"
     },
     {
       "id": "data_presence.dispatch_pricing_true",

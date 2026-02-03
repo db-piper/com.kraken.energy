@@ -144,16 +144,17 @@ module.exports = class productTariff extends krakenDevice {
 		const tariffCode = tariff.tariffCode;
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%
 		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, direction);
-		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
-		const unitPriceTaxed = .01 * ((isDispatchable && (!direction)) ? minPrice : tariffPrices.unitRate);		//£	
-		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} isDispatchable: ${isDispatchable} import: ${!direction}`);
+		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
+		const inDispatch = currentDispatch !== undefined;
+		const unitPriceTaxed = .01 * (inDispatch ? minPrice : tariffPrices.unitRate);							//£	
+		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} import: ${!direction}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
 		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
 		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
 		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);				//£
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;								//W
-		const slotQuartile = tariffPrices.quartile;
+		const slotQuartile = inDispatch ? 0 : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
 		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;
@@ -166,8 +167,6 @@ module.exports = class productTariff extends krakenDevice {
 		if (!nextTariffAbsent) {
 			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
-		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
-		const inDispatch = currentDispatch !== undefined;
 
 		this.updateCapability("product_code", productCode);
 		this.updateCapability("tariff_code", tariffCode);
