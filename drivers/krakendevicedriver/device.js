@@ -70,6 +70,20 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
+	 * Calculate the total dispatch minutes for all smart devices
+	 * @returns {number} 	Total dispatch minutes for all smart devices
+	 */
+	getTotalDispatchMinutes(capabilityName) {
+		let totalDispatchMinutes = 0;
+		for (const device of this.driver.getDevices()) {
+			if (device.getStoreValue("octopusClass") == "smartDevice") {
+				totalDispatchMinutes += device.getCapabilityValue(capabilityName);
+			}
+		}
+		return totalDispatchMinutes;
+	}
+
+	/**
 	 * Queue the update of the value of the named capability
 	 * @param {string} 	capabilityName 		Name of the capability to be updated
 	 * @param {any} 		newValue 					New value to be assigned to the capability

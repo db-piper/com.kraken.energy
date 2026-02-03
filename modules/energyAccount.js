@@ -16,12 +16,11 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
-		const isHalfHourly = await this.accountWrapper.isHalfHourly(false);
+		//const isHalfHourly = await this.accountWrapper.isHalfHourly(false);
 		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
 		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
 
 		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
-		//this.defineCapability("month_day.period_start", { "title": { "en": "Period Start Day" } });  //Enum, drop list interface
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("period_day.period_start", { "title": { "en": "Period Start Day" }, "uiComponent": "slider", "setable": true, "units": { "en": "Day" } });
@@ -45,9 +44,9 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("meter_power.chunk_export", { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
-		this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
-		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
-		this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
+		//this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
+		//this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
+		//this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
 
@@ -58,9 +57,6 @@ module.exports = class energyAccount extends krakenDevice {
 		this.log(`energyAccount Device:onInit - DeviceSettings: ${JSON.stringify(settings)}`);
 
 		this.homey.log(`energyAccount.onInit: Registering capability listener.`);
-		// this.registerCapabilityListener('month_day.period_start', async (value, opts) => {
-		// 	await this.updatePeriodDay(value);
-		// });
 		this.registerCapabilityListener('period_day.period_start', async (value, opts) => {
 			await this.updatePeriodDay(value);
 		});
@@ -287,17 +283,10 @@ module.exports = class energyAccount extends krakenDevice {
 		let billValue = 0;
 		let projectedBill = 0;
 		let importPrice = 0;
-		let importQuartile = 0;
+		// let importQuartile = 0;
 
-		let totalDispatchMinutes = 0;
-		for (const device of this.driver.getDevices()) {
-			if (device.getStoreValue("octopusClass") == "smartDevice") {
-				totalDispatchMinutes += device.getCapabilityValue("item_count.dispatch_minutes");
-				this.homey.log(`energyAccount.processEvent: device ${device.getName()} dispatchMinutes ${device.getCapabilityValue("item_count.dispatch_minutes")}`);
-			}
-		}
-		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
-		this.homey.log(`energyAccount.processEvent: percentDispatchLimit ${percentDispatchLimit} totalDispatchMinutes ${totalDispatchMinutes}`);
+		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
+		const dispatchPricing = inDispatch && (totalDispatchMinutes < this._MAX_DISPATCH_MINUTES);
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -313,7 +302,7 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 
 			if (importTariffPresent) {
-				importPrice = inDispatch ? minPrice : importPrices.unitRate;								//Pence	
+				importPrice = dispatchPricing ? minPrice : importPrices.unitRate;							//Pence	
 				deltaImport = liveMeterReading.consumption - currentImport;									//watts
 				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);								//pounds
 				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);					//watts
@@ -323,10 +312,10 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;										//pounds
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
-				importQuartile = importPrices.quartile;
-				if (inDispatch && percentDispatchLimit < 100) {
-					importQuartile = 0;
-				}
+				// importQuartile = importPrices.quartile;
+				// if (inDispatch && percentDispatchLimit < 100) {
+				// 	importQuartile = 0;
+				// }
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
@@ -360,11 +349,11 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("meter_power.chunk_export", chunkUpdatedExport / 1000);
 		this.updateCapability("measure_monetary.chunk_import_value", chunkUpdatedImportValue);
 		this.updateCapability("measure_monetary.chunk_export_value", chunkUpdatedExportValue);
-		this.updateCapability("slot_quartile", importQuartile);
-		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
-		this.updateCapability("measure_monetary.unit_price", importPrice / 100);
-		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
-		this.homey.log(`energyAccount.processEvent: Set dispatchPricing to ${inDispatch}`);
+		//this.updateCapability("slot_quartile", importQuartile);
+		//this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
+		//this.updateCapability("measure_monetary.unit_price", importPrice / 100);
+		//this.updateCapability("data_presence.dispatch_pricing", inDispatch);
+		//this.homey.log(`energyAccount.processEvent: Set dispatchPricing to ${inDispatch}`);
 		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 

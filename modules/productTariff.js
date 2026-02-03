@@ -33,6 +33,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.defineCapability("data_presence.next_day_prices", { "title": { "en": "Tomorrow's Prices" } }, [], isHalfHourly);
 		this.defineCapability("date_time.next_slot_end", { "title": { "en": 'Next Slot End' } }, [], isHalfHourly);
 		this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
+		this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
 		this.defineCapability("date_time.full_slot_start", { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
 		this.defineCapability("date_time.full_slot_end", { "title": { "en": "SlotEndH" }, "uiComponent": null }, []);
 
@@ -146,15 +147,17 @@ module.exports = class productTariff extends krakenDevice {
 		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, direction);
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
-		const unitPriceTaxed = .01 * (inDispatch ? minPrice : tariffPrices.unitRate);							//£	
-		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} import: ${!direction}`);
+		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
+		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
+		const unitPriceTaxed = .01 * ((inDispatch && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
+		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} percentDispatchLimit: ${percentDispatchLimit} import: ${!direction}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
 		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
 		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
 		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);				//£
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;								//W
-		const slotQuartile = inDispatch ? 0 : tariffPrices.quartile;
+		const slotQuartile = (inDispatch && percentDispatchLimit < 100) ? 0 : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
 		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;
@@ -167,6 +170,7 @@ module.exports = class productTariff extends krakenDevice {
 		if (!nextTariffAbsent) {
 			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
+
 
 		this.updateCapability("product_code", productCode);
 		this.updateCapability("tariff_code", tariffCode);
@@ -187,6 +191,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("slot_quartile.next_slot_quartile", nextQuartile);
 		this.updateCapability("date_time.next_slot_end", shortNextEnd);
 		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
+		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;
