@@ -12,5 +12,53 @@
         "units": {
             "en": "Day"
         }
+    },
+    {
+        "id": "dispatchMinutesLimit",
+        "type": "number",
+        "label": {
+            "en": "Dispatch Minutes Limit"
+        },
+        "value": 360,
+        "min": 0,
+        "max": 1440,
+        "step": 10,
+        "units": {
+            "en": "Minutes"
+        }
+    },
+    {
+        "id": "krakenPollingInterval",
+        "type": "dropdown",
+        "value": "1",
+        "label": {
+            "en": "Kraken Polling Interval"
+        },
+        "values": [
+            {
+                "id": "1",
+                "label": {
+                    "en": "1 minute"
+                }
+            },
+            {
+                "id": "2",
+                "label": {
+                    "en": "2 minutes"
+                }
+            },
+            {
+                "id": "3",
+                "label": {
+                    "en": "3 minutes"
+                }
+            },
+            {
+                "id": "5",
+                "label": {
+                    "en": "5 minutes"
+                }
+            }
+        ]
     }
 ]

@@ -731,14 +731,15 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the dispatches that start after the specified time
+   * Return the planned dispatches that start after the specified time
    * @param       {string}    atTime            Time to check against
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {[JSON]}                      Selected dispatches
    */
   futureDispatches(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
-    const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
+    //const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
+    const selectedItems = plannedDispatches.filter((dispatch) => this.getLocalDateTime(new Date(dispatch.start)) > eventTime);
     //this._driver.homey.log(`krakenAccountWrapper.futureDispatches: selected: ${JSON.stringify(selectedItems)}`);
     return selectedItems;
   }

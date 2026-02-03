@@ -44,9 +44,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("meter_power.chunk_export", { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
 		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
-		//this.defineCapability("data_presence.dispatch_pricing", { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
-		//this.defineCapability("percent.dispatch_limit", { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
-		//this.defineCapability("slot_quartile", { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
+		this.defineCapability("measure_power.import_power", { "title": { "en": "Import Power" } });
+		this.defineCapability("measure_power.export_power", { "title": { "en": "Export Power" } }, [], hasExport);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
 
@@ -279,11 +278,12 @@ module.exports = class energyAccount extends krakenDevice {
 		let chunkUpdatedImportValue = 0;
 		let chunkUpdatedExport = 0;
 		let chunkUpdatedExportValue = 0;
+		let powerImport = 0;
+		let powerExport = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
 		let projectedBill = 0;
 		let importPrice = 0;
-		// let importQuartile = 0;
 
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
 		const dispatchPricing = inDispatch && (totalDispatchMinutes < this._MAX_DISPATCH_MINUTES);
@@ -299,6 +299,7 @@ module.exports = class energyAccount extends krakenDevice {
 				dayExportStandingCharge = exportPrices.standingCharge / 100;								//pounds
 				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);						//watts
 				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);		//pounds
+				powerExport = deltaExport * 60;																//watts
 			}
 
 			if (importTariffPresent) {
@@ -312,10 +313,7 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;										//pounds
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
-				// importQuartile = importPrices.quartile;
-				// if (inDispatch && percentDispatchLimit < 100) {
-				// 	importQuartile = 0;
-				// }
+				powerImport = deltaImport * 60;																//watts
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
@@ -347,13 +345,10 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.day_export_value", dayUpdatedExportValue);
 		this.updateCapability("meter_power.chunk_import", chunkUpdatedImport / 1000);
 		this.updateCapability("meter_power.chunk_export", chunkUpdatedExport / 1000);
+		this.updateCapability("measure_power.import_power", powerImport);
+		this.updateCapability("measure_power.export_power", powerExport);
 		this.updateCapability("measure_monetary.chunk_import_value", chunkUpdatedImportValue);
 		this.updateCapability("measure_monetary.chunk_export_value", chunkUpdatedExportValue);
-		//this.updateCapability("slot_quartile", importQuartile);
-		//this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
-		//this.updateCapability("measure_monetary.unit_price", importPrice / 100);
-		//this.updateCapability("data_presence.dispatch_pricing", inDispatch);
-		//this.homey.log(`energyAccount.processEvent: Set dispatchPricing to ${inDispatch}`);
 		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 
