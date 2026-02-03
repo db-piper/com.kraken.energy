@@ -11,8 +11,9 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff device has been initialized');
 		await super.onInit();
 
-		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
-		const isHalfHourly = await this.accountWrapper.isHalfHourly(this.isExport());
+		const isExport = this.isExport();
+		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && !isExport;
+		const isHalfHourly = await this.accountWrapper.isHalfHourly(isExport);
 		this.defineStoreValue('isHalfHourly', isHalfHourly);
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
 
@@ -126,6 +127,7 @@ module.exports = class productTariff extends krakenDevice {
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const direction = this.isExport();
+		const isDispatchable = ((await this.accountWrapper.getDeviceIds()).length > 0) && !direction;
 		const eventTime = new Date(atTime);
 		const tariff = await this.accountWrapper.getTariffDirection(direction);
 		const tariffPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, direction);
@@ -149,8 +151,8 @@ module.exports = class productTariff extends krakenDevice {
 		const inDispatch = currentDispatch !== undefined;
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
 		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
-		const unitPriceTaxed = .01 * ((inDispatch && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
-		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} percentDispatchLimit: ${percentDispatchLimit} import: ${!direction}`);
+		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
+		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} percentDispatchLimit: ${percentDispatchLimit} minPrice: ${minPrice} tariffPrice: ${tariffPrices.unitRate}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
 		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
