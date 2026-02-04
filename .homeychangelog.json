@@ -103,5 +103,8 @@
   },
   "1.0.40": {
     "en": "Re-implement the EnergyAccount device with correct Dispatch price tracking; Update the SmartEnergyDevice to track Planned Dispatches rather than Extended Dispatches"
+  },
+  "1.0.41": {
+    "en": "Correct application of dispatches to distinguish Dispatch to Device from Dispatch Pricing; Improve focus of EnergyAccount and ImportTariff devices; All Dispatch Pricing managed by ImportTariff device; Measure Power capabilities added to EnergyAccount"
   }
 }
