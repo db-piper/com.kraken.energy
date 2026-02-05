@@ -45,7 +45,7 @@
     {
       "id": "percent.dispatch_limit_changed",
       "title": {
-        "en": "Dispatch limit usage changed"
+        "en": "Dispatch Limit Usage Changed"
       },
       "hint": {
         "en": "The number of minutes consumed towards the dispatch limit has changed."
@@ -95,6 +95,28 @@
         }
       ],
       "$filter": "capabilities=period_day.period_day"
+    },
+    {
+      "id": "item_count.dispatch_minutes_changed",
+      "title": {
+        "en": "Device Dispatch Minutes Count Has Changed"
+      },
+      "hint": {
+        "en": "The number of dispatch minutes to the device has changed."
+      },
+      "tokens": [
+        {
+          "name": "item_count.dispatch_minutes",
+          "type": "number",
+          "title": {
+            "en": "Dispatch Minutes Count"
+          },
+          "example": {
+            "en": "From 0 to 1440 minutes."
+          }
+        }
+      ],
+      "$filter": "capabilities=item_count.dispatch_minutes"
     },
     {
       "id": "date_time.slot_end_changed",
