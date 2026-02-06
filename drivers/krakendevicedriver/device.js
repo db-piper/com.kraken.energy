@@ -59,6 +59,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async onSettingsChanged({ oldSettings, newSettings, changedKeys }) {
 		this.log(`krakenDevice Device:onSettingsChanged - settings changes completed ${this.getName()}.`);
+		this._settings = newSettings;
 	}
 
 

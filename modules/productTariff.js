@@ -145,8 +145,8 @@ module.exports = class productTariff extends krakenDevice {
 		const inDispatch = currentDispatch !== undefined;
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
 		const percentDispatchLimit = 100 * totalDispatchMinutes / this._settings.dispatchMinutesLimit;
+		this.homey.log(`productTariff.processEvent: percentDispatchLimit: ${percentDispatchLimit} minutes limit: ${this._settings.dispatchMinutesLimit}`);
 		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
-		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} percentDispatchLimit: ${percentDispatchLimit} minPrice: ${minPrice} tariffPrice: ${tariffPrices.unitRate}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
 		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
