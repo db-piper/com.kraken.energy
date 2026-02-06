@@ -42,8 +42,8 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice:onSettings settings were changed: ${JSON.stringify(newSettings)}`);
 		for (const device of this.driver.getDevices()) {
 			if (!Object.is(device, this)) {
+				this.homey.log(`krakenDevice:onSettings - updating settings for device: ${device.getName()}`);
 				await device.setSettings(newSettings);
-				this._settings = newSettings;
 			}
 			await device.onSettingsChanged({ oldSettings, newSettings, changedKeys })
 		}
@@ -58,7 +58,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {Promise<string|void>}	Return a custom message that will be displayed
 	 */
 	async onSettingsChanged({ oldSettings, newSettings, changedKeys }) {
-		this.log('krakenDevice Device:onSettingsChanged - settings changes completed.');
+		this.log(`krakenDevice Device:onSettingsChanged - settings changes completed ${this.getName()}.`);
 	}
 
 
@@ -76,6 +76,16 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async onDeleted() {
 		this.log('krakenDevice:onDeleted has been deleted');
+	}
+
+	/**
+	 * Set the device settings values
+	 * @param {object} settings 
+	 */
+	async setSettings(settings) {
+		this.log(`krakenDevice Device:setSettings - device ${this.getName()}`);
+		await super.setSettings(settings);
+		this._settings = settings;
 	}
 
 	/**
@@ -259,7 +269,7 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Define a value to be added to the device's store
-	 * @param {string} 	name					Name of the value
+	 * @param {string} 		name				Name of the value
 	 * @param {any} 		value 				Value to be associated with the name
 	 */
 	defineStoreValue(name, value) {

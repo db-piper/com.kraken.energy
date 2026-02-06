@@ -16,14 +16,12 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
-		//const isHalfHourly = await this.accountWrapper.isHalfHourly(false);
 		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
 		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
 
 		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
-		//this.defineCapability("period_day.period_start", { "title": { "en": "Period Start Day" }, "uiComponent": "slider", "setable": true, "units": { "en": "Day" } });
 		this.defineCapability("period_day.period_day");
 		this.defineCapability("period_day.period_duration", { "title": { "en": "Period Duration" } });
 		this.defineCapability("measure_monetary.account_balance", { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
@@ -51,11 +49,6 @@ module.exports = class energyAccount extends krakenDevice {
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
-
-		// this.homey.log(`energyAccount.onInit: Registering capability listener.`);
-		// this.registerCapabilityListener('period_day.period_start', async (value, opts) => {
-		// 	await this.updatePeriodDay(value);
-		// });
 
 	}
 
@@ -92,10 +85,6 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
 		await super.onSettings({ oldSettings, newSettings, changedKeys });
-		// if (changedKeys.includes('periodStartDay')) {
-		// 	this.homey.log(`energyAccount Device:onSettings - periodStartDay changed to ${newSettings.periodStartDay}`);
-		// 	await this.updatePeriodDay(newSettings.periodStartDay);
-		// }
 		this.log('energyAccount Device:onSettings - settings were changed');
 	}
 
@@ -122,6 +111,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {Promise<boolean>}      Indicates if any capabilities are actually updated
 	 */
 	async updatePeriodDay(startDay) {
+		this.homey.log(`energyAccount Device:updatePeriodDay - updating period day to ${startDay}`);
 		const atTime = (new Date()).toISOString();
 		const periodDay = this.computePeriodDay(atTime, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
@@ -200,22 +190,8 @@ module.exports = class energyAccount extends krakenDevice {
 		let billingPeriodStartDay = this._settings.periodStartDay;
 		if (firstTime) {
 			this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: firstTime ${firstTime}, billingPeriodStartDay ${billingPeriodStartDay}`);
-			// billingPeriodStartDay = (this.accountWrapper.getBillingPeriodStartDay()).toString().padStart(2, '0');
 			billingPeriodStartDay = this.accountWrapper.getBillingPeriodStartDay();
 			await this.updatePeriodDay(billingPeriodStartDay);
-			// try {
-			// 	await this.triggerCapabilityListener('period_day.period_start', billingPeriodStartDay, {});
-			// 	this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener success`);
-			// } catch (error) {
-			// 	this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: triggerCapabilityListener error`);
-			// 	if (error.message.includes('period_day.period_start')) {
-			// 		this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: registering capability listener`);
-			// 		this.registerCapabilityListener('period_day.period_start', async (value, opts) => {
-			// 			await this.updatePeriodDay(value);
-			// 		});
-			// 		await this.updatePeriodDay(billingPeriodStartDay);
-			// 	}
-			// }
 		}
 		return billingPeriodStartDay;
 	}
@@ -337,7 +313,6 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
-			//this.homey.log(`energyAccount.processEvent: periodDay: ${periodDay}`);
 			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 

@@ -75,6 +75,11 @@ module.exports = class productTariff extends krakenDevice {
 		return isExport;
 	}
 
+	/**
+	 * Indicate if the current product tariff is a half hourly product tariff
+	 * @param 	{boolean} direction   	True if the product tariff is export, false otherwise
+	 * @returns {boolean}           	True if the product tariff is half hourly, false otherwise
+	 */
 	async isHalfHourlyTariff(direction) {
 		let halfHourly = undefined;
 		if (this.getStoreKeys().includes("isHalfHourly")) {
