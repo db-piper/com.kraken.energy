@@ -55,18 +55,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	}
 
 	/**
-	 * onSettings is called when the user updates the device's settings.
-	 * @param 	{object} 		event 						 	The onSettings event data
-	 * @param 	{object} 		event.oldSettings 	The old settings object
-	 * @param 	{object} 		event.newSettings 	The new settings object
-	 * @param 	{string[]} 	event.changedKeys 	An array of keys changed since the previous version
-	 * @returns {Promise<string|void>} 					Return a custom message that will be displayed
-	 */
-	async onSettings({ oldSettings, newSettings, changedKeys }) {
-		this.log('smartEnergyDevice:onSettings - settings were changed');
-	}
-
-	/**
 	 * Process a event
 	 * @param   {string}    atTime            Date-time to process event for
 	 * @param   {boolean}   newDay            Indicates the event is the first in a new day

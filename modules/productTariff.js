@@ -67,18 +67,6 @@ module.exports = class productTariff extends krakenDevice {
 	}
 
 	/**
-	 * onSettings is called when the user updates the device's settings.
-	 * @param {object} event the onSettings event data
-	 * @param {object} event.oldSettings The old settings object
-	 * @param {object} event.newSettings The new settings object
-	 * @param {string[]} event.changedKeys An array of keys changed since the previous version
-	 * @returns {Promise<string|void>} return a custom message that will be displayed
-	 */
-	async onSettings({ oldSettings, newSettings, changedKeys }) {
-		this.log('productTariff Device:onSettings - settings were changed');
-	}
-
-	/**
 	 * Indicate if the current product tariff is an export product tariff
 	 * @returns {boolean}           True if the product tariff is export, false otherwise
 	 */
@@ -151,7 +139,7 @@ module.exports = class productTariff extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
-		const percentDispatchLimit = 100 * totalDispatchMinutes / this._MAX_DISPATCH_MINUTES;
+		const percentDispatchLimit = 100 * totalDispatchMinutes / this._settings.dispatchMinutesLimit;
 		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
 		this.homey.log(`productTariff.processEvent: unitPriceTaxed: ${unitPriceTaxed} inDispatch: ${inDispatch} percentDispatchLimit: ${percentDispatchLimit} minPrice: ${minPrice} tariffPrice: ${tariffPrices.unitRate}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£

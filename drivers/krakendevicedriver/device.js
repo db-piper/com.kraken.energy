@@ -14,7 +14,13 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._requiredCapabilities = new Map();
 		this._updatedCapabilities = new Map();
 		this._storeValues = {};
-		this._MAX_DISPATCH_MINUTES = 360;
+		this._settings = await this.getSettings();
+		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this._settings)}`);
+
+		if (this._settings.periodStartDay == 0) {
+			this._settings.periodStartDay = this.accountWrapper.getBillingPeriodStartDay();
+			await this.setSettings(this._settings);
+		}
 	}
 
 	/**
@@ -26,15 +32,35 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * onSettings is called when the user updates the device's settings.
-	 * @param 	{object} 		event 						The onSettings event data
-	 * @param 	{object} 		event.oldSettings The old settings object
-	 * @param 	{object} 		event.newSettings The new settings object
-	 * @param 	{string[]} 	event.changedKeys An array of keys changed since the previous version
+	 * @param 	{object} 		event 				The onSettings event data
+	 * @param 	{object} 		event.oldSettings 	The old settings object
+	 * @param 	{object} 		event.newSettings 	The new settings object
+	 * @param 	{string[]} 		event.changedKeys 	An array of keys changed since the previous version
 	 * @returns {Promise<string|void>} 				return a custom message that will be displayed
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
-		this.log('krakenDevice:onSettings settings were changed');
+		this.log(`krakenDevice:onSettings settings were changed: ${JSON.stringify(newSettings)}`);
+		for (const device of this.driver.getDevices()) {
+			if (!Object.is(device, this)) {
+				await device.setSettings(newSettings);
+				this._settings = newSettings;
+			}
+			await device.onSettingsChanged({ oldSettings, newSettings, changedKeys })
+		}
 	}
+
+	/**
+	 * onSettingsChanged is called to complete the user's updates to the device's settings.
+	 * @param  	{object} 			event 				The onSettings event data
+	 * @param  	{object} 			event.oldSettings 	The old settings object
+	 * @param  	{object} 			event.newSettings 	The new settings object
+	 * @param  	{string[]} 			event.changedKeys 	An array of keys changed since the previous version
+	 * @returns {Promise<string|void>}	Return a custom message that will be displayed
+	 */
+	async onSettingsChanged({ oldSettings, newSettings, changedKeys }) {
+		this.log('krakenDevice Device:onSettingsChanged - settings changes completed.');
+	}
+
 
 	/**
 	 * onRenamed is called when the user updates the device's name.
@@ -98,7 +124,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * Perform the queued updates to capability values	
+	 * Perform the queued updates to capability values
 	 * @param 	{boolean}		updates		True iff any preceding capability has been updated
 	 * @returns {Promise<boolean>}			True iff this or any preceding capability has its value changed
 	 */
@@ -122,7 +148,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * Tolerant update of a capability value
 	 * @param     {string}  capabilityName    The name of the capability to be updated
 	 * @param     {any}     newValue          The new value to be given to the capability
-	 * @returns   {boolean}                   Indicates the value of the capability has changed 
+	 * @returns   {boolean}                   Indicates the value of the capability has changed
 	 */
 	async updateCapabilityValue(capabilityName, newValue) {
 		let updated = false;
@@ -143,7 +169,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * Define the standard interface for processEvent.
 	 * @param     {string}        atTime            String representation of the event time
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
-	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
+	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
 	 * @returns   {Promise<boolean>}                Indicates if any updates have been made to the device capabilities
 	 */
 	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
@@ -171,9 +197,9 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Establish a capability definition to be applied to a device
-	 * @param {string} 		name				Name of the capability 
+	 * @param {string} 		name				Name of the capability
 	 * @param {object} 		overrides 	Object defining capability options to be set
-	 * @param {string[]}	force				List of option names to be forced to update		
+	 * @param {string[]}	force				List of option names to be forced to update
 	 */
 	defineCapability(name, overrides = {}, force = [], required = true) {
 		if (!this.hasOwnProperty("_requiredCapabilities")) {
@@ -233,7 +259,7 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Define a value to be added to the device's store
-	 * @param {string} 	name					Name of the value 
+	 * @param {string} 	name					Name of the value
 	 * @param {any} 		value 				Value to be associated with the name
 	 */
 	defineStoreValue(name, value) {
