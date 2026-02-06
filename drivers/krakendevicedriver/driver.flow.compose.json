@@ -72,6 +72,18 @@
       "hint": {
         "en": "A new invoicing period has started and an invoice will be issued shortly."
       },
+      "tokens": [
+        {
+          "name": "date_time.period_start",
+          "type": "string",
+          "title": {
+            "en": "Invoice Period Start Date"
+          },
+          "example": {
+            "en": "2026-01-21. When the old period ends or the Period Start Day setting is modified."
+          }
+        }
+      ],
       "$filter": "capabilities=date_time.period_start"
     },
     {
