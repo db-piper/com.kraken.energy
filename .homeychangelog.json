@@ -106,5 +106,8 @@
   },
   "1.0.41": {
     "en": "Correct application of dispatches to distinguish Dispatch to Device from Dispatch Pricing; Improve focus of EnergyAccount and ImportTariff devices; All Dispatch Pricing managed by ImportTariff device; Measure Power capabilities added to EnergyAccount"
+  },
+  "1.0.42": {
+    "en": "Replace slider UI setting of Period Start Day with device setting; Add device settings for MaxDispatchMinutes and KrakenPollingPeriod (not yet implemented)"
   }
 }
