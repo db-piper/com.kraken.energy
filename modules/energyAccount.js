@@ -50,6 +50,7 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyCapabilities();
 		await this.applyStoreValues();
 
+		await this.updatePeriodDay(this._settings.periodStartDay);
 	}
 
 	/**
@@ -90,9 +91,9 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * onSettingsChanged is called to complete the user's updates to the device's settings.
-	 * @param  	{object} 			event 					The onSettings event data
-	 * @param  	{object} 				event.oldSettings 	The old settings object
-	 * @param  	{object} 				event.newSettings 	The new settings object
+	 * @param  	{object} 			event 				The onSettings event data
+	 * @param  	{object} 			event.oldSettings 	The old settings object
+	 * @param  	{object} 			event.newSettings 	The new settings object
 	 * @param  	{string[]} 			event.changedKeys 	An array of keys changed since the previous version
 	 * @returns {Promise<string|void>}	Return a custom message that will be displayed
 	 */
@@ -116,12 +117,14 @@ module.exports = class energyAccount extends krakenDevice {
 		const periodDay = this.computePeriodDay(atTime, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
 		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toISO(), startDay);
+		const periodLength = this.computePeriodLength(atTime, Number(startDay));
 
 		this.updateCapability("period_day.period_day", periodDay);
 		this.updateCapability("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
 		this.updateCapability("date_time.full_period_start", periodStartDate.toISO());
 		this.updateCapability("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
 		this.updateCapability("date_time.full_next_period", nextStartDate.toISO());
+		this.updateCapability("period_day.period_duration", periodLength);
 
 		const updates = await this.updateCapabilities(false);
 		return updates;
@@ -169,34 +172,6 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	/**
-	 * Get the start date of the current period as stored in the named capability	
-	 * @param   {string}    capabilityName    Name of the capability to get the start date from
-	 * @param   {DateTime}  valueOnNull       Value to return if the capability is null
-	 * @returns {DateTime}                    The start date of the period
-	 */
-	getPeriodStartDate(capabilityName, valueOnNull) {
-		const dateString = this.getCapabilityValue(capabilityName);
-		const date = (dateString === null) ? valueOnNull : this.accountWrapper.getLocalDateTime(new Date(dateString));
-		return date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
-		//TODO: define and apply constant midnight in device.js
-	}
-
-	/**
-	 * Initialise the billing period start day
-	 * @param   {boolean}   firstTime       Indicates if this is the first time the device is being initialised
-	 * @returns {Promise <integer>}         The billing period start day number within the month
-	 */
-	async initialiseBillingPeriodStartDay(firstTime) {
-		let billingPeriodStartDay = this._settings.periodStartDay;
-		if (firstTime) {
-			this.homey.log(`energyAccount.initialiseBillingPeriodStartDay: firstTime ${firstTime}, billingPeriodStartDay ${billingPeriodStartDay}`);
-			billingPeriodStartDay = this.accountWrapper.getBillingPeriodStartDay();
-			await this.updatePeriodDay(billingPeriodStartDay);
-		}
-		return billingPeriodStartDay;
-	}
-
-	/**
 	 * Process a event
 	 * @param   {string}    atTime            Date-time to process event for
 	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
@@ -208,44 +183,40 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
+		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
-		const billingPeriodStartDay = await this.initialiseBillingPeriodStartDay(firstTime);
-		const periodLength = this.computePeriodLength(atTime, Number(billingPeriodStartDay));
-		this.homey.log(`energyAccount.processEvent: billingPeriodStart: ${billingPeriodStartDay} first: ${firstTime}`);
+		const billingPeriodStartDay = Number(this._settings.periodStartDay);
+		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
 
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
 		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, false);							// Pence
-		this.homey.log(`energyAccount.processEvent: currentDispatch ${JSON.stringify(currentDispatch)} inDispatch ${inDispatch} minPrice ${minPrice}`);
 		const currentBalance = this.accountWrapper.getCurrentBalance();
 		const exportPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, true);
 		const exportTariffPresent = exportPrices !== undefined;
 		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
 
-		const currentExport = 1000 * await this.getCapabilityValue("meter_power.export");						//watts
-		const periodCurrentExport = 1000 * await this.getCapabilityValue("meter_power.period_export");			//watts
-		const periodCurrentExportValue = await this.getCapabilityValue("measure_monetary.period_export_value"); //pounds
-		const dayCurrentExport = 1000 * await this.getCapabilityValue("meter_power.day_export");				//watts
-		const dayCurrentExportValue = await this.getCapabilityValue("measure_monetary.day_export_value");		//pounds
-		const chunkCurrentExport = 1000 * await this.getCapabilityValue("meter_power.chunk_export");			//watts
-		const chunkCurrentExportValue = await this.getCapabilityValue("measure_monetary.chunk_export_value");	//pounds
+		const currentExport = 1000 * this.getCapabilityValue("meter_power.export");						//watts
+		const periodCurrentExport = 1000 * this.getCapabilityValue("meter_power.period_export");			//watts
+		const periodCurrentExportValue = this.getCapabilityValue("measure_monetary.period_export_value"); //pounds
+		const dayCurrentExport = 1000 * this.getCapabilityValue("meter_power.day_export");				//watts
+		const dayCurrentExportValue = this.getCapabilityValue("measure_monetary.day_export_value");		//pounds
+		const chunkCurrentExport = 1000 * this.getCapabilityValue("meter_power.chunk_export");			//watts
+		const chunkCurrentExportValue = this.getCapabilityValue("measure_monetary.chunk_export_value");	//pounds
 
-		const currentImport = 1000 * await this.getCapabilityValue("meter_power.import");						//watts
-		const periodCurrentImport = 1000 * await this.getCapabilityValue("meter_power.period_import");			//watts
-		const periodCurrentImportValue = await this.getCapabilityValue("measure_monetary.period_import_value");	//pounds
-		const dayCurrentImport = 1000 * await this.getCapabilityValue("meter_power.day_import");				//watts
-		const dayCurrentImportValue = await this.getCapabilityValue("measure_monetary.day_import_value");		//pounds
-		const chunkCurrentImport = 1000 * await this.getCapabilityValue("meter_power.chunk_import");			//watts
-		const chunkCurrentImportValue = await this.getCapabilityValue("measure_monetary.chunk_import_value");	//pounds
+		const currentImport = 1000 * this.getCapabilityValue("meter_power.import");						//watts
+		const periodCurrentImport = 1000 * this.getCapabilityValue("meter_power.period_import");			//watts
+		const periodCurrentImportValue = this.getCapabilityValue("measure_monetary.period_import_value");	//pounds
+		const dayCurrentImport = 1000 * this.getCapabilityValue("meter_power.day_import");				//watts
+		const dayCurrentImportValue = this.getCapabilityValue("measure_monetary.day_import_value");		//pounds
+		const chunkCurrentImport = 1000 * this.getCapabilityValue("meter_power.chunk_import");			//watts
+		const chunkCurrentImportValue = this.getCapabilityValue("measure_monetary.chunk_import_value");	//pounds
 
-		let currentPeriodStartDate = this.getPeriodStartDate("date_time.full_period_start", this.computePeriodStartDate(atTime, billingPeriodStartDay));
-		let nextPeriodStartDate = this.getPeriodStartDate("date_time.full_next_period", currentPeriodStartDate.plus({ months: 1 }));
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
-
+		let currentPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.getCapabilityValue("date_time.full_period_start")));
+		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.getCapabilityValue("date_time.full_next_period")));
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
-		this.homey.log(`energyAccount.processEvent: newPeriod ${newPeriod} eventDateTime ${eventDateTime.toISO()} nextPeriodStartDate ${nextPeriodStartDate.toISO()}`);
 		const newChunk = [0, 30].includes(eventDateTime.minute);
 
 		if (newPeriod) {

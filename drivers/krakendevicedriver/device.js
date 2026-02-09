@@ -18,7 +18,8 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this._settings)}`);
 
 		if (this._settings.periodStartDay == 0) {
-			this._settings.periodStartDay = this.accountWrapper.getBillingPeriodStartDay();
+			const periodStartDay = this.accountWrapper.getBillingPeriodStartDay();
+			this._settings.periodStartDay = (Number.isFinite(periodStartDay)) ? periodStartDay : 1;
 			await this.setSettings(this._settings);
 		}
 	}
@@ -84,7 +85,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param {object} settings 
 	 */
 	async setSettings(settings) {
-		this.log(`krakenDevice Device:setSettings - device ${this.getName()}`);
+		this.log(`krakenDevice Device:setSettings - device ${this.getName()} settings: ${JSON.stringify(settings)}`);
 		await super.setSettings(settings);
 		this._settings = settings;
 	}
