@@ -12,7 +12,7 @@ module.exports = class krakenDriver extends Homey.Driver {
    * onInit is called when the driver is initialized.
    */
   async onInit() {
-    this._period = 60000;
+    this._period = 60000;                         //FREQ - change to look at the settings
     this._managerEvent = new managerEvent(this);
     if (this.getDevices().length > 0) {
       await this._managerEvent.setInterval(this._period);

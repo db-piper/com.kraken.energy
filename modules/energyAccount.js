@@ -46,6 +46,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability("measure_power.export_power", { "title": { "en": "Export Power" } }, [], hasExport);
 		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
+		this.defineCapability("item_count.observed_days", { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -167,8 +168,10 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	computePeriodLength(atTime, periodStartDay) {
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
-		const lastDay = periodStartDate.endOf('month').day;
-		return lastDay;
+		const periodEndDate = periodStartDate.plus({ months: 1 });
+		const length = periodEndDate.diff(periodStartDate, 'days').days;
+		this.homey.log(`energyAccount.computePeriodLength: periodLength ${length}`);
+		return length;
 	}
 
 	/**
@@ -185,7 +188,7 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
-		const billingPeriodStartDay = Number(this._settings.periodStartDay);
+		const billingPeriodStartDay = this._settings.periodStartDay;
 		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
 
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
@@ -226,6 +229,10 @@ module.exports = class energyAccount extends krakenDevice {
 		}
 		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);
 
+		let observedDays = firstTime ? 0 : this.getCapabilityValue("item_count.observed_days");
+		observedDays += newDay ? 1 : 0;
+		this.homey.log(`energyAccount.processEvent: observedDays: ${observedDays}`);
+
 		let deltaExport = 0;
 		let deltaExportValue = 0;
 		let periodUpdatedExport = 0;
@@ -248,7 +255,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let powerExport = 0;
 		let periodUpdatedStandingCharge = 0;
 		let billValue = 0;
-		let projectedBill = 0;
+		let projectedBill = null;
 		let importPrice = 0;
 
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
@@ -265,7 +272,7 @@ module.exports = class energyAccount extends krakenDevice {
 				dayExportStandingCharge = exportPrices.standingCharge / 100;								//pounds
 				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);						//watts
 				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);		//pounds
-				powerExport = deltaExport * 60;																//watts
+				powerExport = deltaExport * 60;				//FREQ: 60 / pollinginterval					//watts
 			}
 
 			if (importTariffPresent) {
@@ -280,7 +287,7 @@ module.exports = class energyAccount extends krakenDevice {
 				dayImportStandingCharge = importPrices.standingCharge;										//pounds
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
-				powerImport = deltaImport * 60;																//watts
+				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 					//watts
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
@@ -288,7 +295,11 @@ module.exports = class energyAccount extends krakenDevice {
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
 			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
-			projectedBill = (elapsedDays > 1) ? (billValue / elapsedDays) * periodLength : null;
+			if (elapsedDays > 1 && observedDays > 0) {
+				const durationScale = periodLength / Math.min(elapsedDays, 1 + observedDays);
+				projectedBill = billValue * durationScale;
+				this.homey.log(`energyAccount.processEvent: durationScale: ${durationScale} projectedBill: ${projectedBill}`);
+			}
 		}
 
 		this.updateCapability("period_day.period_day", periodDay);
@@ -317,6 +328,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("measure_monetary.chunk_export_value", chunkUpdatedExportValue);
 		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
+		this.updateCapability("item_count.observed_days", observedDays);
 
 		updates = await this.updateCapabilities(updates);
 		return updates;

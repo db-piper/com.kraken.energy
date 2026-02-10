@@ -109,7 +109,8 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Calculate the total dispatch minutes for all smart devices
-	 * @returns {number} 	Total dispatch minutes for all smart devices
+	 * @param 	{string} capabilityName 	Name of the capability storing dispatch minutes
+	 * @returns {number} 					Total dispatch minutes for all smart devices
 	 */
 	getTotalDispatchMinutes(capabilityName) {
 		let totalDispatchMinutes = 0;
@@ -124,7 +125,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	/**
 	 * Queue the update of the value of the named capability
 	 * @param {string} 	capabilityName 		Name of the capability to be updated
-	 * @param {any} 		newValue 					New value to be assigned to the capability
+	 * @param {any} 	newValue 			New value to be assigned to the capability
 	 */
 	updateCapability(capabilityName, newValue) {
 		if (this.hasCapability(capabilityName)) {
@@ -247,15 +248,15 @@ module.exports = class krakenDevice extends Homey.Device {
 			}
 		}
 
-		for (const setOptionsName of requiredCapabilitiesNames) {							// Each requiredCapabilityName
-			if (!addedCapabilityNames.includes(setOptionsName)) {								//		Not just added - so we are interested in a force list
+		for (const setOptionsName of requiredCapabilitiesNames) {								// Each requiredCapabilityName
+			if (!addedCapabilityNames.includes(setOptionsName)) {									//		Not just added - so we are interested in a force list
 				const forceNames = this._requiredCapabilities.get(setOptionsName).force;
-				if (forceNames.length !== 0) {																			//				Capability has a force list
+				if (forceNames.length !== 0) {																//				Capability has a force list
 					const overrides = this._requiredCapabilities.get(setOptionsName).overrides;
 					let appliedOverrides = {};
-					for (const forceName of forceNames) {														//						For each force name
-						if (forceName in overrides) {																	//								There is an override for this name
-							appliedOverrides[forceName] = overrides[forceName];					//										Prepare to apply the override
+					for (const forceName of forceNames) {													//						For each force name
+						if (forceName in overrides) {															//								There is an override for this name
+							appliedOverrides[forceName] = overrides[forceName];										//								Prepare to apply the override
 						}
 					}
 					if (Object.getOwnPropertyNames(appliedOverrides).length > 0) {	//						There some options being forced

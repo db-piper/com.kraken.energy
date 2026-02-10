@@ -95,7 +95,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			endTime = endDateTime.toFormat("dd/LL T");
 			countDownStart = endDateTime;
 			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
-			dispatchMinutes = dispatchMinutes + 1;
+			dispatchMinutes = dispatchMinutes + 1;   //FREQ: change to increment by polling interval in minutes
 		}
 
 		if (dispatchCount > 0) {

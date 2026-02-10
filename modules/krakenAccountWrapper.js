@@ -462,6 +462,7 @@ module.exports = class krakenAccountWrapper {
    * Test whether the specified API access parameters give access to the Kraken data
    * @param     {string}      accountId     The account reference specified
    * @param     {string}      apiKey        The apiKey for the account 
+   * @returns   {Promise<boolean>}          True iff account data retrieved
   */
   async testAccessParameters(accountId, apiKey) {
     const token = await this._dataFetcher.testApiKey(apiKey);
@@ -498,7 +499,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Access the account data using the current access parameters and make the data retrieved current
-   * @returns {boolean}           True iff account data retrieved
+   * @returns {Promise<boolean>}           True iff account data retrieved
    */
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
@@ -535,7 +536,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the product and tariff JSON for all MPAN on the account
-   * @returns {object} JSON containing the productId and tariffId
+   * @returns {Promise<object>} JSON containing the productId and tariffId
    */
   async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
@@ -901,7 +902,10 @@ module.exports = class krakenAccountWrapper {
    * @returns {integer | undefined}       Day number (1-31)
    */
   getBillingPeriodStartDay() {
-    const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
+    //GASH
+    //const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
+    const dateString = "2026-02-01";
+    //END GASH
     const timeZone = this._driver.homey.clock.getTimezone();
     let monthDay = undefined
     try {
@@ -929,7 +933,7 @@ module.exports = class krakenAccountWrapper {
    * @param {string}  refreshDate             The date time of the last refresh in ISO format
    * @returns {boolean}                       True indicates that the data must be refreshed 
    */
-  async checkAccountDataRefresh(atTime) {
+  checkAccountDataRefresh(atTime) {
     let dataRefresh = true;
     if (this._accountData !== undefined) {
       const timeZone = this._driver.homey.clock.getTimezone();

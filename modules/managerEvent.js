@@ -65,9 +65,9 @@ module.exports = class managerEvent {
 
   /**
    * Test the specified access parameters to ensure they give access to the account data
-   * @param {string} accountId  The account ID to be tested in the form A-9A999999 
-   * @param {string} apiKey     The account specific API key 32 alpha numeric characters starting sk_live_...
-   * @returns {boolean}
+   * @param   {string}  accountId The account ID to be tested in the form A-9A999999 
+   * @param   {string}  apiKey    The account specific API key 32 alpha numeric characters starting sk_live_...
+   * @returns {Promise<boolean>}  True iff account data retrieved
    */
   async testAccessParameters(accountId, apiKey) {
     const success = await this._accountWrapper.testAccessParameters(accountId, apiKey);
@@ -119,10 +119,10 @@ module.exports = class managerEvent {
   /**
    * Execute a timed event for the specified time
    * @param   {string}    atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
-   * @returns {boolean[]}         Booleans indicating for each device whether it has been updated by the event
+   * @returns {promise<boolean[]>}         Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
-    const refresh = await this._accountWrapper.checkAccountDataRefresh(atTime);
+    const refresh = this._accountWrapper.checkAccountDataRefresh(atTime);
     let readyToProcess = true;
 
     if (refresh) {
