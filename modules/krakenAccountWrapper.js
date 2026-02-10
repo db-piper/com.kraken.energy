@@ -887,20 +887,28 @@ module.exports = class krakenAccountWrapper {
    * Get the month day number (1-31) on which the charging period commences
    * @returns {integer | undefined}       Day number (1-31)
    */
-  getBillingPeriodStartDay() {
+  async getBillingPeriodStartDay() {
     //TODO: REMOVE THIS GASH CODE
-    const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
+    const dateKey = "data.account.billingOptions.currentBillingPeriodStartDate";
+    const dateString = await jsonata(dateKey).evaluate(this.accountData);
+    let startDay = 1;
     //const dateString = "2026-02-01";
     //TODO: END GASH
-    const timeZone = this._driver.homey.clock.getTimezone();
-    let monthDay = undefined
-    try {
-      const date = DateTime.fromISO(dateString, { zone: timeZone, setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
-      monthDay = date.minus({ days: 1 }).day;
-    } catch (error) {
-      this._driver.error(`krakenAccountWrapper.getBillingPeriodStartDay: error: ${error}`);
+    if (dateString !== undefined) {
+      startDay = DateTime.fromISO(dateString, { zone: this._driver.homey.clock.getTimezone(), setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).minus({ days: 1 }).day;
     }
-    return monthDay;
+    this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: dateString: ${dateString}, startDay: ${startDay}`);
+    return startDay;
+    //const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
+    //const timeZone = this._driver.homey.clock.getTimezone();
+    //let monthDay = undefined
+    // try {
+    //   const date = DateTime.fromISO(dateString, { zone: timeZone, setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+    //   monthDay = date.minus({ days: 1 }).day;
+    // } catch (error) {
+    //   this._driver.error(`krakenAccountWrapper.getBillingPeriodStartDay: error: ${error}`);
+    // }
+    // return monthDay;
   }
 
   /**

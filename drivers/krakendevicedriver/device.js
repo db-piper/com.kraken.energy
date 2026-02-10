@@ -18,7 +18,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this._settings)}`);
 
 		if (this._settings.periodStartDay == 0) {
-			const periodStartDay = this.accountWrapper.getBillingPeriodStartDay();
+			const periodStartDay = await this.accountWrapper.getBillingPeriodStartDay();
 			this._settings.periodStartDay = (Number.isFinite(periodStartDay)) ? periodStartDay : 1;
 			await this.setSettings(this._settings);
 		}
