@@ -221,17 +221,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.getCapabilityValue("date_time.full_next_period")));
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
 		const newChunk = [0, 30].includes(eventDateTime.minute);
-
-		if (newPeriod) {
-			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
-			currentPeriodStartDate = nextPeriodStartDate;
-			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
-		}
 		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);
-
-		let observedDays = firstTime ? 0 : this.getCapabilityValue("item_count.observed_days");
-		observedDays += newDay ? 1 : 0;
-		this.homey.log(`energyAccount.processEvent: observedDays: ${observedDays}`);
 
 		let deltaExport = 0;
 		let deltaExportValue = 0;
@@ -260,6 +250,23 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
 		const dispatchPricing = inDispatch && (totalDispatchMinutes < this._settings.dispatchMinutesLimit);
+
+		let observedDays = firstTime ? 0 : this.getCapabilityValue("item_count.observed_days");
+		observedDays += newDay ? 1 : 0;
+		this.homey.log(`energyAccount.processEvent: observedDays: ${observedDays}`);
+
+		if (newPeriod) {
+			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
+			currentPeriodStartDate = nextPeriodStartDate;
+			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
+			observedDays = 0;
+		}
+
+		if (observedDays > 0) {
+			const durationScale = periodLength / (1 + observedDays);
+			projectedBill = billValue * durationScale;
+			this.homey.log(`energyAccount.processEvent: durationScale: ${durationScale} projectedBill: ${projectedBill}`);
+		}
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
@@ -294,12 +301,6 @@ module.exports = class energyAccount extends krakenDevice {
 			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 
-			const elapsedDays = eventDateTime.diff(currentPeriodStartDate, 'days').days;
-			if (elapsedDays > 1 && observedDays > 0) {
-				const durationScale = periodLength / Math.min(elapsedDays, 1 + observedDays);
-				projectedBill = billValue * durationScale;
-				this.homey.log(`energyAccount.processEvent: durationScale: ${durationScale} projectedBill: ${projectedBill}`);
-			}
 		}
 
 		this.updateCapability("period_day.period_day", periodDay);
