@@ -473,7 +473,7 @@ module.exports = class krakenAccountWrapper {
       accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
       success = accountData !== undefined;
       if (success) {
-        // //TODO REMOVE THIS GASH CODE
+        // //TODO: REMOVE THIS GASH CODE
         // accountData.data.devices = [
         //   {
         //     id: "00000000-000a-4000-8020-15ffff00d84d",
@@ -490,7 +490,7 @@ module.exports = class krakenAccountWrapper {
         //     }
         //   }
         // ];
-        // //TODO END GASH
+        // //TODO: END GASH
         this._accountData = accountData;
       }
     }
@@ -775,20 +775,6 @@ module.exports = class krakenAccountWrapper {
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
 
-  // /**
-  //  * Indicate whether the specified time is within the dispatch
-  //  * @param       {string}    atTime    Time to check against
-  //  * @param       {JSON}      dispatch  Dispatch to check against
-  //  * @returns     {boolean}             True if the time is within the dispatch, false otherwise
-  //  */
-  // inDispatchToDevice(atTime, dispatch) {
-  //   const eventTime = this.getLocalDateTime(new Date(atTime));
-  //   const startTime = this.getLocalDateTime(new Date(dispatch.start));
-  //   const endTime = this.getLocalDateTime(new Date(dispatch.end));
-  //   this._driver.homey.log(`krakenAccountWrapper.inDispatchToDevice: ${JSON.stringify(dispatch)} ${eventTime.toISO()} ${startTime.toISO()} ${endTime.toISO()}`);
-  //   return (startTime < eventTime) && (endTime > eventTime);
-  // }
-
   /**
    * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
    * @param   {string}      time     String datetime to be advanced, in ISO format
@@ -902,10 +888,10 @@ module.exports = class krakenAccountWrapper {
    * @returns {integer | undefined}       Day number (1-31)
    */
   getBillingPeriodStartDay() {
-    //GASH
+    //TODO: REMOVE THIS GASH CODE
     const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
     //const dateString = "2026-02-01";
-    //END GASH
+    //TODO: END GASH
     const timeZone = this._driver.homey.clock.getTimezone();
     let monthDay = undefined
     try {
