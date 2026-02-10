@@ -903,8 +903,8 @@ module.exports = class krakenAccountWrapper {
    */
   getBillingPeriodStartDay() {
     //GASH
-    //const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
-    const dateString = "2026-02-01";
+    const dateString = this.accountData.data.account.billingOptions.currentBillingPeriodStartDate;
+    //const dateString = "2026-02-01";
     //END GASH
     const timeZone = this._driver.homey.clock.getTimezone();
     let monthDay = undefined
