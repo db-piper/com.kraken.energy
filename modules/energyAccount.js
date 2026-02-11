@@ -113,7 +113,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {Promise<boolean>}      Indicates if any capabilities are actually updated
 	 */
 	async updatePeriodDay(startDay) {
-		this.homey.log(`energyAccount Device:updatePeriodDay - updating period day to ${startDay}`);
+		this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
 		const atTime = (new Date()).toISOString();
 		const periodDay = this.computePeriodDay(atTime, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
@@ -262,12 +262,6 @@ module.exports = class energyAccount extends krakenDevice {
 			observedDays = 0;
 		}
 
-		if (observedDays > 0) {
-			const durationScale = periodLength / (1 + observedDays);
-			projectedBill = billValue * durationScale;
-			this.homey.log(`energyAccount.processEvent: durationScale: ${durationScale} projectedBill: ${projectedBill}`);
-		}
-
 		if (!firstTime) {
 			if (exportTariffPresent) {
 				deltaExport = liveMeterReading.export - currentExport;										//watts
@@ -298,8 +292,15 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 
 			const periodDay = this.getCapabilityValue("period_day.period_day");
-			periodUpdatedStandingCharge = (.01 * (dayExportStandingCharge + dayImportStandingCharge)) * periodDay;
+			const dailyStandingCharge = .01 * (dayExportStandingCharge + dayImportStandingCharge);
+			periodUpdatedStandingCharge = dailyStandingCharge * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
+			this.homey.log(`energyAccount.processEvent: billValue: ${billValue} periodUpdatedImportValue: ${periodUpdatedImportValue} periodUpdatedExportValue: ${periodUpdatedExportValue} periodUpdatedStandingCharge: ${periodUpdatedStandingCharge}`);
+			if (observedDays > 0) {
+				const durationScale = periodLength / (1 + observedDays);
+				projectedBill = (durationScale * (periodUpdatedImportValue - periodUpdatedExportValue)) + (dailyStandingCharge * periodLength);
+				this.homey.log(`energyAccount.processEvent: dailyStandingCharge: ${dailyStandingCharge} durationScale: ${durationScale} projectedBill: ${projectedBill}`);
+			}
 
 		}
 
