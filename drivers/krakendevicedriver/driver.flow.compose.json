@@ -133,10 +133,10 @@
     {
       "id": "date_time.slot_end_changed",
       "title": {
-        "en": "Current Slot End Time Has Changed"
+        "en": "Tariff Pricing Slot Changed"
       },
       "hint": {
-        "en": "The time for the end of the current pricing slot has changed."
+        "en": "A new tariff slot has started with a modified energy unit price."
       },
       "$filter": "capabilities=date_time.slot_end"
     },
