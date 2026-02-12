@@ -109,5 +109,8 @@
   },
   "1.0.42": {
     "en": "Replace slider UI setting of Period Start Day with device setting; Add device settings for MaxDispatchMinutes and KrakenPollingPeriod (not yet implemented)"
+  },
+  "1.1.0": {
+    "en": "Attempt to reset publication corruption"
   }
 }
