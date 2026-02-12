@@ -136,7 +136,7 @@
         "en": "Tariff Pricing Slot Changed"
       },
       "hint": {
-        "en": "A new tariff slot has started with a modified energy unit price."
+        "en": "A new tariff slot has started with a different energy unit price."
       },
       "$filter": "capabilities=date_time.slot_end"
     },
