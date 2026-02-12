@@ -112,5 +112,8 @@
   },
   "1.0.43": {
     "en": "Improve the algorithm to calculate projected bill; Improve naming of date_time.slot_end_changed WHEN flowcard to be \"Tariff Price Slot Changed"
+  },
+  "1.0.44": {
+    "en": "Republish to get images working on test release page"
   }
 }
