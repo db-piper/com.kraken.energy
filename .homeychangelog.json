@@ -115,5 +115,8 @@
   },
   "1.0.44": {
     "en": "Republish to get images working on test release page"
+  },
+  "1.0.45": {
+    "en": "Attempt to fix publication problems"
   }
 }
