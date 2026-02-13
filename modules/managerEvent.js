@@ -14,21 +14,38 @@ module.exports = class managerEvent {
     this._accountWrapper = new krakenAccountWrapper(this._driver);
     this._interval = undefined;
     this._period = undefined;
+    this._targetSecond = 15;
   }
 
   /**
-   * Create the setInterval and its callback
+   * Start the execution of the minute loop synchronised to the targetSecond
    * @param {integer} period  Timing interval in milliseconds 
    */
-  async setInterval(period) {
+  setInterval(period) {
+    this._period = period;
+    const delay = (this._targetSecond - new Date().getSeconds() + 60) % 60 || 60;
+
     if (this._interval === undefined) {
-      this._period = period;
-      this.driver.log(`managerEvent.setInterval: setting period: ${period}`);
-      this._interval = this.driver.homey.setInterval(async () => {
-        await this.processIntervalCallback();
-      }, period);
+      setTimeout(() => {
+        this.processIntervalCallback(); // Fire first run
+        this._interval = this.driver.homey.setInterval(() => this.processIntervalCallback(), period);
+      }, delay * 1000);
     }
   }
+
+  // /**
+  //  * Create the setInterval and its callback
+  //  * @param {integer} period  Timing interval in milliseconds 
+  //  */
+  // async setInterval(period) {
+  //   if (this._interval === undefined) {
+  //     this._period = period;
+  //     this.driver.log(`managerEvent.setInterval: setting period: ${period}`);
+  //     this._interval = this.driver.homey.setInterval(async () => {
+  //       await this.processIntervalCallback();
+  //     }, period);
+  //   }
+  // }
 
   /**
    * Return the krakenAccountWrapper instance
@@ -88,8 +105,13 @@ module.exports = class managerEvent {
   async processIntervalCallback() {
     const dateTimeNow = new Date();
     this.driver.log(`managerEvent.processIntervalCallback: start: ${dateTimeNow.toISOString()}:`);
-    if (this.driver.getDevices().length > 0) {
-      await this.executeEvent(dateTimeNow.toISOString());
+    try {
+      if (this.driver.getDevices().length > 0) {
+        await this.executeEvent(dateTimeNow.toISOString());
+      }
+    } catch (error) {
+      this.stop();
+      throw error;
     }
     this.driver.log(`managerEvent.processIntervalCallback: end:`);
   }
