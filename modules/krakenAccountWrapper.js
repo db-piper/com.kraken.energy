@@ -1,8 +1,8 @@
 'use strict';
 
-const jsonata = require('jsonata');
+const jsonata = require('../bundles/jsonata');
 const dataFetcher = require('./dataFetcher');
-const { DateTime } = require('luxon');
+const { DateTime } = require('../bundles/luxon');
 const AccountIdSetting = "krakenAccountId";
 const ApiKeySetting = "krakenApiKey";
 
@@ -29,6 +29,8 @@ module.exports = class krakenAccountWrapper {
       SMART_CONTROL_OFF: `Smart Control Off`,
       LOST_CONNECTION: `Device Connection Lost`
     };
+    this._timeZone = this._driver.homey.clock.getTimezone();
+    this._deviceDefinitionsTransform = jsonata(this.homeyDevicesTransform());
   }
 
   /**
@@ -85,31 +87,68 @@ module.exports = class krakenAccountWrapper {
    * Get the live meter id on the account
    * @returns {string}      Live meter ID
    */
-  async getLiveMeterId() {
-    let transform = this.liveMeterTransform();
-    return await jsonata(transform).evaluate(this.accountData);
+  getLiveMeterId() {
+    let meterId = undefined;
+    const agreements = this._accountData?.data?.account?.electricityAgreements || [];
+
+    for (const agreement of agreements) {
+      const meterPoint = agreement.meterPoint;
+      const isExport = meterPoint?.agreements?.[0]?.tariff?.isExport;
+      const meter = meterPoint?.meters?.[0];
+
+      if (meter) {
+        // Look for the specific node based on direction
+        if (isExport === true) {
+          meterId = meter.smartExportElectricityMeter?.deviceId;
+        } else if (isExport === false) {
+          meterId = meter.smartImportElectricityMeter?.deviceId;
+        }
+      }
+
+      if (meterId !== undefined) break;
+    }
+
+    return meterId;
   }
 
   /**
    * Get the IDs of the devices on the account
-   * @returns {Promise<string[]}      Array of device IDs
+   * @returns {string[]}      Array of device IDs
    */
-  async getDeviceIds() {
-    const statusCodes = JSON.stringify(Object.getOwnPropertyNames(this._valid_device_status_translations));
-    const transform = `[data.devices[status.currentState in ${statusCodes}].id]`;
-    const devices = await jsonata(transform).evaluate(this.accountData);
-    this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${devices.length} devices`);
-    return devices;
+  getDeviceIds() {
+    const statusCodes = Object.keys(this._valid_device_status_translations);
+    const devices = this._accountData?.data?.devices || [];
+
+    const deviceIds = devices
+      .filter(d => statusCodes.includes(d.status?.currentState))
+      .map(d => d.id);
+
+    this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} devices`);
+    return deviceIds;
   }
 
   /**
    * Return tariff details for the specified direction for the account overview
    * @param   {boolean} isExport    true - export tariff; false - import tariff
-   * @returns {Promise<JSON>}       JSON structure of the tariff details or undefined
+   * @returns {JSON | undefined}    JSON structure of the tariff details or undefined
    */
-  async getTariffDirection(isExport) {
-    const tariffTransform = this.tariffTransform(isExport);
-    const tariff = await jsonata(tariffTransform).evaluate(this.accountData);
+  getTariffDirection(isExport) {
+    let tariff = undefined;
+    const agreementsList = this._accountData?.data?.account?.electricityAgreements;
+
+    if (Array.isArray(agreementsList)) {
+      for (const agreementSet of agreementsList) {
+        const found = agreementSet.meterPoint?.agreements?.find(
+          (a) => a.tariff?.isExport === isExport
+        );
+
+        if (found) {
+          tariff = found.tariff;
+          break;
+        }
+      }
+    }
+
     return tariff;
   }
 
@@ -120,7 +159,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
    */
   async getTariffDirectionPrices(atTime, direction) {
-    const tariff = await this.getTariffDirection(direction);
+    const tariff = this.getTariffDirection(direction);
     if (tariff !== undefined) {
       const prices = await this.getPrices(atTime, tariff);
       return prices;
@@ -175,8 +214,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {DateTime}								DateTime object in Homey's timezone
    */
   getLocalDateTime(jsDate) {
-    const timeZone = this._driver.homey.clock.getTimezone();
-    const dateTime = DateTime.fromJSDate(jsDate).setZone(timeZone);
+    const dateTime = DateTime.fromJSDate(jsDate).setZone(this._timeZone);
     return dateTime;
   }
 
@@ -210,26 +248,78 @@ module.exports = class krakenAccountWrapper {
    */
   async getPrices(atTime, tariff) {
     let prices = undefined;
-    const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
-    const timeZone = this._driver.homey.clock.getTimezone();
-    if ("unitRates" in tariff) {
-      const slotPriceTransform = this.slotPriceTransform(atTime);
-      prices = await jsonata(slotPriceTransform).evaluate(tariff);
-    } else {
-      const startTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone).set(midnight);
-      const endTime = startTime.plus({ days: 1 });
+
+    if (tariff && "unitRates" in tariff) {
+      // 1. Setup timestamps for current and boundary checks
+      const targetMs = new Date(atTime).getTime();
+      const luxonNow = DateTime.fromISO(atTime, { zone: this._timeZone });
+      const tomorrowMs = luxonNow.plus({ days: 1 }).startOf('day').toMillis();
+
+      // 2. Find the active rate (This replaces the JSONata filter)
+      const selectedRate = tariff.unitRates.find(r => {
+        const start = new Date(r.validFrom).getTime();
+        const end = new Date(r.validTo).getTime();
+        return start <= targetMs && end > targetMs;
+      });
+
+      if (selectedRate) {
+        // 3. Quartile calculations (Replaces $min, $max, and math logic)
+        const windowRates = tariff.unitRates.filter(r => new Date(r.validTo).getTime() <= tomorrowMs);
+
+        if (windowRates.length > 0) {
+          const values = windowRates.map(r => r.value);
+          const minPrice = Math.min(...values);
+          const maxPrice = Math.max(...values);
+          const quartileStep = (maxPrice - minPrice) / 4 || 0; // Avoid division by zero
+
+          prices = {
+            preVatUnitRate: selectedRate.preVatValue,
+            unitRate: selectedRate.value,
+            preVatStandingCharge: tariff.preVatStandingCharge,
+            standingCharge: tariff.standingCharge,
+            nextSlotStart: selectedRate.validTo,
+            thisSlotStart: selectedRate.validFrom,
+            quartile: Math.min(3, Math.floor((selectedRate.value - minPrice) / quartileStep)),
+            isHalfHourly: true
+          };
+        }
+      }
+    } else if (tariff) {
+      // 4. Fallback for Standard/Simple Tariffs
+      const startTime = DateTime.fromISO(atTime, { zone: this._timeZone }).startOf('day');
       prices = {
         preVatUnitRate: tariff.preVatUnitRate,
         unitRate: tariff.unitRate,
         preVatStandingCharge: tariff.preVatStandingCharge,
         standingCharge: tariff.standingCharge,
-        nextSlotStart: endTime.toISO(),
+        nextSlotStart: startTime.plus({ days: 1 }).toISO(),
         thisSlotStart: startTime.toISO(),
         isHalfHourly: false,
         quartile: null
       };
     }
+
     return prices;
+    // let prices = undefined;
+    // const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
+    // if ("unitRates" in tariff) {
+    //   const slotPriceTransform = this.slotPriceTransform(atTime);
+    //   prices = await jsonata(slotPriceTransform).evaluate(tariff);
+    // } else {
+    //   const startTime = DateTime.fromJSDate(new Date(atTime)).setZone(this._timeZone).set(midnight);
+    //   const endTime = startTime.plus({ days: 1 });
+    //   prices = {
+    //     preVatUnitRate: tariff.preVatUnitRate,
+    //     unitRate: tariff.unitRate,
+    //     preVatStandingCharge: tariff.preVatStandingCharge,
+    //     standingCharge: tariff.standingCharge,
+    //     nextSlotStart: endTime.toISO(),
+    //     thisSlotStart: startTime.toISO(),
+    //     isHalfHourly: false,
+    //     quartile: null
+    //   };
+    // }
+    // return prices;
   }
 
   /**
@@ -269,18 +359,18 @@ module.exports = class krakenAccountWrapper {
     return transform;
   }
 
-  /**
-   * Return the jsonata transformation to obtain tariff detail for a specified direction
-   * @param   {boolean} isExport  Direction for the tariff
-   * @returns {string}            Jsonata transform string
-   */
-  tariffTransform(isExport) {
-    const transform = `data.account.electricityAgreements.meterPoint.agreements.tariff
-                          [
-                            isExport=${isExport}
-                          ]`;
-    return transform;
-  }
+  // /**
+  //  * Return the jsonata transformation to obtain tariff detail for a specified direction
+  //  * @param   {boolean} isExport  Direction for the tariff
+  //  * @returns {string}            Jsonata transform string
+  //  */
+  // tariffTransform(isExport) {
+  //   const transform = `data.account.electricityAgreements.meterPoint.agreements.tariff
+  //                         [
+  //                           isExport=${isExport}
+  //                         ]`;
+  //   return transform;
+  // }
 
   /**
    * Return the jsonata transformation to obtain the last recorded slot datetime
@@ -303,36 +393,35 @@ module.exports = class krakenAccountWrapper {
     return transform;
   }
 
-  /**
-   * Return the jsonata transformation to obtain a timed price slot
-   * @param   {string}    atTime    DateTime string of the required price slot 
-   * @returns {string}              Jsonata transformation string
-   */
-  slotPriceTransform(atTime) {
-    const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
-    const timeZone = this._driver.homey.clock.getTimezone();
-    const tomorrow = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone).plus({ days: 1 }).set(midnight).toISO();
-    const slotPriceTransform = `(
-      $targetTimestamp := $toMillis("${atTime}");
-      $tomorrow := $toMillis("${tomorrow}");
-      $selectedRate := unitRates[$toMillis(validFrom) <= $targetTimestamp and $toMillis(validTo) > $targetTimestamp]; 
-      $rates := unitRates[$toMillis(validTo)<=$tomorrow];
-      $minPrice := $min($rates.value);
-      $quartileStep := ($max($rates.value)-$minPrice) / 4;
-      $selectedRate != null ?
-      {
-        "preVatUnitRate": $selectedRate.preVatValue,
-        "unitRate": $selectedRate.value,
-        "preVatStandingCharge": preVatStandingCharge,
-        "standingCharge": standingCharge,
-        "nextSlotStart": $selectedRate.validTo,
-        "thisSlotStart": $selectedRate.validFrom,
-        "quartile": $min([3,$floor(($selectedRate.value-$minPrice)/$quartileStep)]),
-        "isHalfHourly": true
-      } : undefined                      
-    )`;
-    return slotPriceTransform;
-  }
+  // /**
+  //  * Return the jsonata transformation to obtain a timed price slot
+  //  * @param   {string}    atTime    DateTime string of the required price slot 
+  //  * @returns {string}              Jsonata transformation string
+  //  */
+  // slotPriceTransform(atTime) {
+  //   const midnight = { hour: 0, minute: 0, second: 0, millisecond: 0 };
+  //   const tomorrow = DateTime.fromJSDate(new Date(atTime)).setZone(this._timeZone).plus({ days: 1 }).set(midnight).toISO();
+  //   const slotPriceTransform = `(
+  //     $targetTimestamp := $toMillis("${atTime}");
+  //     $tomorrow := $toMillis("${tomorrow}");
+  //     $selectedRate := unitRates[$toMillis(validFrom) <= $targetTimestamp and $toMillis(validTo) > $targetTimestamp]; 
+  //     $rates := unitRates[$toMillis(validTo)<=$tomorrow];
+  //     $minPrice := $min($rates.value);
+  //     $quartileStep := ($max($rates.value)-$minPrice) / 4;
+  //     $selectedRate != null ?
+  //     {
+  //       "preVatUnitRate": $selectedRate.preVatValue,
+  //       "unitRate": $selectedRate.value,
+  //       "preVatStandingCharge": preVatStandingCharge,
+  //       "standingCharge": standingCharge,
+  //       "nextSlotStart": $selectedRate.validTo,
+  //       "thisSlotStart": $selectedRate.validFrom,
+  //       "quartile": $min([3,$floor(($selectedRate.value-$minPrice)/$quartileStep)]),
+  //       "isHalfHourly": true
+  //     } : undefined                      
+  //   )`;
+  //   return slotPriceTransform;
+  // }
 
   /**
    * Return the GraphQL query string to obtain the Octopus Account Information
@@ -540,12 +629,11 @@ module.exports = class krakenAccountWrapper {
    */
   async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
-    const meterId = await this.getLiveMeterId();
+    const meterId = this.getLiveMeterId();
     if (meterId === undefined || meterId === null || meterId.length == 0) {
       return [];
     } else {
-      const expression = jsonata(this.homeyDevicesTransform());
-      const tariffDeviceDefinitions = await expression.evaluate(this.accountData);
+      const tariffDeviceDefinitions = await this._deviceDefinitionsTransform.evaluate(this.accountData);
       return tariffDeviceDefinitions;
     }
   }
@@ -644,10 +732,10 @@ module.exports = class krakenAccountWrapper {
    * Return live meter data from the instantiated live meter device
    * @returns {object} reading JSON object representing the current data
    */
-  async getLiveMeterData() {
-    const meterId = await this.getLiveMeterId();
+  async getLiveMeterData(atTime) {
+    const meterId = this.getLiveMeterId();
     const deviceIds = await this.getDeviceIds();
-    const meterQuery = this.buildDispatchQuery(meterId, deviceIds);
+    const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
       reading: undefined,
       dispatches: {}
@@ -810,15 +898,23 @@ module.exports = class krakenAccountWrapper {
   /**
    * Build the live data query using the live meter Id and intelligent device Ids
    * @param   {string}      meterId     The id of the live meter (e.g. Octopus Home Mini) 
-   * @param   {string[]}    deviceIds   Array of intelligent device Ids   
+   * @param   {string[]}    deviceIds   Array of intelligent device Ids  
+   * @param   {string}      atTime      The time at which to get the data
    * @returns {object}                  JSON result of Graph QL query
    */
-  buildDispatchQuery(meterId, deviceIds) {
+  buildDispatchQuery(meterId, deviceIds, atTime) {
     const operationName = 'getHighFrequencyData';
-    let variableDeclarations = '$meterId: String!';
+    const endTime = this.getLocalDateTime(new Date(atTime)).set({ seconds: 0, milliseconds: 0 });
+    const startTime = endTime.minus({ minutes: 1 });
+    this._driver.homey.log(`krakenAccountWrapper.buildDispatchQuery: startTime: ${startTime.toISO()}, endTime: ${endTime.toISO()}`);
+
+    let variableDeclarations = '$meterId: String!, $startTime: DateTime, $endTime: DateTime, $grouping: TelemetryGrouping';
     let queryDeclarations =
       `smartMeterTelemetry(
         deviceId: $meterId
+        start: $startTime
+        end: $endTime
+        grouping: $grouping
       ) 
       {
         demand
@@ -827,7 +923,10 @@ module.exports = class krakenAccountWrapper {
         readAt
       }`;
     let variableValues = {
-      meterId: meterId
+      meterId: meterId,
+      startTime: startTime.toISO(),
+      endTime: endTime.toISO(),
+      grouping: 'ONE_MINUTE'
     };
 
     for (const deviceNum in deviceIds) {
@@ -888,14 +987,12 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<integer>}       Day number (1-31)
    */
   async getBillingPeriodStartDay() {
-    //TODO: REMOVE THIS GASH CODE
-    const dateKey = "data.account.billingOptions.currentBillingPeriodStartDate";
-    const dateString = await jsonata(dateKey).evaluate(this.accountData);
+    const dateString = this.accountData?.data?.account?.billingOptions?.currentBillingPeriodStartDate;
     let startDay = 1;
-    //const dateString = "2026-02-01";
-    //TODO: END GASH
-    if (dateString !== undefined) {
-      startDay = DateTime.fromISO(dateString, { zone: this._driver.homey.clock.getTimezone(), setZone: true }).set({ hour: 0, minute: 0, second: 0, millisecond: 0 }).minus({ days: 1 }).day;
+    if (dateString) {
+      startDay = DateTime.fromISO(dateString, { zone: this._timeZone })
+        .minus({ days: 1 })
+        .day;
     }
     this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: dateString: ${dateString}, startDay: ${startDay}`);
     return startDay;
@@ -920,12 +1017,15 @@ module.exports = class krakenAccountWrapper {
   checkAccountDataRefresh(atTime) {
     let dataRefresh = true;
     if (this._accountData !== undefined) {
-      const timeZone = this._driver.homey.clock.getTimezone();
-      const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
+      const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(this._timeZone);
       dataRefresh = ((eventDateTime.minute == 0) || eventDateTime.minute == 30);
     }
     this._driver.log(`krakenAccountManager.checkAccountDataRefresh: exiting ${dataRefresh}`);
     return dataRefresh;
+  }
+
+  removeAccountData() {
+    this._accountData = undefined;
   }
 
 }

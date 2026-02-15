@@ -1,7 +1,7 @@
 'use strict';
 
 const Homey = require('homey');
-const { DateTime } = require('luxon');
+const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 
 module.exports = class krakenDevice extends Homey.Device {

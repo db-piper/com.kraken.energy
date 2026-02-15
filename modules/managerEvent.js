@@ -1,7 +1,7 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const { DateTime } = require("luxon");
+const { DateTime } = require('../bundles/luxon');
 
 module.exports = class managerEvent {
   /**
@@ -96,7 +96,10 @@ module.exports = class managerEvent {
    */
   unSetInterval() {
     this.driver.log(`managerEvent.unSetInterval: clearing the interval.`);
-    this.driver.clearInterval(this._interval);
+    if (this._interval !== undefined) {
+      this.driver.homey.clearInterval(this._interval);
+      this._interval = undefined;
+    }
   }
 
   /**
@@ -110,7 +113,8 @@ module.exports = class managerEvent {
         await this.executeEvent(dateTimeNow.toISOString());
       }
     } catch (error) {
-      this.stop();
+      this.driver.error(`managerEvent.processIntervalCallback: Error. Terminating loop.`)
+      this.unSetInterval();
       throw error;
     }
     this.driver.log(`managerEvent.processIntervalCallback: end:`);
@@ -144,7 +148,8 @@ module.exports = class managerEvent {
    * @returns {promise<boolean[]>}         Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
-    const refresh = this._accountWrapper.checkAccountDataRefresh(atTime);
+    //const refresh = this._accountWrapper.checkAccountDataRefresh(atTime);
+    const refresh = true;
     let readyToProcess = true;
 
     if (refresh) {
@@ -155,18 +160,20 @@ module.exports = class managerEvent {
 
     let updates = new Array();
     if (readyToProcess) {
-      const liveData = await this._accountWrapper.getLiveMeterData();
+      const { reading, dispatches } = await this._accountWrapper.getLiveMeterData(atTime);
       //this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
-      if ((liveData.reading !== undefined) && (liveData.dispatches !== undefined)) {
+      if ((reading !== undefined) && (dispatches !== undefined)) {
         const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
         for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
           this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
-          updates.push(await device.processEvent(atTime, this.newDay(atTime), liveData.reading, liveData.dispatches));
+          updates.push(await device.processEvent(atTime, this.newDay(atTime), reading, dispatches));
         }
       } else {
         this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
       }
     }
+
+    this._accountWrapper.removeAccountData();
 
     return updates;
   }
