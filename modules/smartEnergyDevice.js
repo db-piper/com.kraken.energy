@@ -66,7 +66,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
-		const deviceData = await this.accountWrapper.getDevice(deviceId);
+		const deviceData = this.accountWrapper.getDevice(deviceId);
 		if (deviceData === undefined) {
 			await this.setUnavailable("bad device; please delete.");
 			return false;
@@ -77,7 +77,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
 		const currentDispatch = this.accountWrapper.currentPlannedDispatch(atTime, deviceDispatches);   //dispatch or undefined
-		const nextDispatch = await this.accountWrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
+		const nextDispatch = this.accountWrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
 		const inDispatch = currentDispatch !== undefined;                                               //receiving reduced price domestic energy
 
 		let startTime = null;

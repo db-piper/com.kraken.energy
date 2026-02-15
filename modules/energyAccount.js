@@ -16,8 +16,8 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
-		const isDispatchable = (await this.accountWrapper.getDeviceIds()).length > 0;
-		const hasExport = (await this.accountWrapper.getTariffDirection(true)) !== undefined;
+		const isDispatchable = this.accountWrapper.getDeviceIds().length > 0;
+		const hasExport = (this.accountWrapper.getTariffDirection(true)) !== undefined;
 
 		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
@@ -194,11 +194,11 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		const minPrice = await this.accountWrapper.minimumPriceOnDate(atTime, false);							// Pence
+		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, false);							// Pence
 		const currentBalance = this.accountWrapper.getCurrentBalance();
-		const exportPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, true);
+		const exportPrices = this.accountWrapper.getTariffDirectionPrices(atTime, true);
 		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = await this.accountWrapper.getTariffDirectionPrices(atTime, false);
+		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false);
 		const importTariffPresent = importPrices !== undefined;
 
 		const currentExport = 1000 * this.getCapabilityValue("meter_power.export");						//watts

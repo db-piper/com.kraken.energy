@@ -76,8 +76,8 @@ module.exports = class managerEvent {
    * Retrieve the device definitions from the octopus account data
    * @returns {object - JSON}   Structure containing the device definitions for Homey
    */
-  async getOctopusDeviceDefinitions() {
-    return await this._accountWrapper.getOctopusDeviceDefinitions();
+  getOctopusDeviceDefinitions() {
+    return this._accountWrapper.getOctopusDeviceDefinitions();
   }
 
   /**
