@@ -15,14 +15,23 @@ module.exports = class krakenApp extends Homey.App {
     const relativePriceCard = this.homey.flow.getConditionCard('slot_relative_price');
     if (relativePriceCard) {
       relativePriceCard.registerRunListener(async (args, state) => {
-        // Use optional chaining for a slightly smaller memory footprint than '&& typeof'
-        // and ensure we don't hold 'args' in memory longer than necessary
+        let result = false;
+
         try {
-          return await args?.device?.getCurrentlyCheaper(args);
+          const device = args?.device;
+          const method = device?.getCurrentlyCheaper;
+
+          // Only set to true if the method exists and evaluates to true
+          if (typeof method === 'function') {
+            result = !!method.call(device, args);
+          }
         } catch (err) {
-          this.error('Error in slot_relative_price listener:', err);
-          return false;
+          // We don't need to return here; let it fall through to the final return
+          this.error('[Listener Error] Relative Price Card:', err.message);
         }
+
+        // The single exit point
+        return result;
       });
     }
   }
