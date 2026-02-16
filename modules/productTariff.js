@@ -115,9 +115,9 @@ module.exports = class productTariff extends krakenDevice {
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
-		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
+		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const direction = this.isExport();
 		//const isHalfHourly = await this.accountWrapper.isHalfHourly(direction);
@@ -134,7 +134,7 @@ module.exports = class productTariff extends krakenDevice {
 		const newEnergyReading = +liveMeterReading[propertyName];														//Wh as integer
 		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));									//Boolean
 		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));				//Decimal hours
-		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * await this.getCapabilityValue("meter_power");	//Wh
+		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.getCapabilityValue("meter_power");	//Wh
 		const slotEnergy = firstTime ? 0 : (1000 * this.getCapabilityValue("meter_power.consumption"));					//Wh
 		const slotValueTaxed = firstTime ? 0 : this.getCapabilityValue("measure_monetary.energy_value_taxed");			//£
 		const productCode = tariff.productCode;
@@ -167,7 +167,6 @@ module.exports = class productTariff extends krakenDevice {
 			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
 
-
 		this.updateCapability("product_code", productCode);
 		this.updateCapability("tariff_code", tariffCode);
 		this.updateCapability("measure_monetary.unit_price_taxed", unitPriceTaxed);
@@ -189,7 +188,7 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 
-		updates = await this.updateCapabilities(updates);
+		//updates = await this.updateCapabilities(updates);
 		return updates;
 
 	}

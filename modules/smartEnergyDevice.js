@@ -52,14 +52,30 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	}
 
 	/**
-	 * Process a event
+	 * Commit changes to the capabilities of the device from the temporary storage map
+	 * @returns {Promise<boolean>}									Indicates if any updates have been committed
+	 */
+	async commitCapabilities() {
+		const deviceId = this.getStoreValue("deviceId");
+		const deviceData = this.accountWrapper.getDevice(deviceId);
+		let updates = false;
+		if (deviceData === undefined) {
+			await this.setUnavailable("bad device; please delete.");
+		} else {
+			updates = await super.commitCapabilities();
+		}
+		return updates;
+	}
+
+	/**
+	 * Process a timed event
 	 * @param   {string}    atTime            Date-time to process event for
 	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
 	 * @param   {JSON}      liveMeterReading  The live meter reading data
 	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
 	 * @returns {boolean}                     True if any capabilities were updated
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
@@ -67,10 +83,10 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
 		const deviceData = this.accountWrapper.getDevice(deviceId);
-		if (deviceData === undefined) {
-			await this.setUnavailable("bad device; please delete.");
-			return false;
-		}
+		// if (deviceData === undefined) {
+		// 	await this.setUnavailable("bad device; please delete.");
+		// 	return false;
+		// }
 		const deviceName = deviceData.name;
 		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
 		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
@@ -116,7 +132,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapabilityValue("alarm_power", inDispatch);
 		this.updateCapabilityValue("item_count.dispatch_minutes", dispatchMinutes);
 
-		updates = await this.updateCapabilities(updates);
+		//updates = await this.updateCapabilities(updates);
 
 		return updates;
 	}

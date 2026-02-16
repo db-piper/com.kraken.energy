@@ -182,9 +182,9 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
 	 * @returns {boolean}                     True if any capabilities were updated
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 
-		let updates = await super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
+		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
 
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
@@ -332,7 +332,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 		this.updateCapability("item_count.observed_days", observedDays);
 
-		updates = await this.updateCapabilities(updates);
+		//updates = await this.updateCapabilities(updates);
 		return updates;
 	}
 

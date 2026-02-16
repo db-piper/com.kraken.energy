@@ -33,20 +33,6 @@ module.exports = class managerEvent {
     }
   }
 
-  // /**
-  //  * Create the setInterval and its callback
-  //  * @param {integer} period  Timing interval in milliseconds 
-  //  */
-  // async setInterval(period) {
-  //   if (this._interval === undefined) {
-  //     this._period = period;
-  //     this.driver.log(`managerEvent.setInterval: setting period: ${period}`);
-  //     this._interval = this.driver.homey.setInterval(async () => {
-  //       await this.processIntervalCallback();
-  //     }, period);
-  //   }
-  // }
-
   /**
    * Return the krakenAccountWrapper instance
    * @returns   {krakenAccountWrapper}    Account wrapper instance
@@ -148,32 +134,37 @@ module.exports = class managerEvent {
    * @returns {promise<boolean[]>}         Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
-    //const refresh = this._accountWrapper.checkAccountDataRefresh(atTime);
-    const refresh = true;
     let readyToProcess = true;
 
-    if (refresh) {
-      this.driver.log(`managerEvent.executeEvent: Trying account access`);
-      readyToProcess = (await this._accountWrapper.accessAccountGraphQL());
-      this.driver.log(`managerEvent.executeEvent: Account access outcome ${readyToProcess}`);
-    }
+    this.driver.log(`managerEvent.executeEvent: Trying account access`);
+    readyToProcess = (await this._accountWrapper.accessAccountGraphQL());
+    let { reading, dispatches } = await this._accountWrapper.getLiveMeterData(atTime);
+    this.driver.log(`managerEvent.executeEvent: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
+    this.driver.log(`managerEvent.executeEvent: Account access outcome ${readyToProcess}`);
 
     let updates = new Array();
     if (readyToProcess) {
-      const { reading, dispatches } = await this._accountWrapper.getLiveMeterData(atTime);
-      //this._driver.log(`managerEvent.executeEvent: liveReading: ${JSON.stringify(liveData)}`);
       if ((reading !== undefined) && (dispatches !== undefined)) {
         const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
         for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
-          this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`)
-          updates.push(await device.processEvent(atTime, this.newDay(atTime), reading, dispatches));
+          this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`);
+          device.processEvent(atTime, this.newDay(atTime), reading, dispatches);
         }
+
+        this._accountWrapper.removeAccountData();
+        reading = null;
+        dispatches = null;
+
+        for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
+          updates.push(await device.commitCapabilities());
+        }
+
+        await this.logMemoryToInsights();
+
       } else {
         this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
       }
     }
-
-    this._accountWrapper.removeAccountData();
 
     return updates;
   }
@@ -191,4 +182,30 @@ module.exports = class managerEvent {
     return newDay != oldDay;
   }
 
+  async logMemoryToInsights() {
+    try {
+      // Talk directly to the JS engine to avoid the uv_resident_set_memory error
+      const heapStats = require('v8').getHeapStatistics();
+      const memoryKB = heapStats.used_heap_size / 1024;
+
+      let myLog;
+      try {
+        myLog = await this.driver.homey.insights.getLog('memory_rss');
+      } catch (e) {
+        myLog = await this.driver.homey.insights.createLog('memory_rss', {
+          title: { en: 'App Memory Usage' },
+          type: 'number',
+          units: 'KB',
+          decimals: 1
+        });
+      }
+
+      await myLog.createEntry(memoryKB);
+      this.driver.homey.log(`[Insight] Recorded: ${memoryKB.toFixed(1)} KB`);
+    } catch (err) {
+      if (this.driver && this.driver.homey) {
+        this.driver.homey.error('[Insight Error]', err.message);
+      }
+    }
+  }
 }

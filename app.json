@@ -29,6 +29,18 @@
       "home mini"
     ]
   },
+  "insights": [
+    {
+      "id": "memory_rss",
+      "title": {
+        "en": "App Memory Usage"
+      },
+      "type": "number",
+      "units": "KB",
+      "decimals": 1,
+      "chartType": "line"
+    }
+  ],
   "permissions": [],
   "images": {
     "small": "/assets/images/kraken_energy_monitoring_small.png",

@@ -125,14 +125,17 @@ module.exports = class krakenDevice extends Homey.Device {
 	/**
 	 * Queue the update of the value of the named capability
 	 * @param {string} 	capabilityName 		Name of the capability to be updated
-	 * @param {any} 	newValue 			New value to be assigned to the capability
+	 * @param {any} 		newValue 					New value to be assigned to the capability
 	 */
 	updateCapability(capabilityName, newValue) {
 		if (this.hasCapability(capabilityName)) {
 			if (!this.hasOwnProperty("_updatedCapabilities")) {
 				this._updatedCapabilities = new Map();
 			}
-			this._updatedCapabilities.set(capabilityName, newValue);
+			const safeValue = (typeof newValue === 'object' && newValue !== null)
+				? JSON.parse(JSON.stringify(newValue))
+				: newValue;
+			this._updatedCapabilities.set(capabilityName, safeValue);
 		}
 	}
 
@@ -183,10 +186,18 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param     {string}        atTime            String representation of the event time
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
-	 * @returns   {Promise<boolean>}                Indicates if any updates have been made to the device capabilities
+	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	async processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
 		return false;
+	}
+
+	/**
+	 * Commit changes to the capabilities of the device from the temporary storage map
+	 * @returns {Promise<boolean>}									Indicates if any updates have been committed
+	 */
+	async commitCapabilities() {
+		return await this.updateCapabilities();
 	}
 
 	/**

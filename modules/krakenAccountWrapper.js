@@ -621,8 +621,7 @@ module.exports = class krakenAccountWrapper {
     if (!tariff) return undefined;
 
     if (Array.isArray(tariff.unitRates)) {
-      const timeZone = this._driver.homey.clock.getTimezone();
-      const boundaryMs = DateTime.fromISO(atTime, { zone: timeZone })
+      const boundaryMs = DateTime.fromISO(atTime, { zone: this._timeZone })
         .plus({ days: 1 })
         .startOf('day')
         .toMillis();
@@ -645,7 +644,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return live meter data from the instantiated live meter device
-   * @returns {object} reading JSON object representing the current data
+   * @returns {Promise<object>} reading JSON object representing the current data
    */
   async getLiveMeterData(atTime) {
     const meterId = this.getLiveMeterId();
