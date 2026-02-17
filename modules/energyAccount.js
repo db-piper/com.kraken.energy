@@ -8,7 +8,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * onInit is called when the device is initialized.
 	 */
 	async onInit() {
-		this.log('energyAccount Device:onInit - energyAccount device has been initialized');
+		this.log('energyAccount Device:onInit - energyAccount Initialization Started');
 		await super.onInit();
 
 		if (this.hasCapability("measure_monetary.chunk_accumulated_value")) {
@@ -52,6 +52,7 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyStoreValues();
 
 		await this.updatePeriodDay(this._settings.periodStartDay);
+		this.log('energyAccount Device:onInit - energyAccount Initialization Completed');
 	}
 
 	/**

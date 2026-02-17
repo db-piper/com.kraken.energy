@@ -97,6 +97,9 @@ module.exports = class managerEvent {
     try {
       if (this.driver.getDevices().length > 0) {
         await this.executeEvent(dateTimeNow.toISOString());
+      } else {
+        this.driver.log(`managerEvent.processIntervalCallback: No devices found. Stopping event loop.`);
+        this.unSetInterval();
       }
     } catch (error) {
       this.driver.error(`managerEvent.processIntervalCallback: Error. Terminating loop.`)

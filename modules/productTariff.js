@@ -8,7 +8,7 @@ module.exports = class productTariff extends krakenDevice {
 	 * onInit is called when the device is initialized.
 	 */
 	async onInit() {
-		this.log('productTariff Device:onInit - productTariff device has been initialized');
+		this.log('productTariff Device:onInit - productTariff Initialization Started');
 		await super.onInit();
 
 		const isExport = this.isExport();
@@ -40,6 +40,8 @@ module.exports = class productTariff extends krakenDevice {
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
+
+		this.log('productTariff Device:onInit - productTariff Initialization Completed');
 
 	}
 

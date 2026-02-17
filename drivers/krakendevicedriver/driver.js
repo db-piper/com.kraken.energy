@@ -12,6 +12,7 @@ module.exports = class krakenDriver extends Homey.Driver {
    * onInit is called when the driver is initialized.
    */
   async onInit() {
+    this.log('krakenDriver.onInit: Driver Initialization Started');
     this._period = 60000;                         //FREQ - change to look at the settings
     this._managerEvent = new managerEvent(this);
     if (this.getDevices().length > 0) {
@@ -23,7 +24,7 @@ module.exports = class krakenDriver extends Homey.Driver {
       }
     }
 
-    this.log('krakenDriver: onInit: driver has been initialized');
+    this.log('krakenDriver.onInit: Driver Initialization Completed');
   }
 
   /**

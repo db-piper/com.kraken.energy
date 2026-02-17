@@ -10,11 +10,11 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * onInit is called when the device is initialized.
 	 */
 	async onInit() {
-		this.log('krakenDevice:onInit - generic krakenDevice has been initialized');
+		this.log('krakenDevice:onInit - generic krakenDevice Initialization Started');
 		this._requiredCapabilities = new Map();
 		this._updatedCapabilities = new Map();
 		this._storeValues = {};
-		this._settings = await this.getSettings();
+		this._settings = await this.migrateSettings(this.getSettings());
 		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this._settings)}`);
 
 		if (this._settings.periodStartDay == 0) {
@@ -22,6 +22,7 @@ module.exports = class krakenDevice extends Homey.Device {
 			this._settings.periodStartDay = (Number.isFinite(periodStartDay)) ? periodStartDay : 1;
 			await this.setSettings(this._settings);
 		}
+		this.log('krakenDevice:onInit - generic krakenDevice Initialization Completed');
 	}
 
 	/**
@@ -79,6 +80,37 @@ module.exports = class krakenDevice extends Homey.Device {
 	async onDeleted() {
 		this.log('krakenDevice:onDeleted has been deleted');
 	}
+
+	/**
+	 * Ensure the set of settings is complete set default values for any missing setting
+	 * @param 	{object} currentSettings	current settings and their values
+	 * @returns {object}							 		full settings as stored in device.settings
+	 */
+	async migrateSettings(currentSettings) {
+		const defaultSettings = {
+			periodStartDay: 1,
+			dispatchMinutesLimit: 360,
+			krakenPollingInterval: "1"
+		}
+
+		const newSettings = {};
+		let migrate = false;
+
+		for (const [key, defaultValue] of Object.entries(defaultSettings)) {
+			if (typeof currentSettings[key] === 'undefined') {
+				newSettings[key] = defaultValue;
+				migrate = true;
+			}
+		}
+
+		if (migrate) {
+			this.log(`krakenDevice Device:migrateSettings - migrating settings for device ${this.getName()}.`);
+			await this.setSettings(newSettings);
+		}
+
+		return this.getSettings();
+	}
+
 
 	/**
 	 * Set the device settings values

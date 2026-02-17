@@ -8,7 +8,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	 * onInit is called when the device is initialized.
 	 */
 	async onInit() {
-		this.log('smartEnergyDevice:onInit - smartEnergyDevice has been initialized');
+		this.log('smartEnergyDevice:onInit - smartEnergyDevice Initialization Started');
 		await super.onInit();
 
 		this.defineCapability("device_attribute.name", { "title": { "en": "Device Name" } });
@@ -25,6 +25,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
+
+		this.log('smartEnergyDevice:onInit - smartEnergyDevice Initialization Completed');
 
 	}
 
