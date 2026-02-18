@@ -30,9 +30,6 @@ module.exports = class krakenAccountWrapper {
       LOST_CONNECTION: `Device Connection Lost`
     };
     this._timeZone = this._driver.homey.clock.getTimezone();
-    // TODO: When _accountData is no longer cached, remove the _liveMeterId cache too and simplify getLiveMeterId
-    //this._liveMeterId = undefined;
-    //this._deviceDefinitionsTransform = jsonata(this.homeyDevicesTransform());
   }
 
   /**
