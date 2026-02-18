@@ -16,10 +16,10 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
-		const isDispatchable = this.accountWrapper.getDeviceIds().length > 0;
-		const hasExport = (this.accountWrapper.getTariffDirection(true)) !== undefined;
+		this.migrateStore();
 
-		this.log(`energyAccount Device:onInit - isDispatchable ${isDispatchable}`);
+		const hasExport = this.hasExport;
+
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
 		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
 		this.defineCapability("period_day.period_day");
@@ -109,6 +109,27 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	/**
+	 * energyAccount onInit migration logic
+	 */
+	async migrateStore() {
+		const keys = this.getStoreKeys();
+
+		if (!keys.includes("hasExport")) {
+			const hasExport = this.hasCapability("meter_power.export");
+			await this.setStoreValue("hasExport", hasExport);
+		}
+	}
+
+	/**
+	 * Indicate if the current product tariff is an export product tariff
+	 * @returns {boolean}           True if the product tariff is export, false otherwise
+	 */
+	get hasExport() {
+		const hasExport = this.getStoreValue("hasExport");
+		return hasExport;
+	}
+
+	/**
 	 * Update capability values that depend on the period day to be consistent
 	 * @param   {integer}   startDay    The day number of the period start (1-31)
 	 * @returns {Promise<boolean>}      Indicates if any capabilities are actually updated
@@ -183,9 +204,9 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
 	 * @returns {boolean}                     True if any capabilities were updated
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 
-		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
+		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
@@ -195,11 +216,11 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, false);							// Pence
-		const currentBalance = this.accountWrapper.getCurrentBalance();
-		const exportPrices = this.accountWrapper.getTariffDirectionPrices(atTime, true);
+		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, false, accountData);							// Pence
+		const currentBalance = this.accountWrapper.getCurrentBalance(accountData);
+		const exportPrices = this.accountWrapper.getTariffDirectionPrices(atTime, true, accountData);
 		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false);
+		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false, accountData);
 		const importTariffPresent = importPrices !== undefined;
 
 		const currentExport = 1000 * this.getCapabilityValue("meter_power.export");						//watts
@@ -333,7 +354,6 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
 		this.updateCapability("item_count.observed_days", observedDays);
 
-		//updates = await this.updateCapabilities(updates);
 		return updates;
 	}
 

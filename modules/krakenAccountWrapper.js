@@ -30,6 +30,8 @@ module.exports = class krakenAccountWrapper {
       LOST_CONNECTION: `Device Connection Lost`
     };
     this._timeZone = this._driver.homey.clock.getTimezone();
+    // TODO: When _accountData is no longer cached, remove the _liveMeterId cache too and simplify getLiveMeterId
+    //this._liveMeterId = undefined;
     //this._deviceDefinitionsTransform = jsonata(this.homeyDevicesTransform());
   }
 
@@ -87,41 +89,37 @@ module.exports = class krakenAccountWrapper {
    * Get the live meter id on the account
    * @returns {string}      Live meter ID
    */
-  getLiveMeterId() {
+  getLiveMeterId(accountData) {
     let meterId = undefined;
-    const agreements = this._accountData?.data?.account?.electricityAgreements || [];
+    const account = accountData?.data?.account;
+    const agreements = account?.electricityAgreements || [];
 
-    for (const agreement of agreements) {
-      const meterPoint = agreement.meterPoint;
-      const isExport = meterPoint?.agreements?.[0]?.tariff?.isExport;
-      const meter = meterPoint?.meters?.[0];
+    const meter = agreements[0]?.meterPoint?.meters?.[0];
 
-      if (meter) {
-        // Look for the specific node based on direction
-        if (isExport === true) {
-          meterId = meter.smartExportElectricityMeter?.deviceId;
-        } else if (isExport === false) {
-          meterId = meter.smartImportElectricityMeter?.deviceId;
-        }
-      }
-
-      if (meterId !== undefined) break;
+    if (meter) {
+      meterId = meter.smartImportElectricityMeter?.deviceId
+        || meter.smartExportElectricityMeter?.deviceId;
     }
 
     return meterId;
   }
 
   /**
-   * Get the IDs of the devices on the account
-   * @returns {string[]}      Array of device IDs
+   * Get the IDs of the smart devices on the account
+   * @param   {object | undefined} accountData  Kraken account data
+   * @returns {string[]}                        Array of smart device IDs
    */
-  getDeviceIds() {
+  getDeviceIds(accountData) {
     const statusCodes = Object.keys(this._valid_device_status_translations);
-    const devices = this._accountData?.data?.devices || [];
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: CALLED WITH UNDEFINED accountData`)
+      accountData = this._accountData
+    }
+    const devices = accountData?.data?.devices || [];
 
     const deviceIds = devices
-      .filter(d => statusCodes.includes(d.status?.currentState))
-      .map(d => d.id);
+      .filter(device => statusCodes.includes(device.status?.currentState))
+      .map(device => device.id);
 
     this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} devices`);
     return deviceIds;
@@ -132,9 +130,13 @@ module.exports = class krakenAccountWrapper {
    * @param   {boolean} isExport    true - export tariff; false - import tariff
    * @returns {JSON | undefined}    JSON structure of the tariff details or undefined
    */
-  getTariffDirection(isExport) {
+  getTariffDirection(isExport, accountData) {
     let tariff = undefined;
-    const agreementsList = this._accountData?.data?.account?.electricityAgreements;
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getTariffDirection: CALLED WITH UNDEFINED accountData`)
+      accountData = this._accountData;
+    }
+    const agreementsList = accountData?.data?.account?.electricityAgreements;
 
     if (Array.isArray(agreementsList)) {
       for (const agreementSet of agreementsList) {
@@ -158,8 +160,12 @@ module.exports = class krakenAccountWrapper {
    * @param   {boolean}   direction     True: export tariff; False: import tariff
    * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
    */
-  getTariffDirectionPrices(atTime, direction) {
-    const tariff = this.getTariffDirection(direction);
+  getTariffDirectionPrices(atTime, direction, accountData) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getTariffDirectionPrices: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
+    const tariff = this.getTariffDirection(direction, accountData);
     if (tariff !== undefined) {
       const prices = this.getPrices(atTime, tariff);
       return prices;
@@ -175,10 +181,14 @@ module.exports = class krakenAccountWrapper {
    * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
    * @returns {object}							Price slot structure with empty values if absent
    */
-  getNextTariffSlotPrices(slotStart, halfHourly, direction) {
+  getNextTariffSlotPrices(slotStart, halfHourly, direction, accountData) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getNextTariffSlotPrices: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
     let nextPrices = undefined;
     if (slotStart !== null) {
-      nextPrices = this.getTariffDirectionPrices(slotStart, direction);
+      nextPrices = this.getTariffDirectionPrices(slotStart, direction, accountData);
     }
     if (nextPrices === undefined) {
       nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
@@ -192,9 +202,13 @@ module.exports = class krakenAccountWrapper {
    * @param		{boolean}		direction			True for export, false for import
    * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
    */
-  getTomorrowsPricesPresent(atTime, direction) {
+  getTomorrowsPricesPresent(atTime, direction, accountData) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getTomorrowsPricesPresent: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
     const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({ days: 1 });
-    const nextDayPrices = this.getTariffDirectionPrices(nextDay.toISO(), direction);
+    const nextDayPrices = this.getTariffDirectionPrices(nextDay.toISO(), direction, accountData);
     let present = false;
     if (nextDayPrices === undefined) {
       present = false;
@@ -325,10 +339,14 @@ module.exports = class krakenAccountWrapper {
    * @param   {string}        id    Device ID
    * @returns {JSON|undefined}      Device data structure or undefined if no device with the specified ID
    */
-  getDevice(id) {
-    const devices = this._accountData?.data?.devices;
+  getDevice(id, accountData = undefined) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getDevice: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
+    const devices = accountData?.data?.devices;
     if (!Array.isArray(devices)) return undefined;
-    return devices.find(d => d.id === id);
+    return devices.find(device => device.id === id);
   }
 
   /**
@@ -345,8 +363,67 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+   * 
+   * @param   {string} accountId      The account to retrieve pairing data for
+   * @returns {promise<string|undefined>}      The data to process for pairing
+   */
+  async getPairingData(accountId) {
+    const pairingQuery = this.pairingDataQuery(accountId);
+    const pairingData = await this._dataFetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
+    return pairingData;
+  }
+
+  /**
+   * 
+   * @param   {string} accountId  Used as the query parameter
+   * @returns {string}            Stringified JSON representing the query
+   */
+  pairingDataQuery(accountId) {
+    const query = {
+      query: `query MyQuery($accountNumber: String!) {
+        account(accountNumber: $accountNumber) {
+          electricityAgreements(active: true) {
+              meterPoint {
+                  agreements(includeInactive: false) {
+                      tariff {
+                          __typename
+                          ... on StandardTariff {
+                              isExport
+                          }
+                          ... on DayNightTariff {
+                              isExport
+                          }
+                          ... on ThreeRateTariff {
+                              isExport
+                          }
+                          ... on HalfHourlyTariff {
+                              isExport
+                          }
+                          ... on PrepayTariff {
+                              isExport
+                          }
+                      }
+                  }
+              }
+          }
+        }
+        devices(accountNumber: $accountNumber) {
+          id
+          name
+        }
+      }`,
+      variables: {
+        accountNumber: accountId
+      },
+      operationName: "GetPairingData"
+    }
+    return JSON.stringify(query);
+  }
+
+  /**
    * Return the GraphQL query string to obtain the Octopus Account Information
-   * @returns {string} Stringified JSON representing the query
+   * @param   {string} accountId  used as the query parameter 
+   * @returns {string}            Stringified JSON representing the query
    */
   accountDataQuery(accountId) {
     const query = {
@@ -509,7 +586,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Access the account data using the current access parameters and make the data retrieved current
-   * @returns {Promise<boolean>}           True iff account data retrieved
+   * @returns {Promise<Object|undefined>}           The account data; undefined if access failed
    */
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
@@ -536,12 +613,11 @@ module.exports = class krakenAccountWrapper {
       // //TODO: END GASH
       this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
-      return true;
     } else {
       this._accountData = undefined;
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
-      return false;
     }
+    return accountData;
   }
 
   /**
@@ -551,58 +627,73 @@ module.exports = class krakenAccountWrapper {
   getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
-    const meterId = this.getLiveMeterId();
-    if (!meterId) return [];
+    const pairingData = this.getPairingData(this.accountId)
+    if (!pairingData) {
+      throw new Error("Failed to retrieve pairing data from Kraken");
+    }
+
+    const account = pairingData?.data?.account;
+    const devices = pairingData?.data?.devices || [];
+
+    //Need GASH code for test data
+
+    const validStatusCodes = Object.keys(this._valid_device_status_translations);
+    const dispatchableDevices = devices.filter(device =>
+      validStatusCodes.includes(device.status?.currentState)
+    );
+    const isDispatchable = dispatchableDevices.length > 0;
+
+    const hasExportTariff = account?.electricityAgreements?.some(agreement =>
+      agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === true
+    ) || false;
 
     const definitions = [];
-    const account = this._accountData?.data?.account;
-    const devices = this._accountData?.data?.devices || [];
 
-    // 1. Process Electricity Agreements (Tariffs)
     if (account?.electricityAgreements) {
       for (const agreement of account.electricityAgreements) {
-        const isExport = agreement.meterPoint?.agreements?.[0]?.tariff?.isExport;
-        const hasUnitRates = !!agreement.meterPoint?.agreements?.[0]?.tariff?.unitRates;
-        const direction = isExport ? "Export" : "Import";
+        const tariff = agreement.meterPoint?.agreements?.[0]?.tariff;
+        if (!tariff) continue;
+
+        const direction = tariff.isExport ? "Export" : "Import";
+        const isHalfHourly = tariff.__typename === 'HalfHourlyTariff';
 
         definitions.push({
           name: `${direction} Tariff`,
           data: { id: `${this.accountId} ${direction}` },
           settings: {},
           store: {
-            isExport: !!isExport,
             octopusClass: "octopusTariff",
-            isHalfHourly: hasUnitRates
+            isExport: !!tariff.isExport,
+            isHalfHourly: isHalfHourly,
+            isDispatchable: isDispatchable
           },
           icon: `/${direction.toLowerCase()}.svg`
         });
       }
     }
 
-    // 2. Add the Octopus Account device
     definitions.push({
       name: "Octopus Account",
       data: { id: `${this.accountId} Octopus Account` },
       settings: {},
-      store: { octopusClass: "octopusAccount" },
+      store: {
+        octopusClass: "octopusAccount",
+        hasExport: hasExportTariff
+      },
       icon: "/account.svg"
     });
 
-    // 3. Process Smart Devices (filtered by status)
-    const validStatusCodes = Object.getOwnPropertyNames(this._valid_device_status_translations);
-
-    for (const device of devices) {
-      if (validStatusCodes.includes(device.status?.currentState)) {
-        definitions.push({
-          name: device.name || "Unknown Device",
-          data: { id: device.id },
-          store: {
-            octopusClass: "smartDevice",
-            deviceId: device.id
-          },
-          icon: "/device.svg"
-        });
-      }
+    for (const device of dispatchableDevices) {
+      definitions.push({
+        name: device.name || "Unknown Device",
+        data: { id: device.id },
+        settings: {},
+        store: {
+          octopusClass: "smartDevice",
+          deviceId: device.id // Just the ID as requested
+        },
+        icon: "/device.svg"
+      });
     }
 
     return definitions;
@@ -614,8 +705,12 @@ module.exports = class krakenAccountWrapper {
    * @param   {boolean}   isExport  True iff export tariff, false otherwise
    * @returns {float}               The minimum price for the day  
    */
-  minimumPriceOnDate(atTime, isExport) {
-    const tariff = this.getTariffDirection(isExport);
+  minimumPriceOnDate(atTime, isExport, accountData) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.minimumPriceOnDate: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
+    const tariff = this.getTariffDirection(isExport, accountData);
     let minimumPrice = 0;
 
     if (!tariff) return undefined;
@@ -646,9 +741,9 @@ module.exports = class krakenAccountWrapper {
    * Return live meter data from the instantiated live meter device
    * @returns {Promise<object>} reading JSON object representing the current data
    */
-  async getLiveMeterData(atTime) {
-    const meterId = this.getLiveMeterId();
-    const deviceIds = this.getDeviceIds();
+  async getLiveMeterData(atTime, meterId) {
+    this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
+    const deviceIds = this.getDeviceIds(this._accountData);
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
       reading: undefined,
@@ -920,9 +1015,14 @@ module.exports = class krakenAccountWrapper {
    * Get the current balance of the account from account data
    * @returns {float}         Balance amount
    */
-  getCurrentBalance() {
-    const pence = this.accountData?.data?.account?.balance;
-    return (typeof pence !== 'number') ? Math.round(pence) / 100 : 0;
+  getCurrentBalance(accountData) {
+    if (!accountData) {
+      this._driver.homey.log(`krakenAccountWrapper.getCurrentBalance: CALLED WITH UNDEFINED accountData`);
+      accountData = this._accountData;
+    }
+    const pence = accountData?.data?.account?.balance;
+    const value = (typeof pence === 'number') ? Math.round(pence) / 100 : 0;
+    return value;
   }
 
   /**

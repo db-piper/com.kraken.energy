@@ -145,6 +145,9 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {number} 					Total dispatch minutes for all smart devices
 	 */
 	getTotalDispatchMinutes(capabilityName) {
+		//TODO: This created dependency between Homey devices and order of update
+		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add minute}} don't rely on "foreign" homey devices
+		//TODO: FREQ 
 		let totalDispatchMinutes = 0;
 		for (const device of this.driver.getDevices()) {
 			if (device.getStoreValue("octopusClass") == "smartDevice") {
@@ -173,10 +176,10 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Perform the queued updates to capability values
-	 * @param 	{boolean}		updates		True iff any preceding capability has been updated
+	 * @param 	{boolean}			updates		True iff any preceding capability has been updated
 	 * @returns {Promise<boolean>}			True iff this or any preceding capability has its value changed
 	 */
-	async updateCapabilities(updates) {
+	async updateCapabilities(updates = false) {
 		this.log(`krakenDevice.updateCapabilities: starting`);
 		if (!this.hasOwnProperty("_updatedCapabilities")) {
 			this.log(`krakenDevice.updateCapabilities: _updatedCapabilities not found`);
@@ -220,8 +223,17 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 		return false;
+	}
+
+	/**
+	 * Indicate if the device is (still) an available device
+	 * @param			{object}				accountData				Current account data from Kraken
+	 * @returns		{Promise<boolean>}								Indicates if the device is available
+	 */
+	async setDeviceAvailability(accountData) {
+		return true
 	}
 
 	/**

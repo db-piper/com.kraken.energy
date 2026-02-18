@@ -11,10 +11,10 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff Initialization Started');
 		await super.onInit();
 
-		const isExport = this.isExport();
-		const isHalfHourly = this.accountWrapper.isHalfHourly(isExport);
-		const isDispatchable = this.accountWrapper.getDeviceIds().length > 0;
-		this.defineStoreValue('isHalfHourly', isHalfHourly);
+		this.migrateStore();
+
+		const isHalfHourly = this.isHalfHourly;
+		const isDispatchable = this.isDispatchable;
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
 
 		this.defineCapability("product_code");
@@ -72,9 +72,50 @@ module.exports = class productTariff extends krakenDevice {
 	 * Indicate if the current product tariff is an export product tariff
 	 * @returns {boolean}           True if the product tariff is export, false otherwise
 	 */
-	isExport() {
+	get isExport() {
 		const isExport = this.getStoreValue("isExport");
 		return isExport;
+	}
+
+	/**
+	 * Indicate if the current product tariff is a half hourly tariff
+	 * @returns {boolean}           True if the product tariff is export, false otherwise
+	 */
+	get isHalfHourly() {
+		const isHalfHourly = this.getStoreValue("isHalfHourly");
+		return isHalfHourly;
+	}
+
+	/**
+	 * Indicate if the current product tariff is a half hourly tariff
+	 * @returns {boolean}           True if the product tariff is export, false otherwise
+	 */
+	get isDispatchable() {
+		const isDispatchable = this.getStoreValue("isDispatchable");
+		return isDispatchable;
+	}
+
+	/**
+	 * productTariff onInit migration logic
+	 */
+	async migrateStore() {
+		const keys = this.getStoreKeys();
+		const updates = [];
+
+		if (!keys.includes("isHalfHourly")) {
+			const isHH = this.hasCapability("data_presence.next_day_prices");
+			updates.push(this.setStoreValue("isHalfHourly", isHH));
+		}
+
+		if (!keys.includes("isDispatchable")) {
+			const isDispatch = this.hasCapability("data_presence.dispatch_pricing");
+			updates.push(this.setStoreValue("isDispatchable", isDispatch));
+		}
+
+		if (updates.length > 0) {
+			await Promise.all(updates);
+			this.log(`Migration: Store updated for legacy productTariff`);
+		}
 	}
 
 	/**
@@ -117,17 +158,17 @@ module.exports = class productTariff extends krakenDevice {
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}) {
+	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 
-		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches);
+		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const direction = this.isExport();
+		const direction = this.isExport;
 		//const isHalfHourly = await this.accountWrapper.isHalfHourly(direction);
-		const isDispatchable = this.accountWrapper.getDeviceIds().length > 0;
+		const isDispatchable = this.accountWrapper.getDeviceIds(accountData).length > 0;
 		const eventTime = new Date(atTime);
-		const tariff = this.accountWrapper.getTariffDirection(direction);
-		const tariffPrices = this.accountWrapper.getTariffDirectionPrices(atTime, direction);
-		const nextTariffPrices = this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction);
+		const tariff = this.accountWrapper.getTariffDirection(direction, accountData);
+		const tariffPrices = this.accountWrapper.getTariffDirectionPrices(atTime, direction, accountData);
+		const nextTariffPrices = this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const recordedSlotEnd = this.getCapabilityValue("date_time.full_slot_end");
 		const recordedSlotStart = this.getCapabilityValue("date_time.full_slot_start");
@@ -142,7 +183,7 @@ module.exports = class productTariff extends krakenDevice {
 		const productCode = tariff.productCode;
 		const tariffCode = tariff.tariffCode;
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%
-		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, direction);
+		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, direction, accountData);
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
@@ -162,7 +203,7 @@ module.exports = class productTariff extends krakenDevice {
 		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");			//ISO
 		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;					//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
-		const nextDayPresent = this.accountWrapper.getTomorrowsPricesPresent(atTime, direction);			//Boolean
+		const nextDayPresent = this.accountWrapper.getTomorrowsPricesPresent(atTime, direction, accountData);			//Boolean
 		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;							//ISO
 		let shortNextEnd = null;
 		if (!nextTariffAbsent) {
@@ -190,7 +231,6 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability("data_presence.dispatch_pricing", inDispatch);
 		this.updateCapability("percent.dispatch_limit", percentDispatchLimit);
 
-		//updates = await this.updateCapabilities(updates);
 		return updates;
 
 	}
