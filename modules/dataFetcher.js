@@ -53,7 +53,7 @@ module.exports = class dataFetcher {
   /**
    * Make a query on the Octopus GraphQL API
    * @param   {string} queryString  the GraphQL query to be performed
-   * @returns {object}              a JSON object representing the result of the query or undefined if query fails to execute
+   * @returns {promise<object>}     a JSON object representing the result of the query or undefined if query fails to execute
    */
   async getDataUsingGraphQL(queryString, apiKey) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
@@ -143,7 +143,7 @@ module.exports = class dataFetcher {
    * @param {string}  queryString   The GraphQL query to be performed
    * @param {string}  token         Current GraphQL access token 
    * @param {boolean} authorization Indicates if an authorization header containing the Graph QL API Token is needed 
-   * @returns {object}              JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
+   * @returns {promise<object>}              JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
    */
   async runGraphQlQuery(queryString, token) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");

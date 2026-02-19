@@ -62,8 +62,8 @@ module.exports = class managerEvent {
    * Retrieve the device definitions from the octopus account data
    * @returns {object - JSON}   Structure containing the device definitions for Homey
    */
-  getOctopusDeviceDefinitions() {
-    return this._accountWrapper.getOctopusDeviceDefinitions();
+  async getOctopusDeviceDefinitions() {
+    return await this._accountWrapper.getOctopusDeviceDefinitions();
   }
 
   /**
@@ -134,55 +134,68 @@ module.exports = class managerEvent {
   /**
    * Execute a timed event for the specified time
    * @param   {string}              atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
-   * @returns {promise<boolean[]>}          Booleans indicating for each device whether it has been updated by the event
    */
   async executeEvent(atTime) {
-
-    let updates = new Array();
+    let updates = []
     this.driver.log(`managerEvent.executeEvent: Trying account access`);
     let accountData = await this._accountWrapper.accessAccountGraphQL();
     this.driver.log(`managerEvent.executeEvent: Account access outcome ${!!(accountData)}`);
     if (accountData) {
-      const liveMeterId = this._accountWrapper.getLiveMeterId(accountData);
-      this.driver.log(`managerEvent.executeEvent: meterId ${liveMeterId}`);
+      updates = await this.executeEventOnDevices(atTime, accountData);
+    } else {
+      throw new Error('managerEvent.executeEvent: Unable to access account data');
+    }
+    return updates;
+  }
 
-      const meterFetchPromise = this._accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
-      const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
+  /**
+   * Loop over devices, executing the event
+   * @param {string}            atTime      string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm" 
+   * @param   {object}            accountData kraken account data
+   * @returns {promise<boolean[]>}          Booleans indicating for each device whether it has been updated by the event
+   */
+  async executeEventOnDevices(atTime, accountData) {
+    let updates = [];
+    const liveMeterId = this._accountWrapper.getLiveMeterId(accountData);
+    this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 
-      let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
-        meterFetchPromise,
-        ...deviceReadyPromises
-      ]);
+    const meterFetchPromise = this._accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
+    const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
-      const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));
-      let availableDevices = await Promise.all(availableDevicePromises);
+    let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
+      meterFetchPromise,
+      ...deviceReadyPromises
+    ]);
 
-      this.driver.log(`managerEvent.executeEvent: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
+    const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));
+    await Promise.all(availableDevicePromises);
 
-      if ((reading !== undefined) && (dispatches !== undefined)) {
-        const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
-        for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
-          if (device.getAvailable()) {
-            this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`);
-            device.processEvent(atTime, this.newDay(atTime), reading, dispatches, accountData);
-          }
+    this.driver.log(`managerEvent.executeEvent: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
+
+    if ((reading !== undefined) && (dispatches !== undefined)) {
+      const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
+      for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
+        if (device.getAvailable()) {
+          this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`);
+          device.processEvent(atTime, this.newDay(atTime), reading, dispatches, accountData);
         }
-
-        accountData = null;
-        reading = null;
-        dispatches = null;
-
-        const deviceCommitPromises = this.driver.getDevices().map(device => device.commitCapabilities());
-        updates = await Promise.all(deviceCommitPromises);
-
-        await this.logMemoryToInsights();
-
-      } else {
-        this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
       }
+
+      accountData = null;
+      reading = null;
+      dispatches = null;
+
+      const deviceCommitPromises = this.driver.getDevices().map(device => device.commitCapabilities());
+      updates = await Promise.all(deviceCommitPromises);
+
+      await this.logMemoryToInsights();
+
+    } else {
+      this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
     }
 
-    return updates;
+    return updates
+
   }
 
   /**

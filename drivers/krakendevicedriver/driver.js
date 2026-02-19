@@ -71,7 +71,7 @@ module.exports = class krakenDriver extends Homey.Driver {
      */
     session.setHandler("list_devices", async () => {
       this.log("krakenDriver.onPair.setHandler(list_devices) - starting");
-      const deviceDefinitions = this._managerEvent.getOctopusDeviceDefinitions();
+      const deviceDefinitions = await this._managerEvent.getOctopusDeviceDefinitions();
       return deviceDefinitions;
     });
   }

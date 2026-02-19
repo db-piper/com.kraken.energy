@@ -473,7 +473,7 @@ module.exports = class krakenAccountWrapper {
       variables: {
         accountNumber: accountId,
       },
-      operationName: "GetAccount",
+      operationName: "GetAccount"
     }
     return JSON.stringify(query, null, 2);
   }
@@ -485,18 +485,16 @@ module.exports = class krakenAccountWrapper {
    * @returns   {Promise<boolean>}          True iff account data retrieved
   */
   async testAccessParameters(accountId, apiKey) {
+    this._driver.log(`krakenAccountWrapper.testAccessParameters: Starting`);
     const token = await this._dataFetcher.testApiKey(apiKey);
     let accountData = undefined;
+    let success = false;
     if (token !== undefined) {
       const accountTestQuery = this.pairingDataQuery(accountId);
       accountData = await this._dataFetcher.runGraphQlQuery(accountTestQuery, token);
-      if (!accountData?.data?.account || accountData?.errors) {
-        const errorMsg = accountData?.errors?.[0]?.message || "Account not found or access denied";
-        this._driver.homey.log(`Login failed: ${errorMsg}`);
-        throw new Error(errorMsg);
-      }
+      success = !!accountData?.data?.account && !accountData?.errors;
     }
-    return true;
+    return success;
   }
 
   /**
@@ -537,10 +535,10 @@ module.exports = class krakenAccountWrapper {
    * Get the product and tariff JSON for all MPAN on the account
    * @returns {Promise<object>} JSON containing the productId and tariffId
    */
-  getOctopusDeviceDefinitions() {
+  async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
-    const pairingData = this.getPairingData(this.accountId)
+    const pairingData = await this.getPairingData(this.accountId)
     if (!pairingData) {
       throw new Error("Failed to retrieve pairing data from Kraken");
     }
