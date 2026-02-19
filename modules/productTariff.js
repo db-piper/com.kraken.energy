@@ -11,8 +11,6 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff Initialization Started');
 		await super.onInit();
 
-		this.migrateStore();
-
 		const isHalfHourly = this.isHalfHourly;
 		const isDispatchable = this.isDispatchable;
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
@@ -96,9 +94,11 @@ module.exports = class productTariff extends krakenDevice {
 	}
 
 	/**
-	 * productTariff onInit migration logic
+	 * Ensure the set of store values is complete for each device
+	 * @returns {promise<void>}
 	 */
 	async migrateStore() {
+		await super.migrateStore();
 		const keys = this.getStoreKeys();
 		const updates = [];
 
@@ -187,8 +187,8 @@ module.exports = class productTariff extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
-		const percentDispatchLimit = 100 * totalDispatchMinutes / this._settings.dispatchMinutesLimit;
-		this.homey.log(`productTariff.processEvent: percentDispatchLimit: ${percentDispatchLimit} minutes limit: ${this._settings.dispatchMinutesLimit}`);
+		const percentDispatchLimit = 100 * totalDispatchMinutes / this.getSettings().dispatchMinutesLimit;
+		this.homey.log(`productTariff.processEvent: percentDispatchLimit: ${percentDispatchLimit} minutes limit: ${this.getSettings().dispatchMinutesLimit}`);
 		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
 		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh

@@ -19,7 +19,6 @@ module.exports = class krakenAccountWrapper {
     driver.homey.log(`krakenAccountWrapper.constructor: Instantiating`);
     this._driver = driver;
     this._dataFetcher = new dataFetcher(this._driver);
-    this._accountData = undefined;
     this._valid_device_status_translations = {
       SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
       SMART_CONTROL_CAPABLE: `Device Capable`,
@@ -74,14 +73,6 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the account overview
-   * @returns {string} JSON representing the account overview 
-   */
-  get accountData() {
-    return this._accountData;
-  }
-
-  /**
    * Get the live meter id on the account
    * @returns {string}      Live meter ID
    */
@@ -107,10 +98,6 @@ module.exports = class krakenAccountWrapper {
    */
   getDeviceIds(accountData) {
     const statusCodes = Object.keys(this._valid_device_status_translations);
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: CALLED WITH UNDEFINED accountData`)
-      accountData = this._accountData
-    }
     const devices = accountData?.data?.devices || [];
 
     const deviceIds = devices
@@ -128,10 +115,6 @@ module.exports = class krakenAccountWrapper {
    */
   getTariffDirection(isExport, accountData) {
     let tariff = undefined;
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getTariffDirection: CALLED WITH UNDEFINED accountData`)
-      accountData = this._accountData;
-    }
     const agreementsList = accountData?.data?.account?.electricityAgreements;
 
     if (Array.isArray(agreementsList)) {
@@ -157,10 +140,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
    */
   getTariffDirectionPrices(atTime, direction, accountData) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getTariffDirectionPrices: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     const tariff = this.getTariffDirection(direction, accountData);
     if (tariff !== undefined) {
       const prices = this.getPrices(atTime, tariff);
@@ -178,10 +157,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {object}							Price slot structure with empty values if absent
    */
   getNextTariffSlotPrices(slotStart, halfHourly, direction, accountData) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getNextTariffSlotPrices: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     let nextPrices = undefined;
     if (slotStart !== null) {
       nextPrices = this.getTariffDirectionPrices(slotStart, direction, accountData);
@@ -199,10 +174,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
    */
   getTomorrowsPricesPresent(atTime, direction, accountData) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getTomorrowsPricesPresent: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({ days: 1 });
     const nextDayPrices = this.getTariffDirectionPrices(nextDay.toISO(), direction, accountData);
     let present = false;
@@ -227,39 +198,6 @@ module.exports = class krakenAccountWrapper {
     const dateTime = DateTime.fromJSDate(jsDate).setZone(this._timeZone);
     return dateTime;
   }
-
-  // /**
-  //  * Get the expiry date time of the last slot present in the account overview irrespective of tariff
-  //  * @param   {boolean}       direction   True=Export, False=Import, undefined=both
-  //  * @returns {object - JSON}             ISO date-time string of the expiry of the last slot currently in stored account overview
-  //  */
-  // getLastPriceSlotExpiry(direction = undefined) {
-  //   let lastExpiry = undefined;
-  //   const agreements = this._accountData?.data?.account?.electricityAgreements || [];
-  //   const timestamps = [];
-
-  //   for (const agreement of agreements) {
-  //     const meterPoint = agreement.meterPoint;
-  //     const isExport = meterPoint?.agreements?.[0]?.tariff?.isExport;
-
-  //     if (direction === undefined || isExport === direction) {
-  //       const unitRates = meterPoint?.agreements?.[0]?.tariff?.unitRates || [];
-
-  //       for (const rate of unitRates) {
-  //         if (rate.validTo) {
-  //           timestamps.push(new Date(rate.validTo).getTime());
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   if (timestamps.length > 0) {
-  //     const maximumTimestamp = Math.max(...timestamps);
-  //     lastExpiry = new Date(maximumTimestamp).toISOString();
-  //   }
-
-  //   return lastExpiry;
-  // }
 
   /**
    * Indicate whether a tariff is halfHourly or simple
@@ -336,10 +274,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {JSON|undefined}      Device data structure or undefined if no device with the specified ID
    */
   getDevice(id, accountData = undefined) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getDevice: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     const devices = accountData?.data?.devices;
     if (!Array.isArray(devices)) return undefined;
     return devices.find(device => device.id === id);
@@ -370,14 +304,17 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * 
+   * Return the GraphQL query string for essential device pairing data
    * @param   {string} accountId  Used as the query parameter
    * @returns {string}            Stringified JSON representing the query
    */
   pairingDataQuery(accountId) {
     const query = {
-      query: `query MyQuery($accountNumber: String!) {
+      query: `query GetPairingData($accountNumber: String!) {
         account(accountNumber: $accountNumber) {
+          billingOptions {
+            currentBillingPeriodStartDate
+          }
           electricityAgreements(active: true) {
               meterPoint {
                   agreements(includeInactive: false) {
@@ -550,34 +487,16 @@ module.exports = class krakenAccountWrapper {
   async testAccessParameters(accountId, apiKey) {
     const token = await this._dataFetcher.testApiKey(apiKey);
     let accountData = undefined;
-    let success = false;
     if (token !== undefined) {
-      const accountQuery = this.accountDataQuery(accountId);
-      accountData = await this._dataFetcher.runGraphQlQuery(accountQuery, token);
-      success = accountData !== undefined;
-      if (success) {
-        // //TODO: REMOVE THIS GASH CODE
-        // accountData.data.devices = [
-        //   {
-        //     id: "00000000-000a-4000-8020-15ffff00d84d",
-        //     name: null,
-        //     status: {
-        //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
-        //     }
-        //   },
-        //   {
-        //     id: "00000000-0009-4000-8020-0000000181f6",
-        //     name: "TEST TEST TEST",
-        //     status: {
-        //       currentState: "SMART_CONTROL_IN_PROGRESS"
-        //     }
-        //   }
-        // ];
-        // //TODO: END GASH
-        this._accountData = accountData;
+      const accountTestQuery = this.pairingDataQuery(accountId);
+      accountData = await this._dataFetcher.runGraphQlQuery(accountTestQuery, token);
+      if (!accountData?.data?.account || accountData?.errors) {
+        const errorMsg = accountData?.errors?.[0]?.message || "Account not found or access denied";
+        this._driver.homey.log(`Login failed: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
     }
-    return success;
+    return true;
   }
 
   /**
@@ -607,10 +526,8 @@ module.exports = class krakenAccountWrapper {
       //   }
       // ];
       // //TODO: END GASH
-      this._accountData = accountData;
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
     } else {
-      this._accountData = undefined;
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
     }
     return accountData;
@@ -631,7 +548,24 @@ module.exports = class krakenAccountWrapper {
     const account = pairingData?.data?.account;
     const devices = pairingData?.data?.devices || [];
 
-    //Need GASH code for test data
+    // //TODO: REMOVE THIS GASH CODE
+    // devices = [
+    //   {
+    //     id: "00000000-000a-4000-8020-15ffff00d84d",
+    //     name: null,
+    //     status: {
+    //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
+    //     }
+    //   },
+    //   {
+    //     id: "00000000-0009-4000-8020-0000000181f6",
+    //     name: "TEST TEST TEST",
+    //     status: {
+    //       currentState: "SMART_CONTROL_IN_PROGRESS"
+    //     }
+    //   }
+    // ];
+    // //TODO: END GASH
 
     const validStatusCodes = Object.keys(this._valid_device_status_translations);
     const dispatchableDevices = devices.filter(device =>
@@ -642,6 +576,12 @@ module.exports = class krakenAccountWrapper {
     const hasExportTariff = account?.electricityAgreements?.some(agreement =>
       agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === true
     ) || false;
+
+    const billingDate = account?.billingOptions?.currentBillingPeriodStartDate;
+    let periodStartDay = 1;
+    if (billingDate) {
+      periodStartDay = DateTime.fromISO(billingDate).minus({ days: 1 }).day;
+    }
 
     const definitions = [];
 
@@ -656,7 +596,9 @@ module.exports = class krakenAccountWrapper {
         definitions.push({
           name: `${direction} Tariff`,
           data: { id: `${this.accountId} ${direction}` },
-          settings: {},
+          settings: {
+            periodStartDay: periodStartDay
+          },
           store: {
             octopusClass: "octopusTariff",
             isExport: !!tariff.isExport,
@@ -671,7 +613,9 @@ module.exports = class krakenAccountWrapper {
     definitions.push({
       name: "Octopus Account",
       data: { id: `${this.accountId} Octopus Account` },
-      settings: {},
+      settings: {
+        periodStartDay: periodStartDay
+      },
       store: {
         octopusClass: "octopusAccount",
         hasExport: hasExportTariff
@@ -683,7 +627,9 @@ module.exports = class krakenAccountWrapper {
       definitions.push({
         name: device.name || "Unknown Device",
         data: { id: device.id },
-        settings: {},
+        settings: {
+          periodStartDay: periodStartDay
+        },
         store: {
           octopusClass: "smartDevice",
           deviceId: device.id // Just the ID as requested
@@ -702,10 +648,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {float}               The minimum price for the day  
    */
   minimumPriceOnDate(atTime, isExport, accountData) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.minimumPriceOnDate: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     const tariff = this.getTariffDirection(isExport, accountData);
     let minimumPrice = 0;
 
@@ -737,9 +679,9 @@ module.exports = class krakenAccountWrapper {
    * Return live meter data from the instantiated live meter device
    * @returns {Promise<object>} reading JSON object representing the current data
    */
-  async getLiveMeterData(atTime, meterId) {
+  async getLiveMeterData(atTime, meterId, accountData) {
     this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
-    const deviceIds = this.getDeviceIds(this._accountData);
+    const deviceIds = this.getDeviceIds(accountData);
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
       reading: undefined,
@@ -992,53 +934,13 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Get the month day number (1-31) on which the charging period commences
-   * @returns {Promise<integer>}       Day number (1-31)
-   */
-  getBillingPeriodStartDay() {
-    const dateString = this.accountData?.data?.account?.billingOptions?.currentBillingPeriodStartDate;
-    let startDay = 1;
-    if (dateString) {
-      startDay = DateTime.fromISO(dateString, { zone: this._timeZone })
-        .minus({ days: 1 })
-        .day;
-    }
-    this._driver.homey.log(`krakenAccountWrapper.getBillingPeriodStartDay: dateString: ${dateString}, startDay: ${startDay}`);
-    return startDay;
-  }
-
-  /**
    * Get the current balance of the account from account data
    * @returns {float}         Balance amount
    */
   getCurrentBalance(accountData) {
-    if (!accountData) {
-      this._driver.homey.log(`krakenAccountWrapper.getCurrentBalance: CALLED WITH UNDEFINED accountData`);
-      accountData = this._accountData;
-    }
     const pence = accountData?.data?.account?.balance;
     const value = (typeof pence === 'number') ? Math.round(pence) / 100 : 0;
     return value;
-  }
-
-  /**
-   * Indicate that at least 24 hours has passed, or that the end time of the last slot of a half-hourly charged tariff is past.
-   * @param {string}  atTime                  The date time of the event in string format
-   * @param {string}  refreshDate             The date time of the last refresh in ISO format
-   * @returns {boolean}                       True indicates that the data must be refreshed 
-   */
-  checkAccountDataRefresh(atTime) {
-    let dataRefresh = true;
-    if (this._accountData !== undefined) {
-      const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(this._timeZone);
-      dataRefresh = ((eventDateTime.minute == 0) || eventDateTime.minute == 30);
-    }
-    this._driver.log(`krakenAccountManager.checkAccountDataRefresh: exiting ${dataRefresh}`);
-    return dataRefresh;
-  }
-
-  removeAccountData() {
-    this._accountData = undefined;
   }
 
 }

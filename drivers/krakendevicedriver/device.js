@@ -14,14 +14,9 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._requiredCapabilities = new Map();
 		this._updatedCapabilities = new Map();
 		this._storeValues = {};
-		this._settings = await this.migrateSettings(this.getSettings());
-		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this._settings)}`);
-
-		if (this._settings.periodStartDay == 0) {
-			const periodStartDay = this.accountWrapper.getBillingPeriodStartDay();
-			this._settings.periodStartDay = (Number.isFinite(periodStartDay)) ? periodStartDay : 1;
-			await this.setSettings(this._settings);
-		}
+		await this.migrateSettings(this.getSettings());
+		await this.migrateStore();
+		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this.getSettings())}`);
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Completed');
 	}
 
@@ -52,20 +47,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * onSettingsChanged is called to complete the user's updates to the device's settings.
-	 * @param  	{object} 			event 				The onSettings event data
-	 * @param  	{object} 			event.oldSettings 	The old settings object
-	 * @param  	{object} 			event.newSettings 	The new settings object
-	 * @param  	{string[]} 			event.changedKeys 	An array of keys changed since the previous version
-	 * @returns {Promise<string|void>}	Return a custom message that will be displayed
-	 */
-	async onSettingsChanged({ oldSettings, newSettings, changedKeys }) {
-		this.log(`krakenDevice Device:onSettingsChanged - settings changes completed ${this.getName()}.`);
-		this._settings = newSettings;
-	}
-
-
-	/**
 	 * onRenamed is called when the user updates the device's name.
 	 * This method can be used this to synchronise the name to the device.
 	 * @param {string} name The new name
@@ -82,9 +63,19 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
+	 * onUnit is called when the device is destroyed
+	 */
+	async onUnit() {
+		this.log('krakenDevice:onInit - generic krakenDevice UnInitialization Started');
+		this._requiredCapabilities = null;
+		this._updatedCapabilities = null;
+		this._storeValues = null;
+	}
+
+	/**
 	 * Ensure the set of settings is complete set default values for any missing setting
 	 * @param 	{object} currentSettings	current settings and their values
-	 * @returns {object}							 		full settings as stored in device.settings
+	 * @returns {promise<object>}					full settings as stored in device.settings
 	 */
 	async migrateSettings(currentSettings) {
 		const defaultSettings = {
@@ -111,15 +102,12 @@ module.exports = class krakenDevice extends Homey.Device {
 		return this.getSettings();
 	}
 
-
 	/**
-	 * Set the device settings values
-	 * @param {object} settings 
+	 * Ensure the set of store values is complete for each device; overridden in concrete classes
+	 * @returns {promise<void>}
 	 */
-	async setSettings(settings) {
-		this.log(`krakenDevice Device:setSettings - device ${this.getName()} settings: ${JSON.stringify(settings)}`);
-		await super.setSettings(settings);
-		this._settings = settings;
+	async migrateStore() {
+		this.log(`krakenDevice Device: migrateStore - migrating settings for device ${this.getName()}.`);
 	}
 
 	/**

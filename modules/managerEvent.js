@@ -146,7 +146,7 @@ module.exports = class managerEvent {
       const liveMeterId = this._accountWrapper.getLiveMeterId(accountData);
       this.driver.log(`managerEvent.executeEvent: meterId ${liveMeterId}`);
 
-      const meterFetchPromise = this._accountWrapper.getLiveMeterData(atTime, liveMeterId);
+      const meterFetchPromise = this._accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
       const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
       let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
@@ -168,7 +168,6 @@ module.exports = class managerEvent {
           }
         }
 
-        this._accountWrapper.removeAccountData();
         accountData = null;
         reading = null;
         dispatches = null;

@@ -16,8 +16,6 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
-		this.migrateStore();
-
 		const hasExport = this.hasExport;
 
 		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
@@ -51,7 +49,7 @@ module.exports = class energyAccount extends krakenDevice {
 		await this.applyCapabilities();
 		await this.applyStoreValues();
 
-		await this.updatePeriodDay(this._settings.periodStartDay);
+		await this.updatePeriodDay(this.getSettings().periodStartDay);
 		this.log('energyAccount Device:onInit - energyAccount Initialization Completed');
 	}
 
@@ -109,9 +107,11 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	/**
-	 * energyAccount onInit migration logic
+	 * Ensure the set of store values is complete for each device
+	 * @returns {promise<void>}
 	 */
 	async migrateStore() {
+		await super.migrateStore
 		const keys = this.getStoreKeys();
 
 		if (!keys.includes("hasExport")) {
@@ -210,7 +210,7 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
-		const billingPeriodStartDay = this._settings.periodStartDay;
+		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
 
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
@@ -271,7 +271,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let importPrice = 0;
 
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
-		const dispatchPricing = inDispatch && (totalDispatchMinutes < this._settings.dispatchMinutesLimit);
+		const dispatchPricing = inDispatch && (totalDispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
 		let observedDays = firstTime ? 0 : this.getCapabilityValue("item_count.observed_days");
 		observedDays += newDay ? 1 : 0;
