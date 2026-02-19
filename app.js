@@ -10,8 +10,8 @@ module.exports = class krakenApp extends Homey.App {
    */
   async onInit() {
     this.homey.log('krakenApp.onInit: App Initialization Started');
-    this.homey.log(`krakenApp.registerConditionRunListener: card: slot_relative_price function: getCurrentCheaper`);
 
+    this.homey.log(`krakenApp.registerConditionRunListener: card: slot_relative_price function: getCurrentCheaper`);
     const relativePriceCard = this.homey.flow.getConditionCard('slot_relative_price');
     if (relativePriceCard) {
       relativePriceCard.registerRunListener(async (args, state) => {
