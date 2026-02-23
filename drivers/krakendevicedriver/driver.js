@@ -13,24 +13,23 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async onInit() {
     this.log('krakenDriver.onInit: Driver Initialization Started');
-    this._period = 60000;                         //FREQ - change to look at the settings
-    this._managerEvent = new managerEvent(this);
     if (this.getDevices().length > 0) {
-      await this._managerEvent.setInterval(this._period);
-      const accessParameters = this._managerEvent.getAccessParameters();
-      if (accessParameters.accountId !== undefined) {
-        const success = await this._managerEvent.testAccessParameters(accessParameters.accountId, accessParameters.apiKey);
-        this.log(`krakenDriver.onInit: Test access parameters: ${success}`)
+      try {
+        const success = await this.sessionLoginHandler(this.homey.app.accountId, this.homey.app.apiKey);
+        if (success) {
+          this.startEventPoller();
+        }
+      } catch (error) {
+        this.log(`krakenDriver.onInit: Failed to initialise: ${error}`);
       }
     }
-
     this.log('krakenDriver.onInit: Driver Initialization Completed');
   }
 
   /**
    * onMapDeviceClass called before a device is initialized to identify a concrete implementation class for the device
    * @param     {Homey.Device}  device  The device whose implementation class is to be returned
-   * @returns   {class}                 The concrete implementation class 
+   * @returns   {class}                 The concrete implementation class
    */
   onMapDeviceClass(device) {
     const deviceClass = device.getStoreValue("octopusClass");
@@ -97,38 +96,102 @@ module.exports = class krakenDriver extends Homey.Driver {
 
   }
 
-
   /**
    * onUninit is called when the app is terminating.
    */
   async onUninit() {
     this.log("krakenDriver.onUninit - driver has been terminated");
-    this._managerEvent.unSetInterval();
+    this.stopEventPoller();
   }
 
   /**
-   * Return the event manager instance
+   * The Heartbeat: The actual task performed every minute.
    */
-  get managerEvent() {
-    return this._managerEvent;
+  async onHeartbeat() {
+    this.log(`krakenDriver.onHeartbeat: Tick at ${new Date().toISOString()}`);
+    try {
+      // 1. Get the fresh token (Airlock logic)
+      const token = await this.homey.app.getValidToken();
+      if (!token) throw new Error('Token acquisition failed');
+
+      // 2. Perform the actual data fetch using the manager
+      const eventer = new managerEvent(this);
+      await eventer.executeEvent(token);
+
+    } catch (err) {
+      this.error('krakenDriver.onHeartbeat: Failure:', err.message);
+      // Optional: if error is terminal, you could stopPoller() here.
+    }
   }
+
+  // /**
+  //  * Return the event manager instance
+  //  */
+  // get managerEvent() {
+  //   return this._managerEvent;
+  // }
 
   /**
    * Helper function used by onPair and onRepair to validate login parameters
    * @param   {string}  account   Account identifier
-   * @param   {string}  apiKey    Kraken API Key for the identified account 
-   * @returns {boolean}           True: valid login parameters; False: otherwise
+   * @param   {string}  apiKey    Kraken API Key for the identified account
+   * @returns {Promise<boolean>}  True: valid login parameters; False: otherwise
    */
   async sessionLoginHandler(account, apiKey) {
     this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
-    const success = await this._managerEvent.testAccessParameters(account, apiKey);
-    this.log(`krakenDriver.sessionLoginHandler: Access test complete: ${success}`);
-    if (success) {
-      this._managerEvent.setAccessParameters(account, apiKey);
-      await this._managerEvent.setInterval(this._period);
+    let success = false;
+    const token = await this.homey.app.getValidToken(apiKey);
+    if (token) {
+      success = await this.homey.app.setValidAccount(account, token);
+      if (success) {
+        this.startEventPoller();
+      } else {
+        throw new Error(this.homey.__('errors.invalid_account_id'));
+      }
     }
     return success;
   }
+
+  /**
+   * Ensures the heartbeat is active and synchronized with current credentials.
+   * Handles the "Phase Shift" by resetting the timer to the moment of validation.
+   */
+  startEventPoller() {
+    this.log('krakenDriver: Ensuring poller is running');
+    this.stopEventPoller();
+
+    // if (this._interval) {
+    //   this.log('krakenDriver: Stopping existing interval.');
+    //   eventer.unSetInterval(this.homey, this._interval);
+    //   this._interval = undefined;
+    // }
+
+    if (this.getDevices().length > 0) {
+      const scheduler = new managerEvent(this);
+      this.log('krakenDriver.runEventPoller: Starting fresh 60s interval.');
+      this._interval = scheduler.setInterval(this.homey, 60000, (newId) => {
+        this._interval = newId; // The Driver manages its own property
+        this.log('krakenDriver.runEventPoller: Poller transitioned from Wait to Loop.');
+      });
+    } else {
+      this.log('krakenDriver.runEventPoller: No devices found. Poller isdormant.');
+    }
+  }
+
+  /**
+   * Ensures the heartbeat is stopped.
+   */
+  stopEventPoller() {
+    this.log('krakenDriver: Ensuring poller is stopped');
+    if (this._interval) {
+      this.homey.clearTimeout(this._interval);
+      this.homey.clearInterval(this._interval);
+      this._interval = undefined;
+      this.log('krakenDriver: Poller stopped.');
+    }
+  }
+
+
 
   /**
    * Returns devices sorted by a custom priority list

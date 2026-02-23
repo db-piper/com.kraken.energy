@@ -10,26 +10,52 @@ module.exports = class managerEvent {
    */
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
+    this._accountWrapper = new krakenAccountWrapper(driver);
     this._driver = driver;
-    this._accountWrapper = new krakenAccountWrapper(this._driver);
-    this._interval = undefined;
-    this._period = undefined;
+    //this._interval = undefined;
+    this._period = 60000;  //FREQ
     this._targetSecond = 15;
   }
 
   /**
-   * Start the execution of the minute loop synchronised to the targetSecond
-   * @param {integer} period  Timing interval in milliseconds 
+   * Start the Metronome.
+   * @param {object} homey - Homey instance
+   * @param {number} period - Milliseconds
+   * @param {function} task - The function to run (Driver.onHeartbeat)
+   * @param {function} onIdChanged - Callback for the Interval ID handover
    */
-  setInterval(period) {
+  setInterval(homey, period, task, onIdChanged) {
     this._period = period;
     const delay = (this._targetSecond - new Date().getSeconds() + 60) % 60 || 60;
 
-    if (this._interval === undefined) {
-      setTimeout(() => {
-        this.processIntervalCallback(); // Fire first run
-        this._interval = this.driver.homey.setInterval(() => this.processIntervalCallback(), period);
-      }, delay * 1000);
+    return homey.setTimeout(async () => {
+      await task(); // Run immediately at target second
+
+      const intervalId = homey.setInterval(async () => {
+        await task();
+      }, period);
+
+      if (typeof onIdChanged === 'function') {
+        onIdChanged(intervalId);
+      }
+    }, delay * 1000);
+  }
+
+  /**
+   * Execute a timed event.
+   * @param {string} token - Valid JWT token from the App/Airlock
+   */
+  async executeEvent(token) {
+    const atTime = new Date().toISOString();
+    this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
+
+    // Pass the token into your wrapper
+    let accountData = await this._accountWrapper.accessAccountGraphQL(token);
+
+    if (accountData) {
+      return await this.executeEventOnDevices(atTime, accountData);
+    } else {
+      throw new Error('Unable to access account data');
     }
   }
 
@@ -42,21 +68,29 @@ module.exports = class managerEvent {
   }
 
   /**
-   * Persist the parameters that give access to the Kraken account's data
-   * @param {string} accountId    Kraken account Id in the form A-9A999999 
-   * @param {string} apiKey       Kraken account specific API key 32 alpha numeric characters starting sk_live_...          
+   * Return the Homey driver instance
+   * @returns {krakenDriver} current driver instance
    */
-  setAccessParameters(accountId, apiKey) {
-    this._accountWrapper.setAccessParameters(accountId, apiKey);
+  get driver() {
+    return this._driver;
   }
 
-  /**
-   * Retrieve the parameters that give access to the Kraken account's data
-   * @returns {object}    With fields accountId and apiKey
-   */
-  getAccessParameters() {
-    return this._accountWrapper.accessParameters;
-  }
+  // /**
+  //  * Persist the parameters that give access to the Kraken account's data
+  //  * @param {string} accountId    Kraken account Id in the form A-9A999999 
+  //  * @param {string} apiKey       Kraken account specific API key 32 alpha numeric characters starting sk_live_...          
+  //  */
+  // setAccessParameters(accountId, apiKey) {
+  //   this._accountWrapper.setAccessParameters(accountId, apiKey);
+  // }
+
+  // /**
+  //  * Retrieve the parameters that give access to the Kraken account's data
+  //  * @returns {object}    With fields accountId and apiKey
+  //  */
+  // getAccessParameters() {
+  //   return this._accountWrapper.accessParameters;
+  // }
 
   /**
    * Retrieve the device definitions from the octopus account data
@@ -66,27 +100,16 @@ module.exports = class managerEvent {
     return await this._accountWrapper.getOctopusDeviceDefinitions();
   }
 
-  /**
-   * Test the specified access parameters to ensure they give access to the account data
-   * @param   {string}  accountId The account ID to be tested in the form A-9A999999 
-   * @param   {string}  apiKey    The account specific API key 32 alpha numeric characters starting sk_live_...
-   * @returns {Promise<boolean>}  True iff account data retrieved
-   */
-  async testAccessParameters(accountId, apiKey) {
-    const success = await this._accountWrapper.testAccessParameters(accountId, apiKey);
-    return success;
-  }
-
-  /**
-   * Destroy the setInterval callback
-   */
-  unSetInterval() {
-    this.driver.log(`managerEvent.unSetInterval: clearing the interval.`);
-    if (this._interval !== undefined) {
-      this.driver.homey.clearInterval(this._interval);
-      this._interval = undefined;
-    }
-  }
+  // /**
+  //  * Test the specified access parameters to ensure they give access to the account data
+  //  * @param   {string}  accountId The account ID to be tested in the form A-9A999999 
+  //  * @param   {string}  apiKey    The account specific API key 32 alpha numeric characters starting sk_live_...
+  //  * @returns {Promise<boolean>}  True iff account data retrieved
+  //  */
+  // async testAccessParameters(accountId, apiKey) {
+  //   const success = await this._accountWrapper.testAccessParameters(accountId, apiKey);
+  //   return success;
+  // }
 
   /**
    * homey.SetInterval callback function get data from Kraken and update devices from data
@@ -110,14 +133,6 @@ module.exports = class managerEvent {
   }
 
   /**
-   * Get the current Homey.driver instance
-   * @returns {krakenDriver} current driver instance
-   */
-  get driver() {
-    return this._driver;
-  }
-
-  /**
    * Indicate that, given the event interval specified, the event is the first of the day
    * @param     {string}  atTime  event time string in ISO format 
    * @returns   {boolean}         less than interval milliseconds have passed since midnight
@@ -131,22 +146,22 @@ module.exports = class managerEvent {
     return isNewDay
   }
 
-  /**
-   * Execute a timed event for the specified time
-   * @param   {string}              atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
-   */
-  async executeEvent(atTime) {
-    let updates = []
-    this.driver.log(`managerEvent.executeEvent: Trying account access`);
-    let accountData = await this._accountWrapper.accessAccountGraphQL();
-    this.driver.log(`managerEvent.executeEvent: Account access outcome ${!!(accountData)}`);
-    if (accountData) {
-      updates = await this.executeEventOnDevices(atTime, accountData);
-    } else {
-      throw new Error('managerEvent.executeEvent: Unable to access account data');
-    }
-    return updates;
-  }
+  // /**
+  //  * Execute a timed event for the specified time
+  //  * @param   {string}              atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
+  //  */
+  // async executeEvent(atTime) {
+  //   let updates = []
+  //   this.driver.log(`managerEvent.executeEvent: Trying account access`);
+  //   let accountData = await this._accountWrapper.accessAccountGraphQL();
+  //   this.driver.log(`managerEvent.executeEvent: Account access outcome ${!!(accountData)}`);
+  //   if (accountData) {
+  //     updates = await this.executeEventOnDevices(atTime, accountData);
+  //   } else {
+  //     throw new Error('managerEvent.executeEvent: Unable to access account data');
+  //   }
+  //   return updates;
+  // }
 
   /**
    * Loop over devices, executing the event

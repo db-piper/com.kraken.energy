@@ -478,24 +478,24 @@ module.exports = class krakenAccountWrapper {
     return JSON.stringify(query, null, 2);
   }
 
-  /**
-   * Test whether the specified API access parameters give access to the Kraken data
-   * @param     {string}      accountId     The account reference specified
-   * @param     {string}      apiKey        The apiKey for the account 
-   * @returns   {Promise<boolean>}          True iff account data retrieved
-  */
-  async testAccessParameters(accountId, apiKey) {
-    this._driver.log(`krakenAccountWrapper.testAccessParameters: Starting`);
-    const token = await this._dataFetcher.testApiKey(apiKey);
-    let accountData = undefined;
-    let success = false;
-    if (token !== undefined) {
-      const accountTestQuery = this.pairingDataQuery(accountId);
-      accountData = await this._dataFetcher.runGraphQlQuery(accountTestQuery, token);
-      success = !!accountData?.data?.account && !accountData?.errors;
-    }
-    return success;
-  }
+  // /**
+  //  * Test whether the specified API access parameters give access to the Kraken data
+  //  * @param     {string}      accountId     The account reference specified
+  //  * @param     {string}      apiKey        The apiKey for the account 
+  //  * @returns   {Promise<boolean>}          True iff account data retrieved
+  // */
+  // async testAccessParameters(accountId, apiKey) {
+  //   this._driver.log(`krakenAccountWrapper.testAccessParameters: Starting`);
+  //   const token = await this._dataFetcher.testApiKey(apiKey);
+  //   let accountData = undefined;
+  //   let success = false;
+  //   if (token !== undefined) {
+  //     const accountTestQuery = this.pairingDataQuery(accountId);
+  //     accountData = await this._dataFetcher.runGraphQlQuery(accountTestQuery, token);
+  //     success = !!accountData?.data?.account && !accountData?.errors;
+  //   }
+  //   return success;
+  // }
 
   /**
    * Access the account data using the current access parameters and make the data retrieved current

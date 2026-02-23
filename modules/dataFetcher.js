@@ -173,12 +173,11 @@ module.exports = class dataFetcher {
 
   /**
    * Build the parameters object for fetch using GraphQL
-   * @param {string}  queryString   GraphQL Query string to be passed as the payload
-   * @param {string}  token         GraphQl access token
-   * @param {boolean} authorization indicates whether an authorization header is needed
-   * @returns {object}              query parameters name value pairs
+   * @param   {string}            queryString   GraphQL Query string to be passed as the payload
+   * @param   {string|undefined}  token         GraphQl access token
+   * @returns {object}                        Query parameters name value pairs
    */
-  buildGraphQLFetchParams(queryString, token) {
+  buildGraphQLFetchParams(queryString, token = undefined) {
     let params = {
       method: 'POST',
       body: queryString,
@@ -188,7 +187,7 @@ module.exports = class dataFetcher {
       },
     }
     if (token !== undefined) {
-      params.headers["Authorization"] = token;
+      params.headers["Authorization"] = `Bearer ${token}`;
     }
     return params;
   }
@@ -253,6 +252,41 @@ module.exports = class dataFetcher {
       token = result.data.obtainKrakenToken.token;
     }
     return token;
+  }
+
+  /**
+   * Get a new API token and expiry data
+   * @param   {string}                                                       apiKey   apiKey to generate a token for
+   * @returns {Promise<{token: string|undefined, expiry: string|undefined}>}          new access token and expiry date  
+   */
+  async login(apiKey) {
+    this.homey.log(`dataFetcher.login: Starting: apiKey: ${apiKey}`);
+    const query = this.getKrakenTokenQuery(apiKey);
+    const result = await this.runGraphQlQuery(query, undefined);
+    let token = undefined;
+    let expiry = undefined;
+    if (result?.data?.obtainKrakenToken) {
+      token = `JWT ${result.data.obtainKrakenToken.token}`;
+      expiry = new Date(1000 * (result.data.obtainKrakenToken.payload.exp - 60)).toISOString();
+    }
+    return { token, expiry };
+  }
+
+  /**
+   * Verify that the specified account ID can be accessed by the specified token
+   * @param {string} accountId     Account ID to verify
+   * @param {string} token         GraphQl access token
+   * @returns {Promise<boolean>}   True if the account ID can be accessed by the token, false otherwise
+   */
+  async verifyAccountId(accountId, token) {
+    this.homey.log(`dataFetcher.verifyAccountId: Starting: token: ${token} : accountId: ${accountId}`);
+    const query = this.getAccountIdQuery(accountId);
+    const result = await this.runGraphQlQuery(query, token);
+    let isValid = false;
+    if (result.data.account !== null) {
+      isValid = true;
+    }
+    return isValid;
   }
 
 }
