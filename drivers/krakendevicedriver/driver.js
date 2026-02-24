@@ -5,6 +5,7 @@ const productTariff = require('../../modules/productTariff');
 const energyAccount = require('../../modules/energyAccount');
 const managerEvent = require('../../modules/managerEvent');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
+const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -13,10 +14,17 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async onInit() {
     this.log('krakenDriver.onInit: Driver Initialization Started');
+    this._accountWrapper = new krakenAccountWrapper(this);
+    this.log(`krakenDriver.onInit: About to check if devices exist`);
     if (this.getDevices().length > 0) {
       try {
+        this.log(`krakenDriver.onInit: Account ID: ${this.homey.app.accountId}`);
+        //this.log(`krakenDriver.onInit: API Key: ${this.homey.app.apiKey}`);
+        //this.log(`krakenDriver.onInit: About to run this.sessionLoginHandler`);
         const success = await this.sessionLoginHandler(this.homey.app.accountId, this.homey.app.apiKey);
+        this.log(`krakenDriver.onInit: Login successful: ${success}`);
         if (success) {
+          this.log(`krakenDriver.onInit: About to start event poller`);
           this.startEventPoller();
         }
       } catch (error) {
@@ -124,12 +132,13 @@ module.exports = class krakenDriver extends Homey.Driver {
     }
   }
 
-  // /**
-  //  * Return the event manager instance
-  //  */
-  // get managerEvent() {
-  //   return this._managerEvent;
-  // }
+
+  /**
+   * Return the account wrapper instance
+   */
+  get accountWrapper() {
+    return this._accountWrapper;
+  }
 
   /**
    * Helper function used by onPair and onRepair to validate login parameters
@@ -142,7 +151,9 @@ module.exports = class krakenDriver extends Homey.Driver {
     let success = false;
     const token = await this.homey.app.getValidToken(apiKey);
     if (token) {
+      this.log(`krakenDriver.sessionLoginHandler: Token acquired calling app.setValidAccount`);
       success = await this.homey.app.setValidAccount(account, token);
+      this.log(`krakenDriver.sessionLoginHandler: app.setValidAccount returned success: ${success}`);
       if (success) {
         this.startEventPoller();
       } else {
@@ -157,19 +168,17 @@ module.exports = class krakenDriver extends Homey.Driver {
    * Handles the "Phase Shift" by resetting the timer to the moment of validation.
    */
   startEventPoller() {
-    this.log('krakenDriver: Ensuring poller is running');
+    this.log('krakenDriver.startEventPoller: Stopping any existing poller');
     this.stopEventPoller();
-
-    // if (this._interval) {
-    //   this.log('krakenDriver: Stopping existing interval.');
-    //   eventer.unSetInterval(this.homey, this._interval);
-    //   this._interval = undefined;
-    // }
 
     if (this.getDevices().length > 0) {
       const scheduler = new managerEvent(this);
+      const heartbeatTask = async () => {
+        this.log('Heartbeat: Polling Kraken...');
+        await this.onHeartbeat(); // Or whatever your polling logic is named
+      };
       this.log('krakenDriver.runEventPoller: Starting fresh 60s interval.');
-      this._interval = scheduler.setInterval(this.homey, 60000, (newId) => {
+      this._interval = scheduler.setInterval(this.homey, 60000, heartbeatTask, (newId) => {   //FREQ
         this._interval = newId; // The Driver manages its own property
         this.log('krakenDriver.runEventPoller: Poller transitioned from Wait to Loop.');
       });

@@ -4,6 +4,7 @@ const dataFetcher = require('./dataFetcher');
 const { DateTime } = require('../bundles/luxon');
 const AccountIdSetting = "krakenAccountId";
 const ApiKeySetting = "krakenApiKey";
+const Queries = require('./gQLQueries');
 
 module.exports = class krakenAccountWrapper {
   /**
@@ -18,7 +19,7 @@ module.exports = class krakenAccountWrapper {
   constructor(driver) {
     driver.homey.log(`krakenAccountWrapper.constructor: Instantiating`);
     this._driver = driver;
-    this._dataFetcher = new dataFetcher(this._driver);
+    this._dataFetcher = driver.homey.app.dataFetcher;
     this._valid_device_status_translations = {
       SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
       SMART_CONTROL_CAPABLE: `Device Capable`,
@@ -309,48 +310,49 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}            Stringified JSON representing the query
    */
   pairingDataQuery(accountId) {
-    const query = {
-      query: `query GetPairingData($accountNumber: String!) {
-        account(accountNumber: $accountNumber) {
-          billingOptions {
-            currentBillingPeriodStartDate
-          }
-          electricityAgreements(active: true) {
-              meterPoint {
-                  agreements(includeInactive: false) {
-                      tariff {
-                          __typename
-                          ... on StandardTariff {
-                              isExport
-                          }
-                          ... on DayNightTariff {
-                              isExport
-                          }
-                          ... on ThreeRateTariff {
-                              isExport
-                          }
-                          ... on HalfHourlyTariff {
-                              isExport
-                          }
-                          ... on PrepayTariff {
-                              isExport
-                          }
-                      }
-                  }
-              }
-          }
-        }
-        devices(accountNumber: $accountNumber) {
-          id
-          name
-        }
-      }`,
-      variables: {
-        accountNumber: accountId
-      },
-      operationName: "GetPairingData"
-    }
-    return JSON.stringify(query);
+    return Queries.getPairingData(accountId);
+    // const query = {
+    //   query: `query GetPairingData($accountNumber: String!) {
+    //     account(accountNumber: $accountNumber) {
+    //       billingOptions {
+    //         currentBillingPeriodStartDate
+    //       }
+    //       electricityAgreements(active: true) {
+    //           meterPoint {
+    //               agreements(includeInactive: false) {
+    //                   tariff {
+    //                       __typename
+    //                       ... on StandardTariff {
+    //                           isExport
+    //                       }
+    //                       ... on DayNightTariff {
+    //                           isExport
+    //                       }
+    //                       ... on ThreeRateTariff {
+    //                           isExport
+    //                       }
+    //                       ... on HalfHourlyTariff {
+    //                           isExport
+    //                       }
+    //                       ... on PrepayTariff {
+    //                           isExport
+    //                       }
+    //                   }
+    //               }
+    //           }
+    //       }
+    //     }
+    //     devices(accountNumber: $accountNumber) {
+    //       id
+    //       name
+    //     }
+    //   }`,
+    //   variables: {
+    //     accountNumber: accountId
+    //   },
+    //   operationName: "GetPairingData"
+    // }
+    // return JSON.stringify(query);
   }
 
   /**
@@ -359,123 +361,124 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}            Stringified JSON representing the query
    */
   accountDataQuery(accountId) {
-    const query = {
-      query: `query GetAccount($accountNumber: String!) {
-        account(accountNumber: $accountNumber) {
-          id
-          balance
-          billingOptions {
-            currentBillingPeriodStartDate
-          }
-          brand
-          electricityAgreements(active: true) {
-            id
-            meterPoint {
-              mpan
-              meters(includeInactive: false) {
-                serialNumber
-                smartImportElectricityMeter {
-                  deviceId
-                }
-                smartExportElectricityMeter {
-                  deviceId
-                }
-              }
-              agreements(includeInactive: false) {
-                validFrom
-                validTo
-                tariff {
-                  ... on StandardTariff {
-                    id
-                    displayName
-                    fullName
-                    isExport
-                    productCode
-                    tariffCode
-                    standingCharge
-                    preVatStandingCharge
-                    unitRate
-                    preVatUnitRate
-                  }
-                  ... on DayNightTariff {
-                    id
-                    displayName
-                    fullName
-                    isExport
-                    productCode
-                    tariffCode
-                    standingCharge
-                    preVatStandingCharge
-                    dayRate
-                    preVatDayRate
-                    nightRate
-                    preVatNightRate
-                  }
-                  ... on ThreeRateTariff {
-                    id
-                    displayName
-                    fullName
-                    isExport
-                    productCode
-                    tariffCode
-                    standingCharge
-                    preVatStandingCharge
-                    offPeakRate
-                    preVatOffPeakRate
-                    nightRate
-                    preVatNightRate
-                    dayRate
-                    preVatDayRate
-                  }
-                  ... on HalfHourlyTariff {
-                    id
-                    displayName
-                    fullName
-                    isExport
-                    productCode
-                    tariffCode
-                    standingCharge
-                    preVatStandingCharge
-                    unitRates {
-                      preVatValue
-                      validFrom
-                      validTo
-                      value
-                    }
-                  }
-                  ... on PrepayTariff {
-                    id
-                    displayName
-                    fullName
-                    isExport
-                    productCode
-                    tariffCode
-                    standingCharge
-                    preVatStandingCharge
-                    unitRate
-                    preVatUnitRate
-                  }
-                }
-              }
-            }
-          }
-        }
-        devices(accountNumber: $accountNumber) {
-          id
-          name
-          deviceType
-          status {
-            currentState
-            current
-          }
-        }
-      }`,
-      variables: {
-        accountNumber: accountId,
-      },
-      operationName: "GetAccount"
-    }
-    return JSON.stringify(query, null, 2);
+    return Queries.getAccountData(accountId);
+    // const query = {
+    //   query: `query GetAccount($accountNumber: String!) {
+    //     account(accountNumber: $accountNumber) {
+    //       id
+    //       balance
+    //       billingOptions {
+    //         currentBillingPeriodStartDate
+    //       }
+    //       brand
+    //       electricityAgreements(active: true) {
+    //         id
+    //         meterPoint {
+    //           mpan
+    //           meters(includeInactive: false) {
+    //             serialNumber
+    //             smartImportElectricityMeter {
+    //               deviceId
+    //             }
+    //             smartExportElectricityMeter {
+    //               deviceId
+    //             }
+    //           }
+    //           agreements(includeInactive: false) {
+    //             validFrom
+    //             validTo
+    //             tariff {
+    //               ... on StandardTariff {
+    //                 id
+    //                 displayName
+    //                 fullName
+    //                 isExport
+    //                 productCode
+    //                 tariffCode
+    //                 standingCharge
+    //                 preVatStandingCharge
+    //                 unitRate
+    //                 preVatUnitRate
+    //               }
+    //               ... on DayNightTariff {
+    //                 id
+    //                 displayName
+    //                 fullName
+    //                 isExport
+    //                 productCode
+    //                 tariffCode
+    //                 standingCharge
+    //                 preVatStandingCharge
+    //                 dayRate
+    //                 preVatDayRate
+    //                 nightRate
+    //                 preVatNightRate
+    //               }
+    //               ... on ThreeRateTariff {
+    //                 id
+    //                 displayName
+    //                 fullName
+    //                 isExport
+    //                 productCode
+    //                 tariffCode
+    //                 standingCharge
+    //                 preVatStandingCharge
+    //                 offPeakRate
+    //                 preVatOffPeakRate
+    //                 nightRate
+    //                 preVatNightRate
+    //                 dayRate
+    //                 preVatDayRate
+    //               }
+    //               ... on HalfHourlyTariff {
+    //                 id
+    //                 displayName
+    //                 fullName
+    //                 isExport
+    //                 productCode
+    //                 tariffCode
+    //                 standingCharge
+    //                 preVatStandingCharge
+    //                 unitRates {
+    //                   preVatValue
+    //                   validFrom
+    //                   validTo
+    //                   value
+    //                 }
+    //               }
+    //               ... on PrepayTariff {
+    //                 id
+    //                 displayName
+    //                 fullName
+    //                 isExport
+    //                 productCode
+    //                 tariffCode
+    //                 standingCharge
+    //                 preVatStandingCharge
+    //                 unitRate
+    //                 preVatUnitRate
+    //               }
+    //             }
+    //           }
+    //         }
+    //       }
+    //     }
+    //     devices(accountNumber: $accountNumber) {
+    //       id
+    //       name
+    //       deviceType
+    //       status {
+    //         currentState
+    //         current
+    //       }
+    //     }
+    //   }`,
+    //   variables: {
+    //     accountNumber: accountId,
+    //   },
+    //   operationName: "GetAccount"
+    // }
+    // return JSON.stringify(query, null, 2);
   }
 
   // /**
@@ -852,56 +855,83 @@ module.exports = class krakenAccountWrapper {
    * @returns {object}                  JSON result of Graph QL query
    */
   buildDispatchQuery(meterId, deviceIds, atTime) {
-    const operationName = 'getHighFrequencyData';
+    // 1. Logic-Heavy calculation (State/Context)
     const endTime = this.getLocalDateTime(new Date(atTime)).set({ seconds: 0, milliseconds: 0 });
     const startTime = endTime.minus({ minutes: 1 });
-    this._driver.homey.log(`krakenAccountWrapper.buildDispatchQuery: startTime: ${startTime.toISO()}, endTime: ${endTime.toISO()}`);
 
-    let variableDeclarations = '$meterId: String!, $startTime: DateTime, $endTime: DateTime, $grouping: TelemetryGrouping';
-    let queryDeclarations =
-      `smartMeterTelemetry(
-        deviceId: $meterId
-        start: $startTime
-        end: $endTime
-        grouping: $grouping
-      ) 
-      {
-        demand
-        export
-        consumption
-        readAt
-      }`;
-    let variableValues = {
-      meterId: meterId,
-      startTime: startTime.toISO(),
-      endTime: endTime.toISO(),
-      grouping: 'ONE_MINUTE'
-    };
+    // 2. Prepare the device array for the factory
+    const preparedDevices = Object.keys(deviceIds).map(key => ({
+      label: this.hashDeviceId(deviceIds[key]),
+      id: deviceIds[key]
+    }));
 
-    for (const deviceNum in deviceIds) {
-      const deviceNumLabel = deviceNum.padStart(2, "0");
-      const deviceVariableName = `deviceId${deviceNumLabel}`;
-      variableDeclarations += `, $${deviceVariableName}: String!`;
-      const deviceLabel = this.hashDeviceId(deviceIds[deviceNum]);
-      queryDeclarations += `
-      ${deviceLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
-        type
-        start
-        end
-        energyAddedKwh
-      }`;
-      variableValues[deviceVariableName] = deviceIds[deviceNum];
-    }
-
-    const gqlQuery = {
-      query: `query ${operationName}(${variableDeclarations}){${queryDeclarations}}`,
-      variables: variableValues,
-      operationName: operationName
-    }
-
-    return JSON.stringify(gqlQuery);
-
+    // 3. Call the Stateless Factory
+    return Queries.getHighFrequencyData(
+      meterId,
+      preparedDevices,
+      startTime.toISO(),
+      endTime.toISO()
+    );
   }
+
+  // /**
+  //  * Build the live data query using the live meter Id and intelligent device Ids
+  //  * @param   {string}      meterId     The id of the live meter (e.g. Octopus Home Mini) 
+  //  * @param   {string[]}    deviceIds   Array of intelligent device Ids  
+  //  * @param   {string}      atTime      The time at which to get the data
+  //  * @returns {object}                  JSON result of Graph QL query
+  //  */
+  // buildDispatchQuery(meterId, deviceIds, atTime) {
+  //   const operationName = 'getHighFrequencyData';
+  //   const endTime = this.getLocalDateTime(new Date(atTime)).set({ seconds: 0, milliseconds: 0 });
+  //   const startTime = endTime.minus({ minutes: 1 });
+  //   this._driver.homey.log(`krakenAccountWrapper.buildDispatchQuery: startTime: ${startTime.toISO()}, endTime: ${endTime.toISO()}`);
+
+  //   let variableDeclarations = '$meterId: String!, $startTime: DateTime, $endTime: DateTime, $grouping: TelemetryGrouping';
+  //   let queryDeclarations =
+  //     `smartMeterTelemetry(
+  //       deviceId: $meterId
+  //       start: $startTime
+  //       end: $endTime
+  //       grouping: $grouping
+  //     ) 
+  //     {
+  //       demand
+  //       export
+  //       consumption
+  //       readAt
+  //     }`;
+  //   let variableValues = {
+  //     meterId: meterId,
+  //     startTime: startTime.toISO(),
+  //     endTime: endTime.toISO(),
+  //     grouping: 'ONE_MINUTE'
+  //   };
+
+  //   for (const deviceNum in deviceIds) {
+  //     const deviceNumLabel = deviceNum.padStart(2, "0");
+  //     const deviceVariableName = `deviceId${deviceNumLabel}`;
+  //     variableDeclarations += `, $${deviceVariableName}: String!`;
+  //     const deviceLabel = this.hashDeviceId(deviceIds[deviceNum]);
+  //     queryDeclarations += `
+  //     ${deviceLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
+  //       type
+  //       start
+  //       end
+  //       energyAddedKwh
+  //     }`;
+  //     variableValues[deviceVariableName] = deviceIds[deviceNum];
+  //   }
+
+  //   const gqlQuery = {
+  //     query: `query ${operationName}(${variableDeclarations}){${queryDeclarations}}`,
+  //     variables: variableValues,
+  //     operationName: operationName
+  //   }
+
+  //   return JSON.stringify(gqlQuery);
+
+  // }
 
   /**
    * Hash a deviceId into a valid GQL query label

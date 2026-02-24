@@ -13,6 +13,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Started');
 		this._requiredCapabilities = new Map();
 		this._updatedCapabilities = new Map();
+		this._accountWrapper = this.driver.accountWrapper;
 		this._storeValues = {};
 		await this.migrateSettings(this.getSettings());
 		await this.migrateStore();
@@ -237,7 +238,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns		{krakenAccountWrapper}		Current app instance of the account wrapper
 	 */
 	get accountWrapper() {
-		return this.driver.managerEvent.accountWrapper;
+		return this._accountWrapper;
 	}
 
 	/**

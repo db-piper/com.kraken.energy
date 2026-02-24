@@ -319,7 +319,7 @@ module.exports = class energyAccount extends krakenDevice {
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 			this.homey.log(`energyAccount.processEvent: billValue: ${billValue} periodUpdatedImportValue: ${periodUpdatedImportValue} periodUpdatedExportValue: ${periodUpdatedExportValue} periodUpdatedStandingCharge: ${periodUpdatedStandingCharge}`);
 			if (observedDays > 0) {
-				const startOfDay = eventDateTime.startOfDay();
+				const startOfDay = eventDateTime.startOf('day');
 				const fractionOfDay = eventDateTime.diff(startOfDay, "milliseconds") / 24 * 60 * 60 * 1000;
 				const durationScale = periodLength / (observedDays + fractionOfDay);
 				projectedBill = (durationScale * (periodUpdatedImportValue - periodUpdatedExportValue)) + (dailyStandingCharge * periodLength);

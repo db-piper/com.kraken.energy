@@ -1,5 +1,6 @@
 'use strict';
 const homey = require("homey");
+const gQLQueries = require("./gQLQueries");
 
 module.exports = class dataFetcher {
   /**
@@ -9,16 +10,16 @@ module.exports = class dataFetcher {
 
   /**
    * Constructor for dataFetcher. Class that performs all access to the REST API and GraphQL API 
-   * @param {krakenDriver}   driver  controls the devices
+   * @param {Homey}   homey  hosts the app
    */
-  constructor(driver) {
-    driver.homey.log(`dataFetcher.constructor: Instantiating`);
-    this._driver = driver;
+  constructor(homey) {
+    homey.log(`dataFetcher.constructor: Instantiating`);
+    this._homey = homey;
     this._baseURL = 'https://api.octopus.energy';
     this._graphQlPath = '/v1/graphql/';
     this._hourMilliSeconds = 60 * 60 * 1000;
     this._dayMilliSeconds = 24 * this._hourMilliSeconds;
-    this._tokenExpiry = undefined;
+    this._tokenExpiry = undefined
     this._graphQlApiToken = undefined;
   }
 
@@ -27,7 +28,7 @@ module.exports = class dataFetcher {
    * @returns {homey} the homey instance
    */
   get homey() {
-    return this._driver.homey;
+    return this._homey;
   }
 
   /**
@@ -151,9 +152,10 @@ module.exports = class dataFetcher {
     try {
       const url = `${this._baseURL}${this._graphQlPath}`;
       let fetchParams = this.buildGraphQLFetchParams(queryString, token);
+      //this.homey.log(`dataFetcher.runGraphQlQuery: Fetch Params: ${JSON.stringify(fetchParams, null, 2)}`);
 
       let response = await fetch(url, fetchParams); // Use await with fetch
-      this.homey.log(`dataFetcher.runGraphQlQuery: Back from FETCH. Response: ${response.status}`);
+      //this.homey.log(`dataFetcher.runGraphQlQuery: Back from FETCH. Response: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text(); // Read the error response body
@@ -244,7 +246,7 @@ module.exports = class dataFetcher {
    * @returns {any}               access token string or undefined 
    */
   async testApiKey(apiKey) {
-    this._driver.log(`dataFetcher.testApiKey: Starting: apiKey: ${apiKey} : query:`);
+    this.homey.log(`dataFetcher.testApiKey: Starting: apiKey: ${apiKey} : query:`);
     const query = this.getKrakenTokenQuery(apiKey);
     const result = await this.runGraphQlQuery(query, undefined);
     let token = undefined;
@@ -266,7 +268,7 @@ module.exports = class dataFetcher {
     let token = undefined;
     let expiry = undefined;
     if (result?.data?.obtainKrakenToken) {
-      token = `JWT ${result.data.obtainKrakenToken.token}`;
+      token = result.data.obtainKrakenToken.token;
       expiry = new Date(1000 * (result.data.obtainKrakenToken.payload.exp - 60)).toISOString();
     }
     return { token, expiry };
@@ -274,14 +276,15 @@ module.exports = class dataFetcher {
 
   /**
    * Verify that the specified account ID can be accessed by the specified token
-   * @param {string} accountId     Account ID to verify
+   * @param {string} queryString   The GraphQL used to verify accountId
    * @param {string} token         GraphQl access token
    * @returns {Promise<boolean>}   True if the account ID can be accessed by the token, false otherwise
    */
-  async verifyAccountId(accountId, token) {
-    this.homey.log(`dataFetcher.verifyAccountId: Starting: token: ${token} : accountId: ${accountId}`);
-    const query = this.getAccountIdQuery(accountId);
-    const result = await this.runGraphQlQuery(query, token);
+  async verifyAccountId(queryString, token) {
+    this.homey.log(`dataFetcher.verifyAccountId: Starting: token: ${token}`);
+    this.homey.log(`dataFetcher.verifyAccountId: Query: ${queryString}`);
+    const result = await this.runGraphQlQuery(queryString, token);
+    this.homey.log(`dataFetcher.verifyAccountId: Result: ${JSON.stringify(result)}`);
     let isValid = false;
     if (result.data.account !== null) {
       isValid = true;

@@ -6,6 +6,7 @@ const TokenExpirySetting = "kraken_token_expiry";
 
 const Homey = require('homey');
 const dataFetcher = require('./modules/dataFetcher');
+const Queries = require('./modules/gQLQueries');
 
 module.exports = class krakenApp extends Homey.App {
 
@@ -15,6 +16,12 @@ module.exports = class krakenApp extends Homey.App {
   async onInit() {
     this.homey.log('krakenApp.onInit: App Initialization Started');
     this._dataFetcher = new dataFetcher(this.homey);
+    //GASH
+    const token = this.homey.settings.get(TokenSetting);
+    if (token && token.startsWith('JWT ')) {
+      this.homey.settings.set(TokenSetting, token.replace('JWT ', '').trim());
+    }
+    //END GASH
 
     this.homey.log(`krakenApp.registerConditionRunListener: card: slot_relative_price function: getCurrentCheaper`);
     const relativePriceCard = this.homey.flow.getConditionCard('slot_relative_price');
@@ -83,8 +90,8 @@ module.exports = class krakenApp extends Homey.App {
    */
   async setValidAccount(accountId, token) {
     this.log(`krakenApp.setValidAccount: Validating account ${accountId}...`);
-
-    const isValid = await this.dataFetcher.verifyAccountId(accountId, token);
+    const isValid = await this.dataFetcher.verifyAccountId(Queries.getPairingData(accountId), token);
+    this.log(`krakenApp.setValidAccount: verifyAccountId returned ${isValid}`);
 
     if (isValid) {
       this.homey.settings.set(AccountIdSetting, accountId);
@@ -115,7 +122,7 @@ module.exports = class krakenApp extends Homey.App {
    * Factory returning an instance of dataFetcher
    * @returns {dataFetcher} New instance of dataFetcher
    */
-  getDataFetcher() {
+  get dataFetcher() {
     return this._dataFetcher;
   }
 
