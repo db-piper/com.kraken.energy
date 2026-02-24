@@ -311,48 +311,6 @@ module.exports = class krakenAccountWrapper {
    */
   pairingDataQuery(accountId) {
     return Queries.getPairingData(accountId);
-    // const query = {
-    //   query: `query GetPairingData($accountNumber: String!) {
-    //     account(accountNumber: $accountNumber) {
-    //       billingOptions {
-    //         currentBillingPeriodStartDate
-    //       }
-    //       electricityAgreements(active: true) {
-    //           meterPoint {
-    //               agreements(includeInactive: false) {
-    //                   tariff {
-    //                       __typename
-    //                       ... on StandardTariff {
-    //                           isExport
-    //                       }
-    //                       ... on DayNightTariff {
-    //                           isExport
-    //                       }
-    //                       ... on ThreeRateTariff {
-    //                           isExport
-    //                       }
-    //                       ... on HalfHourlyTariff {
-    //                           isExport
-    //                       }
-    //                       ... on PrepayTariff {
-    //                           isExport
-    //                       }
-    //                   }
-    //               }
-    //           }
-    //       }
-    //     }
-    //     devices(accountNumber: $accountNumber) {
-    //       id
-    //       name
-    //     }
-    //   }`,
-    //   variables: {
-    //     accountNumber: accountId
-    //   },
-    //   operationName: "GetPairingData"
-    // }
-    // return JSON.stringify(query);
   }
 
   /**
@@ -362,143 +320,7 @@ module.exports = class krakenAccountWrapper {
    */
   accountDataQuery(accountId) {
     return Queries.getAccountData(accountId);
-    // const query = {
-    //   query: `query GetAccount($accountNumber: String!) {
-    //     account(accountNumber: $accountNumber) {
-    //       id
-    //       balance
-    //       billingOptions {
-    //         currentBillingPeriodStartDate
-    //       }
-    //       brand
-    //       electricityAgreements(active: true) {
-    //         id
-    //         meterPoint {
-    //           mpan
-    //           meters(includeInactive: false) {
-    //             serialNumber
-    //             smartImportElectricityMeter {
-    //               deviceId
-    //             }
-    //             smartExportElectricityMeter {
-    //               deviceId
-    //             }
-    //           }
-    //           agreements(includeInactive: false) {
-    //             validFrom
-    //             validTo
-    //             tariff {
-    //               ... on StandardTariff {
-    //                 id
-    //                 displayName
-    //                 fullName
-    //                 isExport
-    //                 productCode
-    //                 tariffCode
-    //                 standingCharge
-    //                 preVatStandingCharge
-    //                 unitRate
-    //                 preVatUnitRate
-    //               }
-    //               ... on DayNightTariff {
-    //                 id
-    //                 displayName
-    //                 fullName
-    //                 isExport
-    //                 productCode
-    //                 tariffCode
-    //                 standingCharge
-    //                 preVatStandingCharge
-    //                 dayRate
-    //                 preVatDayRate
-    //                 nightRate
-    //                 preVatNightRate
-    //               }
-    //               ... on ThreeRateTariff {
-    //                 id
-    //                 displayName
-    //                 fullName
-    //                 isExport
-    //                 productCode
-    //                 tariffCode
-    //                 standingCharge
-    //                 preVatStandingCharge
-    //                 offPeakRate
-    //                 preVatOffPeakRate
-    //                 nightRate
-    //                 preVatNightRate
-    //                 dayRate
-    //                 preVatDayRate
-    //               }
-    //               ... on HalfHourlyTariff {
-    //                 id
-    //                 displayName
-    //                 fullName
-    //                 isExport
-    //                 productCode
-    //                 tariffCode
-    //                 standingCharge
-    //                 preVatStandingCharge
-    //                 unitRates {
-    //                   preVatValue
-    //                   validFrom
-    //                   validTo
-    //                   value
-    //                 }
-    //               }
-    //               ... on PrepayTariff {
-    //                 id
-    //                 displayName
-    //                 fullName
-    //                 isExport
-    //                 productCode
-    //                 tariffCode
-    //                 standingCharge
-    //                 preVatStandingCharge
-    //                 unitRate
-    //                 preVatUnitRate
-    //               }
-    //             }
-    //           }
-    //         }
-    //       }
-    //     }
-    //     devices(accountNumber: $accountNumber) {
-    //       id
-    //       name
-    //       deviceType
-    //       status {
-    //         currentState
-    //         current
-    //       }
-    //     }
-    //   }`,
-    //   variables: {
-    //     accountNumber: accountId,
-    //   },
-    //   operationName: "GetAccount"
-    // }
-    // return JSON.stringify(query, null, 2);
   }
-
-  // /**
-  //  * Test whether the specified API access parameters give access to the Kraken data
-  //  * @param     {string}      accountId     The account reference specified
-  //  * @param     {string}      apiKey        The apiKey for the account 
-  //  * @returns   {Promise<boolean>}          True iff account data retrieved
-  // */
-  // async testAccessParameters(accountId, apiKey) {
-  //   this._driver.log(`krakenAccountWrapper.testAccessParameters: Starting`);
-  //   const token = await this._dataFetcher.testApiKey(apiKey);
-  //   let accountData = undefined;
-  //   let success = false;
-  //   if (token !== undefined) {
-  //     const accountTestQuery = this.pairingDataQuery(accountId);
-  //     accountData = await this._dataFetcher.runGraphQlQuery(accountTestQuery, token);
-  //     success = !!accountData?.data?.account && !accountData?.errors;
-  //   }
-  //   return success;
-  // }
 
   /**
    * Access the account data using the current access parameters and make the data retrieved current
@@ -759,8 +581,6 @@ module.exports = class krakenAccountWrapper {
       return undefined;
     }
 
-    // Use a simple reduce to find the object with the smallest start time
-    // This is O(n) and creates very little garbage.
     const earliest = dispatchArray.reduce((prev, curr) => {
       const prevTime = new Date(prev.start).getTime();
       const currTime = new Date(curr.start).getTime();
@@ -779,9 +599,7 @@ module.exports = class krakenAccountWrapper {
    */
   futureDispatches(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
-    //const selectedItems = plannedDispatches.filter((dispatch) => this.advanceTime(dispatch.start) > eventTime);
     const selectedItems = plannedDispatches.filter((dispatch) => this.getLocalDateTime(new Date(dispatch.start)) > eventTime);
-    //this._driver.homey.log(`krakenAccountWrapper.futureDispatches: selected: ${JSON.stringify(selectedItems)}`);
     return selectedItems;
   }
 
@@ -873,65 +691,6 @@ module.exports = class krakenAccountWrapper {
       endTime.toISO()
     );
   }
-
-  // /**
-  //  * Build the live data query using the live meter Id and intelligent device Ids
-  //  * @param   {string}      meterId     The id of the live meter (e.g. Octopus Home Mini) 
-  //  * @param   {string[]}    deviceIds   Array of intelligent device Ids  
-  //  * @param   {string}      atTime      The time at which to get the data
-  //  * @returns {object}                  JSON result of Graph QL query
-  //  */
-  // buildDispatchQuery(meterId, deviceIds, atTime) {
-  //   const operationName = 'getHighFrequencyData';
-  //   const endTime = this.getLocalDateTime(new Date(atTime)).set({ seconds: 0, milliseconds: 0 });
-  //   const startTime = endTime.minus({ minutes: 1 });
-  //   this._driver.homey.log(`krakenAccountWrapper.buildDispatchQuery: startTime: ${startTime.toISO()}, endTime: ${endTime.toISO()}`);
-
-  //   let variableDeclarations = '$meterId: String!, $startTime: DateTime, $endTime: DateTime, $grouping: TelemetryGrouping';
-  //   let queryDeclarations =
-  //     `smartMeterTelemetry(
-  //       deviceId: $meterId
-  //       start: $startTime
-  //       end: $endTime
-  //       grouping: $grouping
-  //     ) 
-  //     {
-  //       demand
-  //       export
-  //       consumption
-  //       readAt
-  //     }`;
-  //   let variableValues = {
-  //     meterId: meterId,
-  //     startTime: startTime.toISO(),
-  //     endTime: endTime.toISO(),
-  //     grouping: 'ONE_MINUTE'
-  //   };
-
-  //   for (const deviceNum in deviceIds) {
-  //     const deviceNumLabel = deviceNum.padStart(2, "0");
-  //     const deviceVariableName = `deviceId${deviceNumLabel}`;
-  //     variableDeclarations += `, $${deviceVariableName}: String!`;
-  //     const deviceLabel = this.hashDeviceId(deviceIds[deviceNum]);
-  //     queryDeclarations += `
-  //     ${deviceLabel}: flexPlannedDispatches(deviceId: $${deviceVariableName}) {
-  //       type
-  //       start
-  //       end
-  //       energyAddedKwh
-  //     }`;
-  //     variableValues[deviceVariableName] = deviceIds[deviceNum];
-  //   }
-
-  //   const gqlQuery = {
-  //     query: `query ${operationName}(${variableDeclarations}){${queryDeclarations}}`,
-  //     variables: variableValues,
-  //     operationName: operationName
-  //   }
-
-  //   return JSON.stringify(gqlQuery);
-
-  // }
 
   /**
    * Hash a deviceId into a valid GQL query label

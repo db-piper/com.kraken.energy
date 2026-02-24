@@ -320,10 +320,11 @@ module.exports = class energyAccount extends krakenDevice {
 			this.homey.log(`energyAccount.processEvent: billValue: ${billValue} periodUpdatedImportValue: ${periodUpdatedImportValue} periodUpdatedExportValue: ${periodUpdatedExportValue} periodUpdatedStandingCharge: ${periodUpdatedStandingCharge}`);
 			if (observedDays > 0) {
 				const startOfDay = eventDateTime.startOf('day');
-				const fractionOfDay = eventDateTime.diff(startOfDay, "milliseconds") / 24 * 60 * 60 * 1000;
-				const durationScale = periodLength / (observedDays + fractionOfDay);
-				projectedBill = (durationScale * (periodUpdatedImportValue - periodUpdatedExportValue)) + (dailyStandingCharge * periodLength);
-				this.homey.log(`energyAccount.processEvent: dailyStandingCharge: ${dailyStandingCharge} durationScale: ${durationScale} projectedBill: ${projectedBill}`);
+				const fractionOfDay = eventDateTime.diff(startOfDay, "milliseconds") / (24 * 60 * 60 * 1000);
+				const observedFraction = observedDays + fractionOfDay;
+				const aveDaySpend = dailyStandingCharge + (periodUpdatedImportValue - periodUpdatedExportValue) / observedFraction;
+				projectedBill = aveDaySpend * periodLength;
+				this.homey.log(`energyAccount.processEvent: observedFraction: ${observedFraction} aveDaySpend: ${aveDaySpend} periodLength: ${periodLength} projectedBill: ${projectedBill}`);
 			}
 
 		}
