@@ -50,7 +50,7 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
 
     // Pass the token into your wrapper
-    let accountData = await this._accountWrapper.accessAccountGraphQL(token);
+    let accountData = await this.accountWrapper.accessAccountGraphQL(token);
 
     if (accountData) {
       return await this.executeEventOnDevices(atTime, accountData);
@@ -172,7 +172,7 @@ module.exports = class managerEvent {
   async executeEventOnDevices(atTime, accountData) {
     let updates = [];
     const liveMeterId = this.accountWrapper.getLiveMeterId(accountData);
-    this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
+    //this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 
     const meterFetchPromise = this.accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
     const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());

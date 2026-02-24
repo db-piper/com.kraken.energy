@@ -114,7 +114,7 @@ module.exports = class krakenDriver extends Homey.Driver {
    * The Heartbeat: The actual task performed every minute.
    */
   async onHeartbeat() {
-    this.log(`krakenDriver.onHeartbeat: Tick at ${new Date().toISOString()}`);
+    this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
     try {
       const token = await this.homey.app.getValidToken();
       if (!token) throw new Error('Token acquisition failed');
@@ -123,6 +123,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     } catch (err) {
       this.error('krakenDriver.onHeartbeat: Failure:', err.message);
     }
+    this.log(`krakenDriver.onHeartbeat: Tick done at ${new Date().toISOString()}`);
   }
 
 
@@ -167,8 +168,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     if (this.getDevices().length > 0) {
       const scheduler = new managerEvent(this);
       const heartbeatTask = async () => {
-        this.log('Heartbeat: Polling Kraken...');
-        await this.onHeartbeat(); // Or whatever your polling logic is named
+        await this.onHeartbeat();
       };
       this.log('krakenDriver.runEventPoller: Starting fresh 60s interval.');
       this._interval = scheduler.setInterval(this.homey, 60000, heartbeatTask, (newId) => {   //FREQ

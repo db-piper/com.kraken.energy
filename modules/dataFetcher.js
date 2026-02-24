@@ -65,7 +65,7 @@ module.exports = class dataFetcher {
         if ((result !== undefined) && ("data" in result)) {
           return result;
         } else {
-          this.homey.log(`dataFetcher.getDataUsingGraphQL: query result:`);
+          this.homey.log(`dataFetcher.getDataUsingGraphQL: malformed query result:`);
           this.homey.log(JSON.stringify(result));
           return undefined;
         }
@@ -281,10 +281,7 @@ module.exports = class dataFetcher {
    * @returns {Promise<boolean>}   True if the account ID can be accessed by the token, false otherwise
    */
   async verifyAccountId(queryString, token) {
-    this.homey.log(`dataFetcher.verifyAccountId: Starting: token: ${token}`);
-    this.homey.log(`dataFetcher.verifyAccountId: Query: ${queryString}`);
     const result = await this.runGraphQlQuery(queryString, token);
-    this.homey.log(`dataFetcher.verifyAccountId: Result: ${JSON.stringify(result)}`);
     let isValid = false;
     if (result.data.account !== null) {
       isValid = true;

@@ -105,7 +105,7 @@ module.exports = class krakenAccountWrapper {
       .filter(device => statusCodes.includes(device.status?.currentState))
       .map(device => device.id);
 
-    this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} devices`);
+    this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} smart devices`);
     return deviceIds;
   }
 
@@ -681,7 +681,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<object>} reading JSON object representing the current data
    */
   async getLiveMeterData(atTime, meterId, accountData) {
-    this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
+    //this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
     const deviceIds = this.getDeviceIds(accountData);
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
