@@ -10,7 +10,7 @@ module.exports = class managerEvent {
    */
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
-    this._accountWrapper = new krakenAccountWrapper(driver);
+    //this._accountWrapper = new krakenAccountWrapper(driver);
     this._driver = driver;
     //this._interval = undefined;
     this._period = 60000;  //FREQ
@@ -64,7 +64,7 @@ module.exports = class managerEvent {
    * @returns   {krakenAccountWrapper}    Account wrapper instance
    */
   get accountWrapper() {
-    return this._accountWrapper;
+    return this._driver.accountWrapper;
   }
 
   /**
@@ -171,10 +171,10 @@ module.exports = class managerEvent {
    */
   async executeEventOnDevices(atTime, accountData) {
     let updates = [];
-    const liveMeterId = this._accountWrapper.getLiveMeterId(accountData);
+    const liveMeterId = this.accountWrapper.getLiveMeterId(accountData);
     this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 
-    const meterFetchPromise = this._accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
+    const meterFetchPromise = this.accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
     const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
@@ -185,14 +185,15 @@ module.exports = class managerEvent {
     const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));
     await Promise.all(availableDevicePromises);
 
-    this.driver.log(`managerEvent.executeEvent: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
+    //this.driver.log(`managerEvent.executeEventOnDevices: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
-          this.driver.log(`managerEvent.executeEvent: process event for: ${device.getName()}`);
+          this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
           device.processEvent(atTime, this.newDay(atTime), reading, dispatches, accountData);
+          this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }
 
@@ -200,17 +201,18 @@ module.exports = class managerEvent {
       reading = null;
       dispatches = null;
 
+      this.driver.log(`managerEvent.executeEventOnDevices: start commit capabilities`);
       const deviceCommitPromises = this.driver.getDevices().map(device => device.commitCapabilities());
       updates = await Promise.all(deviceCommitPromises);
+      this.driver.log(`managerEvent.executeEventOnDevices: end commit capabilities`);
 
       await this.logMemoryToInsights();
 
     } else {
-      this.driver.log(`managerEvent.executeEvent: unable to retrieve live meter data`);
+      this.driver.log(`managerEvent.executeEventOnDevices: unable to retrieve live meter data`);
     }
 
-    return updates
-
+    return updates;
   }
 
   /**
@@ -245,10 +247,10 @@ module.exports = class managerEvent {
       }
 
       await myLog.createEntry(memoryKB);
-      this.driver.homey.log(`[Insight] Recorded: ${memoryKB.toFixed(1)} KB`);
+      this.driver.homey.log(`managerEvent.logMemoryToInsights: Insight Recorded: ${memoryKB.toFixed(1)} KB`);
     } catch (err) {
       if (this.driver && this.driver.homey) {
-        this.driver.homey.error('[Insight Error]', err.message);
+        this.driver.homey.error(`managerEvent.logMemoryToInsights: Insight Error: ${err.message}`);
       }
     }
   }

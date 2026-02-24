@@ -16,12 +16,6 @@ module.exports = class krakenApp extends Homey.App {
   async onInit() {
     this.homey.log('krakenApp.onInit: App Initialization Started');
     this._dataFetcher = new dataFetcher(this.homey);
-    //GASH
-    const token = this.homey.settings.get(TokenSetting);
-    if (token && token.startsWith('JWT ')) {
-      this.homey.settings.set(TokenSetting, token.replace('JWT ', '').trim());
-    }
-    //END GASH
 
     this.homey.log(`krakenApp.registerConditionRunListener: card: slot_relative_price function: getCurrentCheaper`);
     const relativePriceCard = this.homey.flow.getConditionCard('slot_relative_price');

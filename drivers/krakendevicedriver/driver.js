@@ -19,8 +19,6 @@ module.exports = class krakenDriver extends Homey.Driver {
     if (this.getDevices().length > 0) {
       try {
         this.log(`krakenDriver.onInit: Account ID: ${this.homey.app.accountId}`);
-        //this.log(`krakenDriver.onInit: API Key: ${this.homey.app.apiKey}`);
-        //this.log(`krakenDriver.onInit: About to run this.sessionLoginHandler`);
         const success = await this.sessionLoginHandler(this.homey.app.accountId, this.homey.app.apiKey);
         this.log(`krakenDriver.onInit: Login successful: ${success}`);
         if (success) {
@@ -118,17 +116,12 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick at ${new Date().toISOString()}`);
     try {
-      // 1. Get the fresh token (Airlock logic)
       const token = await this.homey.app.getValidToken();
       if (!token) throw new Error('Token acquisition failed');
-
-      // 2. Perform the actual data fetch using the manager
       const eventer = new managerEvent(this);
       await eventer.executeEvent(token);
-
     } catch (err) {
       this.error('krakenDriver.onHeartbeat: Failure:', err.message);
-      // Optional: if error is terminal, you could stopPoller() here.
     }
   }
 
