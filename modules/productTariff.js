@@ -119,27 +119,6 @@ module.exports = class productTariff extends krakenDevice {
 		}
 	}
 
-	// /**
-	//  * Indicate if the current product tariff is a half hourly product tariff
-	//  * @param 	{boolean} direction   	True if the product tariff is export, false otherwise
-	//  * @returns {boolean}           		True if the product tariff is half hourly, false otherwise
-	//  */
-	// async isHalfHourlyTariff(direction) {
-	// 	let halfHourly = undefined;
-	// 	if (this.getStoreKeys().includes("isHalfHourly")) {
-	// 		this.log(`productTariff.isHalfHourlyTariff: Already in store`)
-	// 		halfHourly = this.getStoreValue("isHalfHourly");
-	// 	} else {
-	// 		const tariff = this.accountWrapper.getTariffDirection(direction);
-	// 		if (tariff !== undefined) {
-	// 			halfHourly = ('unitRates' in tariff);
-	// 			this.log(`productTariff.isHalfHourlyTariff: Not in store, if tariff: ${halfHourly}`);
-	// 			await this.setStoreValue("isHalfHourly", halfHourly);
-	// 		}
-	// 	}
-	// 	return halfHourly;
-	// }
-
 	/**
 	 * Indicate if the current kWh slot price is less than the next kWh slot price
 	 * Used as the run listener for the slot_relative_price condition card
@@ -180,36 +159,37 @@ module.exports = class productTariff extends krakenDevice {
 		const eventTime = new Date(atTime);
 		const tariff = this.accountWrapper.getTariffDirection(direction, accountData);
 		const tariffPrices = this.accountWrapper.getTariffDirectionPrices(atTime, direction, accountData);
+		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
 		const nextTariffPrices = this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
 		const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
 		const firstTime = recordedSlotEnd === null;
 		const propertyName = direction ? "export" : "consumption";
-		const newEnergyReading = +liveMeterReading[propertyName];														//Wh as integer
-		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));									//Boolean
-		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));				//Decimal hours
+		const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
+		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));																				//Boolean
+		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));											//Decimal hours
 		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
-		const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));					//Wh
-		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);			//£
+		const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));						//Wh
+		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);											//£
 		const productCode = tariff.productCode;
 		const tariffCode = tariff.tariffCode;
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%
 		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, direction, accountData);
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
-		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
-		const percentDispatchLimit = 100 * totalDispatchMinutes / this.getSettings().dispatchMinutesLimit;
-		this.homey.log(`productTariff.processEvent: percentDispatchLimit: ${percentDispatchLimit} minutes limit: ${this.getSettings().dispatchMinutesLimit}`);
+		//const totalDispatchMinutes = this.getTotalDispatchMinutes();
+		const percentDispatchLimit = 100 * this.getTotalDispatchMinutes() / this.getSettings().dispatchMinutesLimit;
 		const tariffPrice = .01 * tariffPrices.unitRate;
 		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
 		this.homey.log(`productTariff.processEvent: prices: ${JSON.stringify(tariffPrices)} tariffPrice: ${tariffPrice} unitPriceTaxed: ${unitPriceTaxed}`);
-		const standingChargeTaxed = .01 * tariff.standingCharge;												//£
-		const deltaEnergy = newEnergyReading - lastEnergyReading;												//Wh
-		const deltaEnergyValueTaxed = unitPriceTaxed * (deltaEnergy / 1000);									//£
+		const standingChargeTaxed = .01 * tariff.standingCharge;																		//£
+		const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
+		//The prior price paid is used to calculate the value of the energy consumed in the previous tick
+		const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£
 		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
-		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);				//£
-		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;								//W
+		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);		//£
+		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
 		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? 0 : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
 		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");

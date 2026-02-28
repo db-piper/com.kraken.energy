@@ -45,6 +45,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
 		this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
+		this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals']);
+		this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals'], hasExport);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -223,6 +225,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false, accountData);
 		const importTariffPresent = importPrices !== undefined;
 
+		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);
+
 		const currentExport = 1000 * this.readCapabilityValue(this._capIds.EXPORT_READING);								//watts
 		const periodCurrentExport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_EXPORT_ENERGY);		//watts
 		const periodCurrentExportValue = this.readCapabilityValue(this._capIds.PERIOD_EXPORT_VALUE);			//pounds
@@ -230,6 +234,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const dayCurrentExportValue = this.readCapabilityValue(this._capIds.DAY_EXPORT_VALUE);						//pounds
 		const chunkCurrentExport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_EXPORT_ENERGY);			//watts
 		const chunkCurrentExportValue = this.readCapabilityValue(this._capIds.CHUNK_EXPORT_VALUE);				//pounds
+		const priorExportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_EXPORT_PRICE_PAID);			//pounds
 
 		const currentImport = 1000 * this.readCapabilityValue(this._capIds.IMPORT_READING);								//watts
 		const periodCurrentImport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_IMPORT_ENERGY);		//watts
@@ -238,6 +243,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const dayCurrentImportValue = this.readCapabilityValue(this._capIds.DAY_IMPORT_VALUE);						//pounds
 		const chunkCurrentImport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_IMPORT_ENERGY);			//watts
 		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
+		const priorImportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_IMPORT_PRICE_PAID);			//pounds
 
 		let currentPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME)));
 		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
@@ -265,12 +271,13 @@ module.exports = class energyAccount extends krakenDevice {
 		let chunkUpdatedExportValue = 0;
 		let powerImport = 0;
 		let powerExport = 0;
-		let periodUpdatedStandingCharge = 0;
+		let periodUpdatedStandingCharge = periodStandingCharge;
 		let billValue = 0;
 		let projectedBill = null;
 		let importPrice = 0;
+		let exportPrice = 0;
 
-		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
+		const totalDispatchMinutes = this.getTotalDispatchMinutes();
 		const dispatchPricing = inDispatch && (totalDispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
 		let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
@@ -286,8 +293,10 @@ module.exports = class energyAccount extends krakenDevice {
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
+				exportPrice = .01 * exportPrices.unitRate;																									//pounds
 				deltaExport = liveMeterReading.export - currentExport;																			//watts
-				deltaExportValue = (deltaExport / 1000) * (exportPrices.unitRate / 100);										//pounds
+				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
+				deltaExportValue = (deltaExport / 1000) * priorExportPricePaid;															//pounds
 				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watts
 				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);		//pounds
 				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watts
@@ -299,13 +308,13 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 
 			if (importTariffPresent) {
-				importPrice = dispatchPricing ? minPrice : importPrices.unitRate;														//Pence	
+				importPrice = .01 * (dispatchPricing ? minPrice : importPrices.unitRate);										//pounds	
 				deltaImport = liveMeterReading.consumption - currentImport;																	//watts
-				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);															//pounds
+				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
+				deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
 				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);									//watts
 				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);		//pounds
 				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watts
-				this.homey.log(`energyAccount.processEvent: dayUpdatedImport: ${dayUpdatedImport} deltaImport: ${deltaImport}`);							//watts
 				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);						//pounds
 				dayImportStandingCharge = importPrices.standingCharge;																			//pence
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);											//watts
@@ -313,20 +322,26 @@ module.exports = class energyAccount extends krakenDevice {
 				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 													//watts
 			}
 
-			const periodDay = this.readCapabilityValue(this._capIds.PERIOD_DAY_NUMBER);
-			const dailyStandingCharge = .01 * (dayExportStandingCharge + dayImportStandingCharge);
-			periodUpdatedStandingCharge = dailyStandingCharge * periodDay;
+			if (newDay) {
+				periodUpdatedStandingCharge = (newPeriod ? 0 : periodStandingCharge) + (
+					.01 * (dayExportStandingCharge + dayImportStandingCharge)
+				);
+			}
+
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
-			this.homey.log(`energyAccount.processEvent: billValue: ${billValue} periodUpdatedImportValue: ${periodUpdatedImportValue} periodUpdatedExportValue: ${periodUpdatedExportValue} periodUpdatedStandingCharge: ${periodUpdatedStandingCharge}`);
 			if (observedDays > 0) {
 				const startOfDay = eventDateTime.startOf('day');
 				const fractionOfDay = eventDateTime.diff(startOfDay, "milliseconds") / (24 * 60 * 60 * 1000);
 				const observedFraction = observedDays + fractionOfDay;
-				const aveDaySpend = dailyStandingCharge + (periodUpdatedImportValue - periodUpdatedExportValue) / observedFraction;
+				const dayStandingCharge = .01 * (dayExportStandingCharge + dayImportStandingCharge);
+				const aveDaySpend = dayStandingCharge + (periodUpdatedImportValue - periodUpdatedExportValue) / observedFraction;
 				projectedBill = aveDaySpend * periodLength;
-				this.homey.log(`energyAccount.processEvent: observedFraction: ${observedFraction} aveDaySpend: ${aveDaySpend} periodLength: ${periodLength} projectedBill: ${projectedBill}`);
 			}
-
+		} else {
+			periodUpdatedStandingCharge = periodDay * (
+				(exportTariffPresent ? exportPrices.standingCharge : 0) +
+				(importTariffPresent ? importPrices.standingCharge : 0)
+			);
 		}
 
 		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
@@ -356,6 +371,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability(this._capIds.PERIOD_START_DATETIME, currentPeriodStartDate.toISO());
 		this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextPeriodStartDate.toISO());
 		this.updateCapability(this._capIds.OBSERVED_DAYS, observedDays);
+		this.updateCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, importPrice);
+		this.updateCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, exportPrice);
 
 		return updates;
 	}

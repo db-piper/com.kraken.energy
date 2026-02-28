@@ -121,6 +121,8 @@ module.exports = class krakenDriver extends Homey.Driver {
       const eventer = new managerEvent(this);
       await eventer.executeEvent(token);
     } catch (err) {
+      this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
+      this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.stack}`);
       this.error('krakenDriver.onHeartbeat: Failure:', err.message);
     }
     this.log(`krakenDriver.onHeartbeat: Tick done at ${new Date().toISOString()}`);

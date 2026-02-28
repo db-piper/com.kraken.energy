@@ -146,23 +146,6 @@ module.exports = class managerEvent {
     return isNewDay
   }
 
-  // /**
-  //  * Execute a timed event for the specified time
-  //  * @param   {string}              atTime  string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm"
-  //  */
-  // async executeEvent(atTime) {
-  //   let updates = []
-  //   this.driver.log(`managerEvent.executeEvent: Trying account access`);
-  //   let accountData = await this._accountWrapper.accessAccountGraphQL();
-  //   this.driver.log(`managerEvent.executeEvent: Account access outcome ${!!(accountData)}`);
-  //   if (accountData) {
-  //     updates = await this.executeEventOnDevices(atTime, accountData);
-  //   } else {
-  //     throw new Error('managerEvent.executeEvent: Unable to access account data');
-  //   }
-  //   return updates;
-  // }
-
   /**
    * Loop over devices, executing the event
    * @param {string}            atTime      string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm" 

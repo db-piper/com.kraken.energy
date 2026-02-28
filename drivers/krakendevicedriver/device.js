@@ -14,12 +14,12 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Started');
 		const className = this.getStoreValue('octopusClass');
 		this._capabilityIds = Capabilities.registryForDriver(className);
-		this._capIds = Object.freeze(
-			Object.keys(this._capabilityIds).reduce((obj, key) => {
-				obj[key] = key;
-				return obj;
-			}, {})
-		);
+		this._capIds = new Proxy(this._capabilityIds, {
+			get(target, prop) {
+				if (prop in target) return prop; // Returns the key name as the value
+				throw new Error(`[krakenDevice:Proxy] Capability ID "${String(prop)}" is not in the registry for ${className}`);
+			}
+		});
 		const idCount = Object.keys(this._capabilityIds).length;
 		this.log(`krakenDevice:onInit ${this.getName()} instance of ${className} with ${idCount} capability ids`);
 
@@ -143,17 +143,16 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Calculate the total dispatch minutes for all smart devices
-	 * @param 	{string} capabilityName 	Name of the capability storing dispatch minutes
-	 * @returns {number} 					Total dispatch minutes for all smart devices
+	 * @returns {number} 								Total dispatch minutes for all smart devices
 	 */
-	getTotalDispatchMinutes(capabilityName) {
+	getTotalDispatchMinutes() {
 		//TODO: This created dependency between Homey devices and order of update
 		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add minute}} don't rely on "foreign" homey devices
 		//TODO: FREQ 
 		let totalDispatchMinutes = 0;
 		for (const device of this.driver.getDevices()) {
 			if (device.getStoreValue("octopusClass") == "smartDevice") {
-				totalDispatchMinutes += device.getCapabilityValue(capabilityName);
+				totalDispatchMinutes += device.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
 			}
 		}
 		return totalDispatchMinutes;
@@ -165,6 +164,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {boolean}			True iff the device has a capability with the given ID
 	 */
 	hasCapabilityWithId(id) {
+		this.homey.log(`krakenDevice.hasCapabilityWithId: id ${id} on ${this.getName()}`);
 		return this.hasCapability(this.getCapabilityName(id));
 	}
 

@@ -119,10 +119,9 @@ module.exports = class dataFetcher {
 
   /**
    * Execute the specified GraphQL query with an authorization header if needed
-   * @param {string}  queryString   The GraphQL query to be performed
-   * @param {string}  token         Current GraphQL access token 
-   * @param {boolean} authorization Indicates if an authorization header containing the Graph QL API Token is needed 
-   * @returns {promise<object>}              JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
+   * @param   {string}          queryString   The GraphQL query to be performed
+   * @param   {string}          token         Current GraphQL access token (empty if no security header is needed)
+   * @returns {promise<object>}               JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
    */
   async runGraphQlQuery(queryString, token) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");
@@ -140,7 +139,11 @@ module.exports = class dataFetcher {
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
-      let result = JSON.parse(JSON.stringify(await response.json()));
+      let rawjson = await response.json();
+      const result = JSON.parse(JSON.stringify(rawjson));
+
+      rawjson = null;
+      fetchParams = null;
 
       return result;
     }
@@ -179,7 +182,7 @@ module.exports = class dataFetcher {
    */
   async testApiKey(apiKey) {
     this.homey.log(`dataFetcher.testApiKey: Starting: apiKey: ${apiKey} : query:`);
-    const query = this.getKrakenTokenQuery(apiKey);
+    const query = Queries.getKrakenTokenQuery(apiKey);
     const result = await this.runGraphQlQuery(query, undefined);
     let token = undefined;
     if (result.data.obtainKrakenToken !== null) {
@@ -195,7 +198,7 @@ module.exports = class dataFetcher {
    */
   async login(apiKey) {
     this.homey.log(`dataFetcher.login: Starting: apiKey: ${apiKey}`);
-    const query = this.getKrakenTokenQuery(apiKey);
+    const query = Queries.getKrakenTokenQuery(apiKey);
     const result = await this.runGraphQlQuery(query, undefined);
     let token = undefined;
     let expiry = undefined;

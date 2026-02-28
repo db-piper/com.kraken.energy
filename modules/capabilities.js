@@ -58,6 +58,8 @@ const ENERGY_ACCOUNT = {
   PERIOD_START_DATETIME: "date_time.full_period_start",
   PERIOD_NEXT_START_DATETIME: "date_time.full_next_period",
   OBSERVED_DAYS: "item_count.observed_days",
+  PRIOR_IMPORT_PRICE_PAID: "measure_monetary.prior_import_price_paid",
+  PRIOR_EXPORT_PRICE_PAID: "measure_monetary.prior_export_price_paid",
 };
 
 const SMART_ENERGY_DEVICE = {
