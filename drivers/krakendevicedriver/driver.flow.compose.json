@@ -191,6 +191,16 @@
         "en": "Compares the price per kWH of the current slot with that for the next slot. Card can be inverted."
       },
       "$filter": "capabilities=slot_quartile"
+    },
+    {
+      "id": "price_less_than_tariff",
+      "title": {
+        "en": "Current kWh Price Is !{{|Not}} Cheaper Than The Current Tariff Price"
+      },
+      "hint": {
+        "en": "Compares the price per kWH acutally being paid with the current tariff price. Card can be inverted."
+      },
+      "$filter": "capabilities=data_presence.dispatch_pricing"
     }
   ]
 }

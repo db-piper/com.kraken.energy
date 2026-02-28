@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
+const Capabilities = require('../../modules/capabilities');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -11,14 +12,26 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async onInit() {
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Started');
-		this._requiredCapabilities = new Map();
-		this._updatedCapabilities = new Map();
+		const className = this.getStoreValue('octopusClass');
+		this._capabilityIds = Capabilities.registryForDriver(className);
+		this._capIds = Object.freeze(
+			Object.keys(this._capabilityIds).reduce((obj, key) => {
+				obj[key] = key;
+				return obj;
+			}, {})
+		);
+		const idCount = Object.keys(this._capabilityIds).length;
+		this.log(`krakenDevice:onInit ${this.getName()} instance of ${className} with ${idCount} capability ids`);
+
+		this._requiredCapabilities = {};
+		this._updatedCapabilities = {};
 		this._accountWrapper = this.driver.accountWrapper;
 		this._storeValues = {};
 		await this.migrateSettings(this.getSettings());
 		await this.migrateStore();
 		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this.getSettings())}`);
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Completed');
+		await super.onInit();
 	}
 
 	/**
@@ -70,7 +83,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onInit - generic krakenDevice UnInitialization Started');
 		this._requiredCapabilities = null;
 		this._updatedCapabilities = null;
-		this._storeValues = null;
+		//this._storeValues = null;
 	}
 
 	/**
@@ -147,40 +160,50 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * Queue the update of the value of the named capability
-	 * @param {string} 	capabilityName 		Name of the capability to be updated
-	 * @param {any} 		newValue 					New value to be assigned to the capability
+	 * Check if the device has a capability with the given ID
+	 * @param  	{string} 	id  ID of the capability to check	
+	 * @returns {boolean}			True iff the device has a capability with the given ID
 	 */
-	updateCapability(capabilityName, newValue) {
+	hasCapabilityWithId(id) {
+		return this.hasCapability(this.getCapabilityName(id));
+	}
+
+	/**
+	 * Queue the update of the value of the named capability
+	 * @param {string} 	capabilityId 		ID of the capability to be updated
+	 * @param {any} 		newValue 				New value to be assigned to the capability
+	 */
+	updateCapability(capabilityId, newValue) {
+		const capabilityName = this._capabilityIds[capabilityId];
 		if (this.hasCapability(capabilityName)) {
 			if (!this.hasOwnProperty("_updatedCapabilities")) {
-				this._updatedCapabilities = new Map();
+				this._updatedCapabilities = {};
 			}
 			const safeValue = (typeof newValue === 'object' && newValue !== null)
 				? JSON.parse(JSON.stringify(newValue))
 				: newValue;
-			this._updatedCapabilities.set(capabilityName, safeValue);
+			this._updatedCapabilities[capabilityId] = safeValue;
 		}
 	}
 
 	/**
 	 * Perform the queued updates to capability values
-	 * @param 	{boolean}			updates		True iff any preceding capability has been updated
-	 * @returns {Promise<boolean>}			True iff this or any preceding capability has its value changed
+	 * @param 	{boolean}						updates		True iff any preceding capability has been updated
+	 * @returns {Promise<boolean>}						True iff this or any preceding capability has its value changed
 	 */
 	async updateCapabilities(updates = false) {
 		this.log(`krakenDevice.updateCapabilities: starting`);
 		if (!this.hasOwnProperty("_updatedCapabilities")) {
 			this.log(`krakenDevice.updateCapabilities: _updatedCapabilities not found`);
-			this._updatedCapabilities = new Map();
+			this._updatedCapabilities = {};
 		}
-		const updatedCapabilitiesNames = Array.from(this._updatedCapabilities.keys());
 		let updated = updates;
-		for (const capabilityName of updatedCapabilitiesNames) {
-			const value = this._updatedCapabilities.get(capabilityName);
+		for (const capabilityId of Object.keys(this._updatedCapabilities)) {
+			const capabilityName = this._capabilityIds[capabilityId];
+			const value = this._updatedCapabilities[capabilityId];
 			updated = (await this.updateCapabilityValue(capabilityName, value)) || updated;
 		}
-		this._updatedCapabilities = new Map();
+		this._updatedCapabilities = {};																						//IDS - just = {}	
 		return updated;
 	}
 
@@ -254,16 +277,18 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Establish a capability definition to be applied to a device
-	 * @param {string} 		name				Name of the capability
+	 * @param {string} 		id					ID of the capability
 	 * @param {object} 		overrides 	Object defining capability options to be set
 	 * @param {string[]}	force				List of option names to be forced to update
+	 * @param {boolean}		required		Indicates if the capability is required
 	 */
-	defineCapability(name, overrides = {}, force = [], required = true) {
+	defineCapability(id, overrides = {}, force = [], required = true) {
 		if (!this.hasOwnProperty("_requiredCapabilities")) {
-			this._requiredCapabilities = new Map();
+			this._requiredCapabilities = {};
 		}
 		if (required) {
-			this._requiredCapabilities.set(name, { overrides: overrides, force: force });
+			const name = this.getCapabilityName(id);
+			this._requiredCapabilities[id] = { name: name, overrides: overrides, force: force };
 		}
 	}
 
@@ -273,20 +298,24 @@ module.exports = class krakenDevice extends Homey.Device {
 	async applyCapabilities() {
 		this.homey.log(`krakenDevice.applyCapabilities: starting`);
 		const definedCapabilitiesNames = this.getCapabilities();
-		const requiredCapabilitiesNames = Array.from(this._requiredCapabilities.keys());
+		const nameToIdMap = Object.fromEntries(
+			Object.keys(this._requiredCapabilities).map(id => [this.getCapabilityName(id), id])
+		);
+		const requiredCapabilitiesNames = Object.keys(nameToIdMap);
 		let addedCapabilityNames = [];
 		for (const definedCapabilityName of definedCapabilitiesNames) {
 			if (!(requiredCapabilitiesNames.includes(definedCapabilityName))) {				// Defined capability not in required list - remove it
-				this.homey.log(`krakenDevice.restrictCapabilities: Remove capability ${definedCapabilityName}`);
+				this.homey.log(`krakenDevice.applyCapabilities: ${this.getName()} remove capability id ${nameToIdMap[definedCapabilityName]}`);
 				await this.removeCapability(definedCapabilityName);
 			}
 		}
 
 		for (const requiredCapabilityName of requiredCapabilitiesNames) {
 			if (!(definedCapabilitiesNames.includes(requiredCapabilityName))) {				// Required capability is not defined - add it
-				this.homey.log(`krakenDevice.restrictCapabilities: Add capability ${requiredCapabilityName}`);
+				this.homey.log(`krakenDevice.applyCapabilities: ${this.getName()} add capability id ${nameToIdMap[requiredCapabilityName]}`);
 				await this.addCapability(requiredCapabilityName);
-				const capabilityOptions = this._requiredCapabilities.get(requiredCapabilityName).overrides;
+				const capabilityId = nameToIdMap[requiredCapabilityName];
+				const capabilityOptions = this._requiredCapabilities[capabilityId].overrides;
 				await this.setCapabilityOptions(requiredCapabilityName, capabilityOptions);
 				addedCapabilityNames.push(requiredCapabilityName);
 			}
@@ -294,24 +323,49 @@ module.exports = class krakenDevice extends Homey.Device {
 
 		for (const setOptionsName of requiredCapabilitiesNames) {								// Each requiredCapabilityName
 			if (!addedCapabilityNames.includes(setOptionsName)) {									//		Not just added - so we are interested in a force list
-				const forceNames = this._requiredCapabilities.get(setOptionsName).force;
-				if (forceNames.length !== 0) {																//				Capability has a force list
-					const overrides = this._requiredCapabilities.get(setOptionsName).overrides;
+				const capabilityId = nameToIdMap[setOptionsName];
+				const forceNames = this._requiredCapabilities[capabilityId].force;
+				if (forceNames.length !== 0) {																			//				Capability has a force list
+					const overrides = this._requiredCapabilities[capabilityId].overrides;
 					let appliedOverrides = {};
-					for (const forceName of forceNames) {													//						For each force name
-						if (forceName in overrides) {															//								There is an override for this name
-							appliedOverrides[forceName] = overrides[forceName];										//								Prepare to apply the override
+					for (const forceName of forceNames) {															//						For each force name
+						if (forceName in overrides) {																		//							There is an override for this name
+							appliedOverrides[forceName] = overrides[forceName];						//								Prepare to apply the override
 						}
 					}
-					if (Object.getOwnPropertyNames(appliedOverrides).length > 0) {	//						There some options being forced
-						this.homey.log(`krakenDevice.restrictCapabilities: Change options on ${setOptionsName} overrides ${JSON.stringify(appliedOverrides)}`);
+					if (Object.keys(appliedOverrides).length > 0) {										//						There some options being forced
+						this.homey.log(`krakenDevice.applyCapabilities: ${this.getName()} change capability id ${nameToIdMap[setOptionsName]} overrides ${JSON.stringify(appliedOverrides)}`);
 						await this.setCapabilityOptions(setOptionsName, appliedOverrides);
 					}
 				}
 			}
 		}
 
-		this._requiredCapabilities = new Map();
+		this._requiredCapabilities = {};
+	}
+
+	/**
+	 * Get the capability name from the capability ID
+	 * @param 	{symbol} capabilityId					ID of the capability defined in the registry
+	 * @returns {string}											Name of the capability
+	 */
+	getCapabilityName(capabilityId) {
+		const name = this._capabilityIds[capabilityId];
+		if (!name) {
+			this.homey.log(`krakenDevice.getCapabilityName: id ${capabilityId} not found`);
+			throw new Error(`krakenDevice.getCapabilityName: invalid capability id ${capabilityId} on ${this.getName()}`);
+		}
+		return name;
+	}
+
+	/**
+	 * Read the value of a capability using the capability ID
+	 * @param {symbol} capabilityID			ID of the capability defined in the registry
+	 * @returns {any}										capability value
+	 */
+	readCapabilityValue(capabilityID) {
+		const name = this.getCapabilityName(capabilityID);
+		return this.getCapabilityValue(name);
 	}
 
 	/**

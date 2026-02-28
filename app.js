@@ -17,24 +17,9 @@ module.exports = class krakenApp extends Homey.App {
     this.homey.log('krakenApp.onInit: App Initialization Started');
     this._dataFetcher = new dataFetcher(this.homey);
 
-    this.homey.log(`krakenApp.registerConditionRunListener: card: slot_relative_price function: getCurrentCheaper`);
-    const relativePriceCard = this.homey.flow.getConditionCard('slot_relative_price');
-    if (relativePriceCard) {
-      relativePriceCard.registerRunListener(async (args, state) => {
-        let result = false;
+    this.registerConditionCardListener('slot_relative_price', 'getCurrentlyCheaper');
+    this.registerConditionCardListener('price_less_than_tariff', 'getPriceLessThanTariff');
 
-        try {
-          const device = args?.device;
-          const method = device?.getCurrentlyCheaper;
-          if (typeof method === 'function') {
-            result = !!method.call(device, args);
-          }
-        } catch (err) {
-          this.error('[Listener Error] Relative Price Card:', err.message);
-        }
-        return result;
-      });
-    }
     this.homey.log('krakenApp.onInit: App Initialization Completed');
   }
 
@@ -94,6 +79,37 @@ module.exports = class krakenApp extends Homey.App {
     }
 
     return false;
+  }
+
+  /**
+   * Generic helper to link a Condition Card to a specific Device method
+   * @param {string} cardId     The ID of the flow card
+   * @param {string} methodName The name of the method to call on the device
+   */
+  registerConditionCardListener(cardId, methodName) {
+    this.homey.log(`krakenApp: Registering listener for ${cardId} -> ${methodName}`);
+    const card = this.homey.flow.getConditionCard(cardId);
+    if (card) {
+      card.registerRunListener(async (args, state) => {
+        let result = false;
+
+        try {
+          const device = args?.device;
+          if (!device) {
+            throw new Error(`[Listener Error] No device selected for ${cardId}.`);
+          }
+          const method = device?.[methodName];
+          if (typeof method === 'function') {
+            result = await device[methodName](args, state);
+          } else {
+            throw new Error(`Method ${methodName} not found on device ${device.getName()}.`);
+          }
+        } catch (err) {
+          this.error(`[Listener Error] ${cardId}: Condition card `, err.message);
+        }
+        return result;
+      });
+    }
   }
 
   /**

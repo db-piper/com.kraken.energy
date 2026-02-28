@@ -11,17 +11,17 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.log('smartEnergyDevice:onInit - smartEnergyDevice Initialization Started');
 		await super.onInit();
 
-		this.defineCapability("device_attribute.name", { "title": { "en": "Device Name" } });
-		this.defineCapability("device_attribute.status", { "title": { "en": "Current Status" } });
-		this.defineCapability("item_count.planned_dispatches", { "title": { "en": "Future Dispatches" } });			//Integer
-		this.defineCapability("data_presence.in_dispatch", { "title": { "en": "Dispatching Now" } });						//Boolean
-		this.defineCapability("alarm_power", { "title": { "en": "In Dispatch" }, "uiComponent": null });				//Boolean
-		this.defineCapability("date_time.current_dispatch_start", { "title": { "en": "Planned Start" } });			//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("date_time.current_dispatch_end", { "title": { "en": "Planned Finish" } });				//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("duration.remaining_duration", { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
-		this.defineCapability("duration.next_dispatch_countdown", { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
-		this.defineCapability("date_time.next_dispatch_start", { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
-		this.defineCapability("item_count.dispatch_minutes", { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
+		this.defineCapability(this._capIds.DEVICE_NAME, { "title": { "en": "Device Name" } });
+		this.defineCapability(this._capIds.DEVICE_STATUS, { "title": { "en": "Current Status" } });
+		this.defineCapability(this._capIds.PLANNED_DISPATCHES, { "title": { "en": "Future Dispatches" } });			//Integer
+		this.defineCapability(this._capIds.IN_DISPATCH, { "title": { "en": "Dispatching Now" } });						//Boolean
+		this.defineCapability(this._capIds.ALARM_POWER, { "title": { "en": "In Dispatch" }, "uiComponent": null });				//Boolean
+		this.defineCapability(this._capIds.CURRENT_DISPATCH_START, { "title": { "en": "Planned Start" } });			//DD/mm HH:MM [dd/LL T]
+		this.defineCapability(this._capIds.CURRENT_DISPATCH_END, { "title": { "en": "Planned Finish" } });				//DD/mm HH:MM [dd/LL T]
+		this.defineCapability(this._capIds.REMAINING_DISPATCH_DURATION, { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
+		this.defineCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
+		this.defineCapability(this._capIds.NEXT_DISPATCH_START, { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
+		this.defineCapability(this._capIds.DISPATCH_MINUTES, { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -100,7 +100,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let nextDispatchStart = null;
 		let countDownStart = eventTime;
 		let countDown = null;
-		let dispatchMinutes = newDay ? 0 : this.getCapabilityValue("item_count.dispatch_minutes");
+		let dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
 
 		if (inDispatch) {
 			const startDateTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start));
@@ -118,17 +118,17 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 		}
 
-		this.updateCapabilityValue("device_attribute.name", deviceName);
-		this.updateCapabilityValue("device_attribute.status", deviceStatus);
-		this.updateCapabilityValue("item_count.planned_dispatches", dispatchCount);
-		this.updateCapabilityValue("date_time.current_dispatch_start", startTime);
-		this.updateCapabilityValue("date_time.current_dispatch_end", endTime);
-		this.updateCapabilityValue("duration.remaining_duration", duration);
-		this.updateCapabilityValue("date_time.next_dispatch_start", nextDispatchStart);
-		this.updateCapabilityValue("duration.next_dispatch_countdown", countDown);
-		this.updateCapabilityValue("data_presence.in_dispatch", inDispatch);
-		this.updateCapabilityValue("alarm_power", inDispatch);
-		this.updateCapabilityValue("item_count.dispatch_minutes", dispatchMinutes);
+		this.updateCapability(this._capIds.DEVICE_NAME, deviceName);
+		this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
+		this.updateCapability(this._capIds.PLANNED_DISPATCHES, dispatchCount);
+		this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
+		this.updateCapability(this._capIds.ALARM_POWER, inDispatch);
+		this.updateCapability(this._capIds.CURRENT_DISPATCH_START, startTime);
+		this.updateCapability(this._capIds.CURRENT_DISPATCH_END, endTime);
+		this.updateCapability(this._capIds.REMAINING_DISPATCH_DURATION, duration);
+		this.updateCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, countDown);
+		this.updateCapability(this._capIds.NEXT_DISPATCH_START, nextDispatchStart);
+		this.updateCapability(this._capIds.DISPATCH_MINUTES, dispatchMinutes);
 
 		return updates;
 	}

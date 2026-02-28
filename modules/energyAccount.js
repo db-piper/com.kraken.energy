@@ -18,33 +18,33 @@ module.exports = class energyAccount extends krakenDevice {
 
 		const hasExport = this.hasExport;
 
-		this.defineCapability("date_time.period_start", { "title": { "en": "This Period Start" } });
-		this.defineCapability("date_time.next_period_start", { "title": { "en": "Next Start Day" } });
-		this.defineCapability("period_day.period_day");
-		this.defineCapability("period_day.period_duration", { "title": { "en": "Period Duration" } });
-		this.defineCapability("measure_monetary.account_balance", { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.projected_bill", { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
-		this.defineCapability("meter_power.import", { "title": { "en": "Import Reading" }, "decimals": 3 });
-		this.defineCapability("meter_power.export", { "title": { "en": "Export Reading" }, "decimals": 3 }, [], hasExport);
-		this.defineCapability("meter_power.period_import", { "title": { "en": "Period Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.period_export", { "title": { "en": "Period Export" }, "decimals": 3 }, [], hasExport);
-		this.defineCapability("measure_monetary.period_import_value", { "title": { "en": "Import Cost" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.period_export_value", { "title": { "en": "Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
-		this.defineCapability("measure_monetary.period_standing_charge", { "title": { "en": "Standing Charge" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.period_bill", { "title": { "en": "Bill Total" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("meter_power.day_import", { "title": { "en": "Day Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.day_export", { "title": { "en": "Day Export" }, "decimals": 3 }, [], hasExport);
-		this.defineCapability("measure_monetary.day_import_value", { "title": { "en": "Day Import Cost" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.day_export_value", { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
-		this.defineCapability("meter_power.chunk_import", { "title": { "en": "Chunk Import" }, "decimals": 3 });
-		this.defineCapability("meter_power.chunk_export", { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
-		this.defineCapability("measure_monetary.chunk_import_value", { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
-		this.defineCapability("measure_monetary.chunk_export_value", { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
-		this.defineCapability("measure_power.import_power", { "title": { "en": "Import Power" } });
-		this.defineCapability("measure_power.export_power", { "title": { "en": "Export Power" } }, [], hasExport);
-		this.defineCapability("date_time.full_period_start", { "title": { "en": "Full Start Date" }, "uiComponent": null });
-		this.defineCapability("date_time.full_next_period", { "title": { "en": "Full Next Start" }, "uiComponent": null });
-		this.defineCapability("item_count.observed_days", { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
+		this.defineCapability(this._capIds.PERIOD_START_TEXT, { "title": { "en": "This Period Start" } });
+		this.defineCapability(this._capIds.PERIOD_NEXT_START_TEXT, { "title": { "en": "Next Start Day" } });
+		this.defineCapability(this._capIds.PERIOD_DAY_NUMBER, { "title": { "en": "Period Day Number" } });
+		this.defineCapability(this._capIds.PERIOD_DURATION, { "title": { "en": "Period Duration" } });
+		this.defineCapability(this._capIds.ACCOUNT_BALANCE, { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.PROJECTED_BILL, { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3 });
+		this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability(this._capIds.PERIOD_IMPORT_ENERGY, { "title": { "en": "Period Import" }, "decimals": 3 });
+		this.defineCapability(this._capIds.PERIOD_EXPORT_ENERGY, { "title": { "en": "Period Export" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability(this._capIds.PERIOD_IMPORT_VALUE, { "title": { "en": "Import Cost" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.PERIOD_EXPORT_VALUE, { "title": { "en": "Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability(this._capIds.PERIOD_STANDING_CHARGE, { "title": { "en": "Standing Charge" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.PERIOD_BILL, { "title": { "en": "Bill Total" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.DAY_IMPORT_ENERGY, { "title": { "en": "Day Import" }, "decimals": 3 });
+		this.defineCapability(this._capIds.DAY_EXPORT_ENERGY, { "title": { "en": "Day Export" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability(this._capIds.DAY_IMPORT_VALUE, { "title": { "en": "Day Import Cost" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.DAY_EXPORT_VALUE, { "title": { "en": "Day Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability(this._capIds.CHUNK_IMPORT_ENERGY, { "title": { "en": "Chunk Import" }, "decimals": 3 });
+		this.defineCapability(this._capIds.CHUNK_EXPORT_ENERGY, { "title": { "en": "Chunk Export" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability(this._capIds.CHUNK_IMPORT_VALUE, { "title": { "en": "Chunk Import Cost" }, "decimals": 2, "units": { "en": "£" } });
+		this.defineCapability(this._capIds.CHUNK_EXPORT_VALUE, { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
+		this.defineCapability(this._capIds.CURRENT_IMPORT_POWER, { "title": { "en": "Import Power" } });
+		this.defineCapability(this._capIds.CURRENT_EXPORT_POWER, { "title": { "en": "Export Power" } }, [], hasExport);
+		this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
+		this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
+		this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -111,7 +111,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {promise<void>}
 	 */
 	async migrateStore() {
-		await super.migrateStore
+		await super.migrateStore();
 		const keys = this.getStoreKeys();
 
 		if (!keys.includes("hasExport")) {
@@ -142,12 +142,12 @@ module.exports = class energyAccount extends krakenDevice {
 		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toISO(), startDay);
 		const periodLength = this.computePeriodLength(atTime, Number(startDay));
 
-		this.updateCapability("period_day.period_day", periodDay);
-		this.updateCapability("date_time.period_start", periodStartDate.toFormat("yyyy-LL-dd"));
-		this.updateCapability("date_time.full_period_start", periodStartDate.toISO());
-		this.updateCapability("date_time.next_period_start", nextStartDate.toFormat("yyyy-LL-dd"));
-		this.updateCapability("date_time.full_next_period", nextStartDate.toISO());
-		this.updateCapability("period_day.period_duration", periodLength);
+		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
+		this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability(this._capIds.PERIOD_START_DATETIME, periodStartDate.toISO());
+		this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextStartDate.toISO());
+		this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
 
 		const updates = await this.updateCapabilities(false);
 		return updates;
@@ -209,7 +209,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
 		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
-		const firstTime = (null === this.getCapabilityValue("meter_power.import"));
+		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
 
@@ -223,24 +223,24 @@ module.exports = class energyAccount extends krakenDevice {
 		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false, accountData);
 		const importTariffPresent = importPrices !== undefined;
 
-		const currentExport = 1000 * this.getCapabilityValue("meter_power.export");						//watts
-		const periodCurrentExport = 1000 * this.getCapabilityValue("meter_power.period_export");			//watts
-		const periodCurrentExportValue = this.getCapabilityValue("measure_monetary.period_export_value"); //pounds
-		const dayCurrentExport = 1000 * this.getCapabilityValue("meter_power.day_export");				//watts
-		const dayCurrentExportValue = this.getCapabilityValue("measure_monetary.day_export_value");		//pounds
-		const chunkCurrentExport = 1000 * this.getCapabilityValue("meter_power.chunk_export");			//watts
-		const chunkCurrentExportValue = this.getCapabilityValue("measure_monetary.chunk_export_value");	//pounds
+		const currentExport = 1000 * this.readCapabilityValue(this._capIds.EXPORT_READING);								//watts
+		const periodCurrentExport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_EXPORT_ENERGY);		//watts
+		const periodCurrentExportValue = this.readCapabilityValue(this._capIds.PERIOD_EXPORT_VALUE);			//pounds
+		const dayCurrentExport = 1000 * this.readCapabilityValue(this._capIds.DAY_EXPORT_ENERGY);					//watts
+		const dayCurrentExportValue = this.readCapabilityValue(this._capIds.DAY_EXPORT_VALUE);						//pounds
+		const chunkCurrentExport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_EXPORT_ENERGY);			//watts
+		const chunkCurrentExportValue = this.readCapabilityValue(this._capIds.CHUNK_EXPORT_VALUE);				//pounds
 
-		const currentImport = 1000 * this.getCapabilityValue("meter_power.import");						//watts
-		const periodCurrentImport = 1000 * this.getCapabilityValue("meter_power.period_import");			//watts
-		const periodCurrentImportValue = this.getCapabilityValue("measure_monetary.period_import_value");	//pounds
-		const dayCurrentImport = 1000 * this.getCapabilityValue("meter_power.day_import");				//watts
-		const dayCurrentImportValue = this.getCapabilityValue("measure_monetary.day_import_value");		//pounds
-		const chunkCurrentImport = 1000 * this.getCapabilityValue("meter_power.chunk_import");			//watts
-		const chunkCurrentImportValue = this.getCapabilityValue("measure_monetary.chunk_import_value");	//pounds
+		const currentImport = 1000 * this.readCapabilityValue(this._capIds.IMPORT_READING);								//watts
+		const periodCurrentImport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_IMPORT_ENERGY);		//watts
+		const periodCurrentImportValue = this.readCapabilityValue(this._capIds.PERIOD_IMPORT_VALUE);			//pounds
+		const dayCurrentImport = 1000 * this.readCapabilityValue(this._capIds.DAY_IMPORT_ENERGY);					//watts
+		const dayCurrentImportValue = this.readCapabilityValue(this._capIds.DAY_IMPORT_VALUE);						//pounds
+		const chunkCurrentImport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_IMPORT_ENERGY);			//watts
+		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
 
-		let currentPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.getCapabilityValue("date_time.full_period_start")));
-		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.getCapabilityValue("date_time.full_next_period")));
+		let currentPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME)));
+		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
 		const newChunk = [0, 30].includes(eventDateTime.minute);
 		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);
@@ -273,7 +273,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const totalDispatchMinutes = this.getTotalDispatchMinutes("item_count.dispatch_minutes");
 		const dispatchPricing = inDispatch && (totalDispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
-		let observedDays = firstTime ? 0 : this.getCapabilityValue("item_count.observed_days");
+		let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
 		observedDays += newDay ? 1 : 0;
 		this.homey.log(`energyAccount.processEvent: observedDays: ${observedDays}`);
 
@@ -286,34 +286,34 @@ module.exports = class energyAccount extends krakenDevice {
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
-				deltaExport = liveMeterReading.export - currentExport;										//watts
-				deltaExportValue = (deltaExport / 1000) * (exportPrices.unitRate / 100);					//pounds
-				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);					//watts
-				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);	//pounds
-				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);							//watts
-				dayUpdatedExportValue = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);			//pounds
-				dayExportStandingCharge = exportPrices.standingCharge / 100;								//pounds
-				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);						//watts
-				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);		//pounds
-				powerExport = deltaExport * 60;				//FREQ: 60 / pollinginterval					//watts
+				deltaExport = liveMeterReading.export - currentExport;																			//watts
+				deltaExportValue = (deltaExport / 1000) * (exportPrices.unitRate / 100);										//pounds
+				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watts
+				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);		//pounds
+				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watts
+				dayUpdatedExportValue = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);						//pounds
+				dayExportStandingCharge = exportPrices.standingCharge;																			//pence
+				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);											//watts
+				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);			//pounds
+				powerExport = deltaExport * 60;				//FREQ: 60 / pollinginterval													//watts
 			}
 
 			if (importTariffPresent) {
-				importPrice = dispatchPricing ? minPrice : importPrices.unitRate;							//Pence	
-				deltaImport = liveMeterReading.consumption - currentImport;									//watts
-				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);								//pounds
-				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);					//watts
-				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);	//pounds
-				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);
+				importPrice = dispatchPricing ? minPrice : importPrices.unitRate;														//Pence	
+				deltaImport = liveMeterReading.consumption - currentImport;																	//watts
+				deltaImportValue = (deltaImport / 1000) * (importPrice / 100);															//pounds
+				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);									//watts
+				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);		//pounds
+				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watts
 				this.homey.log(`energyAccount.processEvent: dayUpdatedImport: ${dayUpdatedImport} deltaImport: ${deltaImport}`);							//watts
-				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);			//pounds
-				dayImportStandingCharge = importPrices.standingCharge;										//pounds
-				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);						//watts
-				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);		//pounds
-				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 					//watts
+				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);						//pounds
+				dayImportStandingCharge = importPrices.standingCharge;																			//pence
+				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);											//watts
+				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);			//pounds
+				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 													//watts
 			}
 
-			const periodDay = this.getCapabilityValue("period_day.period_day");
+			const periodDay = this.readCapabilityValue(this._capIds.PERIOD_DAY_NUMBER);
 			const dailyStandingCharge = .01 * (dayExportStandingCharge + dayImportStandingCharge);
 			periodUpdatedStandingCharge = dailyStandingCharge * periodDay;
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
@@ -329,33 +329,33 @@ module.exports = class energyAccount extends krakenDevice {
 
 		}
 
-		this.updateCapability("period_day.period_day", periodDay);
-		this.updateCapability("period_day.period_duration", periodLength);
-		this.updateCapability("measure_monetary.account_balance", currentBalance);
-		this.updateCapability("measure_monetary.projected_bill", projectedBill);
-		this.updateCapability("date_time.period_start", currentPeriodStartDate.toFormat("yyyy-LL-dd"));
-		this.updateCapability("date_time.next_period_start", nextPeriodStartDate.toFormat("yyyy-LL-dd"));
-		this.updateCapability("meter_power.import", liveMeterReading.consumption / 1000);
-		this.updateCapability("meter_power.export", liveMeterReading.export / 1000);
-		this.updateCapability("meter_power.period_import", periodUpdatedImport / 1000);
-		this.updateCapability("meter_power.period_export", periodUpdatedExport / 1000);
-		this.updateCapability("measure_monetary.period_import_value", periodUpdatedImportValue);
-		this.updateCapability("measure_monetary.period_export_value", periodUpdatedExportValue);
-		this.updateCapability("measure_monetary.period_standing_charge", periodUpdatedStandingCharge);
-		this.updateCapability("measure_monetary.period_bill", billValue);
-		this.updateCapability("meter_power.day_import", dayUpdatedImport / 1000);
-		this.updateCapability("meter_power.day_export", dayUpdatedExport / 1000);
-		this.updateCapability("measure_monetary.day_import_value", dayUpdatedImportValue);
-		this.updateCapability("measure_monetary.day_export_value", dayUpdatedExportValue);
-		this.updateCapability("meter_power.chunk_import", chunkUpdatedImport / 1000);
-		this.updateCapability("meter_power.chunk_export", chunkUpdatedExport / 1000);
-		this.updateCapability("measure_power.import_power", powerImport);
-		this.updateCapability("measure_power.export_power", powerExport);
-		this.updateCapability("measure_monetary.chunk_import_value", chunkUpdatedImportValue);
-		this.updateCapability("measure_monetary.chunk_export_value", chunkUpdatedExportValue);
-		this.updateCapability("date_time.full_period_start", currentPeriodStartDate.toISO());
-		this.updateCapability("date_time.full_next_period", nextPeriodStartDate.toISO());
-		this.updateCapability("item_count.observed_days", observedDays);
+		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
+		this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
+		this.updateCapability(this._capIds.ACCOUNT_BALANCE, currentBalance);
+		this.updateCapability(this._capIds.PROJECTED_BILL, projectedBill);
+		this.updateCapability(this._capIds.PERIOD_START_TEXT, currentPeriodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextPeriodStartDate.toFormat("yyyy-LL-dd"));
+		this.updateCapability(this._capIds.IMPORT_READING, liveMeterReading.consumption / 1000);
+		this.updateCapability(this._capIds.EXPORT_READING, liveMeterReading.export / 1000);
+		this.updateCapability(this._capIds.PERIOD_IMPORT_ENERGY, periodUpdatedImport / 1000);
+		this.updateCapability(this._capIds.PERIOD_EXPORT_ENERGY, periodUpdatedExport / 1000);
+		this.updateCapability(this._capIds.PERIOD_IMPORT_VALUE, periodUpdatedImportValue);
+		this.updateCapability(this._capIds.PERIOD_EXPORT_VALUE, periodUpdatedExportValue);
+		this.updateCapability(this._capIds.PERIOD_STANDING_CHARGE, periodUpdatedStandingCharge);
+		this.updateCapability(this._capIds.PERIOD_BILL, billValue);
+		this.updateCapability(this._capIds.DAY_IMPORT_ENERGY, dayUpdatedImport / 1000);
+		this.updateCapability(this._capIds.DAY_EXPORT_ENERGY, dayUpdatedExport / 1000);
+		this.updateCapability(this._capIds.DAY_IMPORT_VALUE, dayUpdatedImportValue);
+		this.updateCapability(this._capIds.DAY_EXPORT_VALUE, dayUpdatedExportValue);
+		this.updateCapability(this._capIds.CHUNK_IMPORT_ENERGY, chunkUpdatedImport / 1000);
+		this.updateCapability(this._capIds.CHUNK_EXPORT_ENERGY, chunkUpdatedExport / 1000);
+		this.updateCapability(this._capIds.CURRENT_IMPORT_POWER, powerImport);
+		this.updateCapability(this._capIds.CURRENT_EXPORT_POWER, powerExport);
+		this.updateCapability(this._capIds.CHUNK_IMPORT_VALUE, chunkUpdatedImportValue);
+		this.updateCapability(this._capIds.CHUNK_EXPORT_VALUE, chunkUpdatedExportValue);
+		this.updateCapability(this._capIds.PERIOD_START_DATETIME, currentPeriodStartDate.toISO());
+		this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextPeriodStartDate.toISO());
+		this.updateCapability(this._capIds.OBSERVED_DAYS, observedDays);
 
 		return updates;
 	}

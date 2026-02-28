@@ -41,14 +41,14 @@ module.exports = class dataFetcher {
 
   /**
    * Return the GraphQL token expiry date-time as a date
-   * @returns {date}  the current GraphQL token expiry date-time
+   * @returns {DateTime | undefined}  the current GraphQL token expiry date-time
    */
   get tokenExpiry() {
+    let tokenExpiryDateTime = undefined;
     if (this._tokenExpiry !== undefined) {
-      return new Date(this._tokenExpiry);
-    } else {
-      return undefined;
+      tokenExpiryDateTime = DateTime.fromISO(this._tokenExpiry);
     }
+    return tokenExpiryDateTime;
   }
 
   /**
@@ -110,8 +110,8 @@ module.exports = class dataFetcher {
    */
   async getGraphQlApiToken(apiKey) {
     this.homey.log("dataFetcher.getGraphQlApiToken - starting");
-    if (this.tokenExpiry > Date.now() && this.graphQlApiToken !== undefined) {
-      this.homey.log(`dataFetcher.getGraphQlApiToken: Valid token; no fetch needed. Expiry: ${this.tokenExpiry.toISOString()}`);
+    if (this.tokenExpiry !== undefined && this.tokenExpiry > DateTime.now() && this.graphQlApiToken !== undefined) {
+      this.homey.log(`dataFetcher.getGraphQlApiToken: Valid token; no fetch needed. Expiry: ${this.tokenExpiry.toISO()}`);
       return true;
     } else {
       try {
@@ -162,7 +162,7 @@ module.exports = class dataFetcher {
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
-      let result = await response.json();
+      let result = JSON.parse(JSON.stringify(await response.json()));
 
       return result;
     }

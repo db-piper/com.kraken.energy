@@ -221,21 +221,21 @@ module.exports = class krakenAccountWrapper {
     let prices = undefined;
 
     if (tariff && "unitRates" in tariff) {
-      const targetMs = new Date(atTime).getTime();
-      const luxonNow = DateTime.fromISO(atTime, { zone: this._timeZone });
-      const tomorrowMs = luxonNow.plus({ days: 1 }).startOf('day').toMillis();
+      const target = DateTime.fromISO(atTime, { zone: this._timeZone });
+      const targetMs = target.toMillis();
+      const tomorrowMs = target.plus({ days: 1 }).startOf('day').toMillis();
 
-      const selectedRate = tariff.unitRates.find(r => {
-        const start = new Date(r.validFrom).getTime();
-        const end = new Date(r.validTo).getTime();
+      const selectedRate = tariff.unitRates.find(rate => {
+        const start = DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis();
+        const end = DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis();
         return start <= targetMs && end > targetMs;
       });
 
       if (selectedRate) {
-        const windowRates = tariff.unitRates.filter(r => new Date(r.validTo).getTime() <= tomorrowMs);
+        const windowRates = tariff.unitRates.filter(rate => DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis() <= tomorrowMs);
 
         if (windowRates.length > 0) {
-          const values = windowRates.map(r => r.value);
+          const values = windowRates.map(rate => rate.value);
           const minPrice = Math.min(...values);
           const maxPrice = Math.max(...values);
           const quartileStep = (maxPrice - minPrice) / 4 || 0; // Avoid division by zero
@@ -483,8 +483,8 @@ module.exports = class krakenAccountWrapper {
         .toMillis();
 
       const validRates = tariff.unitRates
-        .filter(r => new Date(r.validFrom).getTime() < boundaryMs)
-        .map(r => r.value);
+        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis() < boundaryMs)
+        .map(rate => rate.value);
 
       if (validRates.length > 0) {
         minimumPrice = Math.min(...validRates);

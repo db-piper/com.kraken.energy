@@ -3,8 +3,8 @@
 module.exports = {
   /**
    * Return the GraphQL query string for essential device pairing data
-   * @param {string} accountId 
-   * @returns {string} Stringified JSON
+   * @param   {string} accountId  The account number to be queried
+   * @returns {string}            Stringified JSON of the parameterized query
    */
   getPairingData: (accountId) => {
     return JSON.stringify({
@@ -41,8 +41,8 @@ module.exports = {
   },
   /**
    * Return the GraphQL query string for a full Octopus Account Information refresh
-   * @param   {string} accountId 
-   * @returns {string} Stringified JSON
+   * @param   {string} accountId  The account number to be queried
+   * @returns {string}            Stringified JSON of the parameterized query
    */
   getAccountData: (accountId) => {
     return JSON.stringify({
@@ -160,10 +160,11 @@ module.exports = {
   },
   /**
    * Generates a complex dispatch and telemetry query
-   * @param {string} meterId
-   * @param {Array<{label: string, id: string}>} devices - Array of {label, id}
-   * @param {string} startTime - ISO string
-   * @param {string} endTime - ISO string
+   * @param   {string}                              meterId          The meter ID to be queried
+   * @param   {Array<{label: string, id: string}>}  devices          Array of {label, id}
+   * @param   {string}                              startTime        ISO string
+   * @param   {string}                              endTime          ISO string
+   * @returns {string}                                               Stringified JSON of the parameterized query 
    */
   getHighFrequencyData: (meterId, devices, startTime, endTime) => {
     let variableDeclarations = '$meterId: String!, $startTime: DateTime, $endTime: DateTime, $grouping: TelemetryGrouping';
