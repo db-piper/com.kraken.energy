@@ -204,5 +204,29 @@ module.exports = {
       query: `query getHighFrequencyData(${variableDeclarations}) { ${queryBody} }`,
       variables: variableValues
     });
+  },
+
+  /**
+   * Return the query string to obtain the Kraken API Token
+   * @param   {string} apiKey  the API key to be used to obtain the Kraken API Token
+   * @returns {string} Stringified JSON representing the query
+   */
+  getKrakenTokenQuery(apiKey) {
+    let query = {
+      query: `mutation GetKrakenToken($apikey: String!) {
+          obtainKrakenToken(input: {APIKey: $apikey}) {
+            token
+            refreshToken
+            refreshExpiresIn
+            payload
+          }
+        }`,
+      variables: {
+        apikey: apiKey,
+      },
+      operationName: "GetKrakenToken"
+    }
+    return JSON.stringify(query, null, 2);
   }
-};
+
+}

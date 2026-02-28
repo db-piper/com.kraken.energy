@@ -1,6 +1,6 @@
 'use strict';
 
-const dataFetcher = require('./dataFetcher');
+//const dataFetcher = require('./dataFetcher');
 const { DateTime } = require('../bundles/luxon');
 const AccountIdSetting = "krakenAccountId";
 const ApiKeySetting = "krakenApiKey";

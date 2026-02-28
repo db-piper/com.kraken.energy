@@ -1,10 +1,11 @@
 'use strict';
 const homey = require("homey");
-const gQLQueries = require("./gQLQueries");
+const { DateTime } = require('../bundles/luxon');
+const Queries = require('./gQLQueries');
 
 module.exports = class dataFetcher {
   /**
-   * dataFetcher performs all {fetc} activity for REST and GraphQL queries. Current implementation assumes
+   * dataFetcher performs all {fetch} activity for REST and GraphQL queries. Current implementation assumes
    * octopus.energy account.
    */
 
@@ -79,29 +80,6 @@ module.exports = class dataFetcher {
     }
   }
 
-  /**
-   * Return the query string to obtain the Kraken API Token
-   * @param   {string} apiKey  the API key to be used to obtain the Kraken API Token
-   * @returns {string} Stringified JSON representing the query
-   */
-  getKrakenTokenQuery(apiKey) {
-    this.homey.log(`dataFetcher.getKrakenTokenQuery: starting`);
-    let query = {
-      query: `mutation GetKrakenToken($apikey: String!) {
-        obtainKrakenToken(input: {APIKey: $apikey}) {
-          token
-          refreshToken
-          refreshExpiresIn
-          payload
-        }
-      }`,
-      variables: {
-        apikey: apiKey,
-      },
-      operationName: "GetKrakenToken"
-    }
-    return JSON.stringify(query, null, 2);
-  }
 
   /**
    * Check the currency of the GraphQL API Token and refresh it if need be
@@ -116,7 +94,7 @@ module.exports = class dataFetcher {
     } else {
       try {
         this.homey.log("dataFetcher.getGraphQlApiToken: No valid token detected, about to run GetKrakenToken GQL query.");
-        const obtainKrakenTokenQuery = this.getKrakenTokenQuery(apiKey);
+        const obtainKrakenTokenQuery = Queries.getKrakenTokenQuery(apiKey);
         const result = await this.runGraphQlQuery(obtainKrakenTokenQuery, undefined);
         this.homey.log("dataFetcher.getGraphQlApiToken: Back from GetKrakenToken GQL query.");
         if (result !== undefined && !result.hasOwnProperty("errors")) {
@@ -191,52 +169,6 @@ module.exports = class dataFetcher {
     if (token !== undefined) {
       params.headers["Authorization"] = `Bearer ${token}`;
     }
-    return params;
-  }
-
-  /**
-   * Run a query using the Octopus Energy REST API
-   * @param {string}  url           the REST url for the query 
-   * @param {boolean} authorization the request must be run with basic authorization
-   * @returns {object}              JSON result of the query or undefined
-   */
-  async getDataUsingRest(url, authorization = true) {
-    this.homey.log("dataFetcher.getDataUsingRest: Starting");
-    const params = this.buildRestFetchParams(authorization);
-    try {
-      const response = await fetch(url, params);
-      this.homey.log(`Status code: ${response.status}`);
-      if (response.ok) {
-        let restJSON = response.json();
-        this.homey.log("dataFetcher.getDataUsingRest: About to return restJSON:");
-        return restJSON;
-      } else {
-        this.homey.log("dataFetcher.getDataUsingRest: About to return UNDEFINED");
-        return undefined;
-      }
-    } catch (err) {
-      this.homey.log("dataFetcher.getDataUsingRest: error block");
-      this.homey.log(err.message);
-      return undefined;
-    }
-  }
-
-  /**
-  * Build the parameters object for fetch using REST 
-  * @param    {boolean} authorization query requires an Authorization string
-  * @returns  {object}                query parameters name-value pairs object
-  */
-  buildRestFetchParams(authorization) {
-    const params = {
-      "method": 'GET',
-    };
-
-    if (authorization) {
-      params.headers = {
-        "Authorization": "Basic " + Utilities.base64Encode(this.apiKey + ":"),
-      }
-    }
-
     return params;
   }
 
