@@ -1,6 +1,7 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
+const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
 
 module.exports = class smartEnergyDevice extends krakenDevice {
 
@@ -60,7 +61,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	async setDeviceAvailability(accountData) {
 		let available = super.setDeviceAvailability(accountData);
 		const deviceId = this.getStoreValue("deviceId");
-		const deviceData = this.accountWrapper.getDevice(deviceId, accountData);
+		//const wrapper = new krakenAccountWrapper(this.driver);
+		const deviceData = this.wrapper.getDevice(deviceId, accountData);
 		if (!deviceData) {
 			await this.setUnavailable("bad device; please delete.");
 			available = false;
@@ -81,17 +83,18 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const eventTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
+		//const wrapper = new krakenAccountWrapper(this.driver);
+		const eventTime = this.wrapper.getLocalDateTime(new Date(atTime));
 		const deviceId = this.getStoreValue("deviceId");
-		const deviceKey = this.accountWrapper.hashDeviceId(deviceId);
-		const deviceData = this.accountWrapper.getDevice(deviceId, accountData);
+		const deviceKey = this.wrapper.hashDeviceId(deviceId);
+		const deviceData = this.wrapper.getDevice(deviceId, accountData);
 		const deviceName = deviceData.name;
-		const deviceStatus = this.accountWrapper.translateDeviceStatus(deviceData.status.currentState);
+		const deviceStatus = this.wrapper.translateDeviceStatus(deviceData.status.currentState);
 		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
-		const futureDispatches = this.accountWrapper.futureDispatches(atTime, deviceDispatches);
+		const futureDispatches = this.wrapper.futureDispatches(atTime, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
-		const currentDispatch = this.accountWrapper.currentPlannedDispatch(atTime, deviceDispatches);   //dispatch or undefined
-		const nextDispatch = this.accountWrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
+		const currentDispatch = this.wrapper.currentPlannedDispatch(atTime, deviceDispatches);   //dispatch or undefined
+		const nextDispatch = this.wrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
 		const inDispatch = currentDispatch !== undefined;                                               //receiving reduced price domestic energy
 
 		let startTime = null;
@@ -103,9 +106,9 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
 
 		if (inDispatch) {
-			const startDateTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.start));
+			const startDateTime = this.wrapper.getLocalDateTime(new Date(currentDispatch.start));
 			startTime = startDateTime.toFormat("dd/LL T");
-			const endDateTime = this.accountWrapper.getLocalDateTime(new Date(currentDispatch.end));
+			const endDateTime = this.wrapper.getLocalDateTime(new Date(currentDispatch.end));
 			endTime = endDateTime.toFormat("dd/LL T");
 			countDownStart = endDateTime;
 			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
@@ -113,7 +116,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		}
 
 		if (dispatchCount > 0) {
-			const nextStartDateTime = this.accountWrapper.getLocalDateTime(new Date(nextDispatch.start));
+			const nextStartDateTime = this.wrapper.getLocalDateTime(new Date(nextDispatch.start));
 			nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 		}

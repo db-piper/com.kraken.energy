@@ -10,9 +10,7 @@ module.exports = class managerEvent {
    */
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
-    //this._accountWrapper = new krakenAccountWrapper(driver);
     this._driver = driver;
-    //this._interval = undefined;
     this._period = 60000;  //FREQ
     this._targetSecond = 15;
   }
@@ -50,21 +48,14 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
 
     // Pass the token into your wrapper
-    let accountData = await this.accountWrapper.accessAccountGraphQL(token);
+    const wrapper = new krakenAccountWrapper(this.driver);
+    let accountData = await wrapper.accessAccountGraphQL(token);
 
     if (accountData) {
       return await this.executeEventOnDevices(atTime, accountData);
     } else {
       throw new Error('Unable to access account data');
     }
-  }
-
-  /**
-   * Return the krakenAccountWrapper instance
-   * @returns   {krakenAccountWrapper}    Account wrapper instance
-   */
-  get accountWrapper() {
-    return this._driver.accountWrapper;
   }
 
   /**
@@ -75,41 +66,14 @@ module.exports = class managerEvent {
     return this._driver;
   }
 
-  // /**
-  //  * Persist the parameters that give access to the Kraken account's data
-  //  * @param {string} accountId    Kraken account Id in the form A-9A999999 
-  //  * @param {string} apiKey       Kraken account specific API key 32 alpha numeric characters starting sk_live_...          
-  //  */
-  // setAccessParameters(accountId, apiKey) {
-  //   this._accountWrapper.setAccessParameters(accountId, apiKey);
-  // }
-
-  // /**
-  //  * Retrieve the parameters that give access to the Kraken account's data
-  //  * @returns {object}    With fields accountId and apiKey
-  //  */
-  // getAccessParameters() {
-  //   return this._accountWrapper.accessParameters;
-  // }
-
   /**
    * Retrieve the device definitions from the octopus account data
-   * @returns {object - JSON}   Structure containing the device definitions for Homey
+   * @returns {Promise<object - JSON>}   Structure containing the device definitions for Homey
    */
   async getOctopusDeviceDefinitions() {
-    return await this._accountWrapper.getOctopusDeviceDefinitions();
+    const wrapper = new krakenAccountWrapper(this.driver);
+    return await wrapper.getOctopusDeviceDefinitions();
   }
-
-  // /**
-  //  * Test the specified access parameters to ensure they give access to the account data
-  //  * @param   {string}  accountId The account ID to be tested in the form A-9A999999 
-  //  * @param   {string}  apiKey    The account specific API key 32 alpha numeric characters starting sk_live_...
-  //  * @returns {Promise<boolean>}  True iff account data retrieved
-  //  */
-  // async testAccessParameters(accountId, apiKey) {
-  //   const success = await this._accountWrapper.testAccessParameters(accountId, apiKey);
-  //   return success;
-  // }
 
   /**
    * homey.SetInterval callback function get data from Kraken and update devices from data
@@ -148,16 +112,18 @@ module.exports = class managerEvent {
 
   /**
    * Loop over devices, executing the event
-   * @param {string}            atTime      string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm" 
+   * @param   {string}            atTime      string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm" 
    * @param   {object}            accountData kraken account data
-   * @returns {promise<boolean[]>}          Booleans indicating for each device whether it has been updated by the event
+   * @returns {promise<boolean>}              Booleans indicating whether any device has been updated by the event
    */
   async executeEventOnDevices(atTime, accountData) {
-    let updates = [];
-    const liveMeterId = this.accountWrapper.getLiveMeterId(accountData);
+    let updates = false;
+    const wrapper = new krakenAccountWrapper(this.driver);
+    const liveMeterId = wrapper.getLiveMeterId(accountData);
     //this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 
-    const meterFetchPromise = this.accountWrapper.getLiveMeterData(atTime, liveMeterId, accountData);
+    const deviceIds = wrapper.getDeviceIds(accountData);
+    const meterFetchPromise = wrapper.getLiveMeterData(atTime, liveMeterId, deviceIds);
     const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
@@ -185,8 +151,15 @@ module.exports = class managerEvent {
       dispatches = null;
 
       this.driver.log(`managerEvent.executeEventOnDevices: start commit capabilities`);
-      const deviceCommitPromises = this.driver.getDevices().map(device => device.commitCapabilities());
-      updates = await Promise.all(deviceCommitPromises);
+      const allUpdatePromises = this.driver.getDevices().flatMap(device => {
+        return device.updateCapabilities();
+      });
+
+      // Single synchronization point for the entire app
+      const results = await Promise.all(allUpdatePromises);
+
+      // 'updates' will be true if any single promise in the lake returned true
+      updates = results.includes(true);
       this.driver.log(`managerEvent.executeEventOnDevices: end commit capabilities`);
 
       await this.logMemoryToInsights();
@@ -213,28 +186,56 @@ module.exports = class managerEvent {
 
   async logMemoryToInsights() {
     try {
-      // Talk directly to the JS engine to avoid the uv_resident_set_memory error
-      const heapStats = require('v8').getHeapStatistics();
-      const memoryKB = heapStats.used_heap_size / 1024;
+      const v8 = require('v8');
+      const heapStats = v8.getHeapStatistics();
 
-      let myLog;
-      try {
-        myLog = await this.driver.homey.insights.getLog('memory_rss');
-      } catch (e) {
-        myLog = await this.driver.homey.insights.createLog('memory_rss', {
-          title: { en: 'App Memory Usage' },
-          type: 'number',
-          units: 'KB',
-          decimals: 1
-        });
+      // 1. Reconstruct Footprint from V8-only stats
+      // total_heap_size = Memory V8 has currently grabbed from the OS
+      // external_memory = Buffers (Kraken strings) living outside the JS heap
+      const heapTotal = heapStats.total_heap_size || 0;
+      const external = heapStats.external_memory || 0;
+      const heapUsed = heapStats.used_heap_size || 0;
+
+      const footprintKB = Math.round(((heapTotal + external) / 1024) * 10) / 10;
+      const externalKB = Math.round((external / 1024) * 10) / 10;
+      const heapUsedKB = Math.round((heapUsed / 1024) * 10) / 10;
+
+      // 2. Update the High Water Mark
+      if (footprintKB > (this.driver.maxPssPeak || 0)) {
+        this.driver.maxPssPeak = footprintKB;
       }
 
-      await myLog.createEntry(memoryKB);
-      this.driver.homey.log(`managerEvent.logMemoryToInsights: Insight Recorded: ${memoryKB.toFixed(1)} KB`);
+      // 3. Log to Insights
+      await this.logValue('memory_rss', footprintKB, 'App Footprint (V8 Total)');
+      await this.logValue('mem_external', externalKB, 'External/Buffer Memory');
+      await this.logValue('mem_rss_peak', this.driver.maxPssPeak, 'Peak Memory Footprint');
+
+      this.driver.log(`managerEvent.logMemoryToInsights: Footprint: ${footprintKB}KB | Heap: ${heapUsedKB}KB | Ext: ${externalKB}KB`);
+
     } catch (err) {
-      if (this.driver && this.driver.homey) {
-        this.driver.homey.error(`managerEvent.logMemoryToInsights: Insight Error: ${err.message}`);
-      }
+      this.driver.log('managerEvent.logMemoryToInsights: Error:', err.message);
     }
+  }
+
+  /**
+   * Ensures the log exists and logs the value
+   * @param   {string}  id      The log ID
+   * @param   {number}  value   The value to log
+   * @param   {string}  title   The log title
+   * @returns {Promise<void>}
+   */
+  async logValue(id, value, title) {
+    let log;
+    try {
+      log = await this.driver.homey.insights.getLog(id);
+    } catch (e) {
+      log = await this.driver.homey.insights.createLog(id, {
+        title: { en: title },
+        type: 'number',
+        units: 'KB',
+        decimals: 1
+      });
+    }
+    return log.createEntry(value);
   }
 }

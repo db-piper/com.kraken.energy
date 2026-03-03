@@ -5,7 +5,7 @@ const productTariff = require('../../modules/productTariff');
 const energyAccount = require('../../modules/energyAccount');
 const managerEvent = require('../../modules/managerEvent');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
-const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
+const dataFetcher = require('../../modules/dataFetcher');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -14,7 +14,7 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async onInit() {
     this.log('krakenDriver.onInit: Driver Initialization Started');
-    this._accountWrapper = new krakenAccountWrapper(this);
+    this._maxPssPeak = 0;
     this.log(`krakenDriver.onInit: About to check if devices exist`);
     if (this.getDevices().length > 0) {
       try {
@@ -57,8 +57,8 @@ module.exports = class krakenDriver extends Homey.Driver {
    * @param {PairSession} session   The session using this driver
    */
   async onPair(session) {
-    let account = "";
-    let apiKey = "";
+    // let account = "";
+    // let apiKey = "";
 
     /**
      * Set a handler for the login event
@@ -76,7 +76,8 @@ module.exports = class krakenDriver extends Homey.Driver {
      */
     session.setHandler("list_devices", async () => {
       this.log("krakenDriver.onPair.setHandler(list_devices) - starting");
-      const deviceDefinitions = await this._managerEvent.getOctopusDeviceDefinitions();
+      const deviceDefinitions = await this.eventer.getOctopusDeviceDefinitions();
+      this.log(`krakenDriver.onPair.setHandler(list_devices) - returning ${deviceDefinitions.length} device definitions`);
       return deviceDefinitions;
     });
   }
@@ -87,8 +88,8 @@ module.exports = class krakenDriver extends Homey.Driver {
    * @param {Device}      device    The device being repaired
    */
   async onRepair(session, device) {
-    let account = "";
-    let apiKey = "";
+    // let account = "";
+    // let apiKey = "";
 
     /**
      * Set a handler for the login event
@@ -110,16 +111,20 @@ module.exports = class krakenDriver extends Homey.Driver {
     this.stopEventPoller();
   }
 
+  get eventer() {
+    return new managerEvent(this);
+  }
+
   /**
    * The Heartbeat: The actual task performed every minute.
    */
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
     try {
-      const token = await this.homey.app.getValidToken();
+      const fetcher = new dataFetcher(this.homey);
+      const token = await fetcher.getApiToken();
       if (!token) throw new Error('Token acquisition failed');
-      const eventer = new managerEvent(this);
-      await eventer.executeEvent(token);
+      await this.eventer.executeEvent(token);
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.stack}`);
@@ -128,12 +133,19 @@ module.exports = class krakenDriver extends Homey.Driver {
     this.log(`krakenDriver.onHeartbeat: Tick done at ${new Date().toISOString()}`);
   }
 
+  /**
+   * Update the max RSS peak if it's greater than the current max
+   * @param {number} rss The RSS value to update 
+   */
+  set maxPssPeak(rss) {
+    this._maxPssPeak = Math.max(this._maxPssPeak, rss);
+  }
 
   /**
-   * Return the account wrapper instance
+   * Return the max RSS peak
    */
-  get accountWrapper() {
-    return this._accountWrapper;
+  get maxPssPeak() {
+    return this._maxPssPeak;
   }
 
   /**
@@ -144,11 +156,13 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async sessionLoginHandler(account, apiKey) {
     this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
+    const fetcher = new dataFetcher(this.homey);
+    const token = await fetcher.getApiToken(apiKey);
     let success = false;
-    const token = await this.homey.app.getValidToken(apiKey);
     if (token) {
       this.log(`krakenDriver.sessionLoginHandler: Token acquired calling app.setValidAccount`);
-      success = await this.homey.app.setValidAccount(account, token);
+      success = await fetcher.setValidAccount(account, token);
+      //success = await this.homey.app.setValidAccount(account, token);
       this.log(`krakenDriver.sessionLoginHandler: app.setValidAccount returned success: ${success}`);
       if (success) {
         this.startEventPoller();
@@ -168,12 +182,11 @@ module.exports = class krakenDriver extends Homey.Driver {
     this.stopEventPoller();
 
     if (this.getDevices().length > 0) {
-      const scheduler = new managerEvent(this);
       const heartbeatTask = async () => {
         await this.onHeartbeat();
       };
       this.log('krakenDriver.runEventPoller: Starting fresh 60s interval.');
-      this._interval = scheduler.setInterval(this.homey, 60000, heartbeatTask, (newId) => {   //FREQ
+      this._interval = this.eventer.setInterval(this.homey, 60000, heartbeatTask, (newId) => {   //FREQ
         this._interval = newId; // The Driver manages its own property
         this.log('krakenDriver.runEventPoller: Poller transitioned from Wait to Loop.');
       });
@@ -194,8 +207,6 @@ module.exports = class krakenDriver extends Homey.Driver {
       this.log('krakenDriver: Poller stopped.');
     }
   }
-
-
 
   /**
    * Returns devices sorted by a custom priority list

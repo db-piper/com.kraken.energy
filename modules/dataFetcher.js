@@ -2,10 +2,11 @@
 const homey = require("homey");
 const { DateTime } = require('../bundles/luxon');
 const Queries = require('./gQLQueries');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting } = require('./constants');
 
 module.exports = class dataFetcher {
   /**
-   * dataFetcher performs all {fetch} activity for REST and GraphQL queries. Current implementation assumes
+   * dataFetcher performs all {fetch} activity for GraphQL queries. Current implementation assumes
    * octopus.energy account.
    */
 
@@ -20,8 +21,6 @@ module.exports = class dataFetcher {
     this._graphQlPath = '/v1/graphql/';
     this._hourMilliSeconds = 60 * 60 * 1000;
     this._dayMilliSeconds = 24 * this._hourMilliSeconds;
-    this._tokenExpiry = undefined
-    this._graphQlApiToken = undefined;
   }
 
   /**
@@ -33,24 +32,53 @@ module.exports = class dataFetcher {
   }
 
   /**
-   * Return the GraphQL API token value
-   * @returns {string} the current GraphQL API token
+   * Get a valid GQL token
+   * @customTag                 sideeffects               Updates homey settings {TokenSetting} and {TokenExpirySetting} 
+   * @param   {string|null}     [userSpecifiedKey=null]   Key specified by the user so that it can be tested for validity
+   * @returns {promise<string>}                           Valid GQL token
    */
-  get graphQlApiToken() {
-    return this._graphQlApiToken;
+  async getApiToken(userSpecifiedKey = null) {
+
+    const activeApiKey = userSpecifiedKey || this.apiKey;
+
+    if (!activeApiKey) {
+      this.homey.log('dataFetcher.getApiToken: No API Key available in settings or arguments.');
+      return undefined;
+    }
+
+    let token = this.homey.settings.get(TokenSetting);
+    let expiry = this.homey.settings.get(TokenExpirySetting);
+
+    const isValid = token && expiry && Date.now() < expiry;
+
+    if (!isValid) {
+      this.homey.log('dataFetcher.get apiToken: GQL token absent or expired, requestng new token');
+
+      ({ token, expiry } = await this.login(activeApiKey));
+
+      if (!token) {
+        throw new Error(`API key does not grant access - use Homey's "Repair" option to provide a valid API key`);
+      }
+
+      this.homey.settings.set(TokenSetting, token);
+      this.homey.settings.set(TokenExpirySetting, expiry);
+
+      if (userSpecifiedKey) {
+        this.homey.settings.set(ApiKeySetting, userSpecifiedKey);
+      }
+    }
+
+    return token;
   }
 
   /**
-   * Return the GraphQL token expiry date-time as a date
-   * @returns {DateTime | undefined}  the current GraphQL token expiry date-time
+   * Return the current API key
+   * @returns {string}  API key
    */
-  get tokenExpiry() {
-    let tokenExpiryDateTime = undefined;
-    if (this._tokenExpiry !== undefined) {
-      tokenExpiryDateTime = DateTime.fromISO(this._tokenExpiry);
-    }
-    return tokenExpiryDateTime;
+  get apiKey() {
+    return this.homey.settings.get(ApiKeySetting);
   }
+
 
   /**
    * Make a query on the Octopus GraphQL API
@@ -59,10 +87,11 @@ module.exports = class dataFetcher {
    */
   async getDataUsingGraphQL(queryString, apiKey) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
-    let validToken = await this.getGraphQlApiToken(apiKey);
+    //let validToken = await this.getGraphQlApiToken(apiKey);
+    let validToken = await this.getApiToken(apiKey);
     if (validToken) {
       try {
-        let result = await this.runGraphQlQuery(queryString, this.graphQlApiToken);
+        let result = await this.runGraphQlQuery(queryString, validToken);
         if ((result !== undefined) && ("data" in result)) {
           return result;
         } else {
@@ -77,43 +106,6 @@ module.exports = class dataFetcher {
       }
     } else {
       return undefined;
-    }
-  }
-
-
-  /**
-   * Check the currency of the GraphQL API Token and refresh it if need be
-   * @param   {string}  apiKey  the API key to be used to obtain the Kraken API Token
-   * @returns {boolean}         TRUE if a valid GraphQL API Token is available, FALSE otherwise
-   */
-  async getGraphQlApiToken(apiKey) {
-    this.homey.log("dataFetcher.getGraphQlApiToken - starting");
-    if (this.tokenExpiry !== undefined && this.tokenExpiry > DateTime.now() && this.graphQlApiToken !== undefined) {
-      this.homey.log(`dataFetcher.getGraphQlApiToken: Valid token; no fetch needed. Expiry: ${this.tokenExpiry.toISO()}`);
-      return true;
-    } else {
-      try {
-        this.homey.log("dataFetcher.getGraphQlApiToken: No valid token detected, about to run GetKrakenToken GQL query.");
-        const obtainKrakenTokenQuery = Queries.getKrakenTokenQuery(apiKey);
-        const result = await this.runGraphQlQuery(obtainKrakenTokenQuery, undefined);
-        this.homey.log("dataFetcher.getGraphQlApiToken: Back from GetKrakenToken GQL query.");
-        if (result !== undefined && !result.hasOwnProperty("errors")) {
-          let graphQlApiToken = result.data.obtainKrakenToken.token;
-          let tokenExpiry = new Date(1000 * (result.data.obtainKrakenToken.payload.exp - 60));
-          this._graphQlApiToken = graphQlApiToken;
-          this._tokenExpiry = tokenExpiry.toISOString();
-          this.homey.log(`dataFetcher.getGraphQlApiToken: QL API Token Expiry: ${this._tokenExpiry}`);
-          return true;
-        } else {
-          this.homey.log("dataFetcher.getGraphQlAPIToken: errors property found, throwing error");
-          throw new Error(`Unable to get the GraphQL API Token.`);
-        }
-      }
-      catch (err) {
-        this.homey.log("dataFetcher.getGraphQlApiToken: Catch block.");
-        this.homey.log(err);
-        return false;
-      }
     }
   }
 
@@ -141,9 +133,19 @@ module.exports = class dataFetcher {
 
       let rawjson = await response.json();
       const result = JSON.parse(JSON.stringify(rawjson));
+      //const result = structuredClone(rawjson);
 
+      response = null;
       rawjson = null;
       fetchParams = null;
+
+      if (typeof global.gc === 'function') {
+        this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
+        global.gc();
+      } else {
+        // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
+        this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
+      }
 
       return result;
     }
@@ -176,22 +178,6 @@ module.exports = class dataFetcher {
   }
 
   /**
-   * Test the validity of the apiKey by trying to get an access token
-   * @param   {string} apiKey     apiKey to be tested 
-   * @returns {any}               access token string or undefined 
-   */
-  async testApiKey(apiKey) {
-    this.homey.log(`dataFetcher.testApiKey: Starting: apiKey: ${apiKey} : query:`);
-    const query = Queries.getKrakenTokenQuery(apiKey);
-    const result = await this.runGraphQlQuery(query, undefined);
-    let token = undefined;
-    if (result.data.obtainKrakenToken !== null) {
-      token = result.data.obtainKrakenToken.token;
-    }
-    return token;
-  }
-
-  /**
    * Get a new API token and expiry data
    * @param   {string}                                                       apiKey   apiKey to generate a token for
    * @returns {Promise<{token: string|undefined, expiry: string|undefined}>}          new access token and expiry date  
@@ -204,10 +190,32 @@ module.exports = class dataFetcher {
     let expiry = undefined;
     if (result?.data?.obtainKrakenToken) {
       token = result.data.obtainKrakenToken.token;
-      expiry = new Date(1000 * (result.data.obtainKrakenToken.payload.exp - 60)).toISOString();
+      expiry = 1000 * (result.data.obtainKrakenToken.payload.exp - 60);
     }
     return { token, expiry };
   }
+
+  /**
+   * Proves an Account ID can be accessed by the token derived from the API key and persists it.
+   * @param   {string} accountId The ID to validate and store.
+   * @param   {string} token     The valid JWT to use for the check.
+   * @returns {Promise<boolean>}
+   */
+  async setValidAccount(accountId, token) {
+    this.homey.log(`dataFetcher.setValidAccount: Validating account ${accountId}...`);
+    //const fetcher = new dataFetcher(this.homey);
+    const isValid = await this.verifyAccountId(Queries.getPairingData(accountId), token);
+    this.homey.log(`dataFetcher.setValidAccount: verifyAccountId returned ${isValid}`);
+
+    if (isValid) {
+      this.homey.settings.set(AccountIdSetting, accountId);
+      this.homey.log('dataFetcher.setValidAccount: Account ID verified and saved.');
+      return true;
+    }
+
+    return false;
+  }
+
 
   /**
    * Verify that the specified account ID can be accessed by the specified token

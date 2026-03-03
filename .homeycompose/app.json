@@ -38,6 +38,24 @@
       "units": "KB",
       "decimals": 1,
       "chartType": "line"
+    },
+    {
+      "id": "mem_rss_peak",
+      "title": {
+        "en": "Peak RSS Memory"
+      },
+      "type": "number",
+      "units": "KB",
+      "decimals": 1
+    },
+    {
+      "id": "mem_external",
+      "title": {
+        "en": "External Memory"
+      },
+      "type": "number",
+      "units": "KB",
+      "decimals": 1
     }
   ],
   "permissions": [],

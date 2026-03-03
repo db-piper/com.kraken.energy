@@ -1,6 +1,7 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
+const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
 
 module.exports = class energyAccount extends krakenDevice {
 
@@ -45,8 +46,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
 		this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
 		this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
-		this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals']);
-		this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals'], hasExport);
+		this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units']);
+		this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units'], hasExport);
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
@@ -162,7 +163,8 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+		//const wrapper = new krakenAccountWrapper(this.driver);
+		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
 		this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
@@ -176,7 +178,8 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {DateTime}                    The start date of the period
 	 */
 	computePeriodStartDate(atTime, periodStartDay) {
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+		//const wrapper = new krakenAccountWrapper(this.driver);
+		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
 			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :
@@ -210,7 +213,8 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const eventDateTime = this.accountWrapper.getLocalDateTime(new Date(atTime));
+		//const wrapper = new krakenAccountWrapper(this.driver);
+		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
@@ -218,11 +222,11 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, false, accountData);							// Pence
-		const currentBalance = this.accountWrapper.getCurrentBalance(accountData);
-		const exportPrices = this.accountWrapper.getTariffDirectionPrices(atTime, true, accountData);
+		const minPrice = this.wrapper.minimumPriceOnDate(atTime, false, accountData);							// Pence
+		const currentBalance = this.wrapper.getCurrentBalance(accountData);
+		const exportPrices = this.wrapper.getTariffDirectionPrices(atTime, true, accountData);
 		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = this.accountWrapper.getTariffDirectionPrices(atTime, false, accountData);
+		const importPrices = this.wrapper.getTariffDirectionPrices(atTime, false, accountData);
 		const importTariffPresent = importPrices !== undefined;
 
 		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);
@@ -245,8 +249,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
 		const priorImportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_IMPORT_PRICE_PAID);			//pounds
 
-		let currentPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME)));
-		let nextPeriodStartDate = this.accountWrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
+		let currentPeriodStartDate = this.wrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME)));
+		let nextPeriodStartDate = this.wrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
 		const newChunk = [0, 30].includes(eventDateTime.minute);
 		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);

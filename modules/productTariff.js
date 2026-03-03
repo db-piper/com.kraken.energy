@@ -1,6 +1,7 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
+const krakenAccountWrapper = require("./krakenAccountWrapper");
 
 module.exports = class productTariff extends krakenDevice {
 
@@ -154,13 +155,14 @@ module.exports = class productTariff extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
+		//const wrapper = new krakenAccountWrapper(this.driver);
 		const direction = this.isExport;
-		const isDispatchable = this.accountWrapper.getDeviceIds(accountData).length > 0;
+		const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
 		const eventTime = new Date(atTime);
-		const tariff = this.accountWrapper.getTariffDirection(direction, accountData);
-		const tariffPrices = this.accountWrapper.getTariffDirectionPrices(atTime, direction, accountData);
+		const tariff = this.wrapper.getTariffDirection(direction, accountData);
+		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTime, direction, accountData);
 		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
-		const nextTariffPrices = this.accountWrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
+		const nextTariffPrices = this.wrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
 		const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
@@ -174,15 +176,15 @@ module.exports = class productTariff extends krakenDevice {
 		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);											//£
 		const productCode = tariff.productCode;
 		const tariffCode = tariff.tariffCode;
-		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%
-		const minPrice = this.accountWrapper.minimumPriceOnDate(atTime, direction, accountData);
+		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%		
+		const minPrice = this.wrapper.minimumPriceOnDate(atTime, direction, accountData);
 		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 		//const totalDispatchMinutes = this.getTotalDispatchMinutes();
 		const percentDispatchLimit = 100 * this.getTotalDispatchMinutes() / this.getSettings().dispatchMinutesLimit;
 		const tariffPrice = .01 * tariffPrices.unitRate;
 		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
-		this.homey.log(`productTariff.processEvent: prices: ${JSON.stringify(tariffPrices)} tariffPrice: ${tariffPrice} unitPriceTaxed: ${unitPriceTaxed}`);
+		//this.homey.log(`productTariff.processEvent: prices: ${JSON.stringify(tariffPrices)} tariffPrice: ${tariffPrice} unitPriceTaxed: ${unitPriceTaxed}`);
 		const standingChargeTaxed = .01 * tariff.standingCharge;																		//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
 		//The prior price paid is used to calculate the value of the energy consumed in the previous tick
@@ -192,16 +194,16 @@ module.exports = class productTariff extends krakenDevice {
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
 		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? 0 : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
-		const shortStart = this.accountWrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
+		const shortStart = this.wrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;
-		const shortEnd = this.accountWrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");			//ISO
+		const shortEnd = this.wrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");			//ISO
 		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;					//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
-		const nextDayPresent = this.accountWrapper.getTomorrowsPricesPresent(atTime, direction, accountData);			//Boolean
+		const nextDayPresent = this.wrapper.getTomorrowsPricesPresent(atTime, direction, accountData);			//Boolean
 		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;							//ISO
 		let shortNextEnd = null;
 		if (!nextTariffAbsent) {
-			shortNextEnd = this.accountWrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
+			shortNextEnd = this.wrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
 		}
 
 		this.updateCapability(this._capIds.PRODUCT_CODE, productCode);

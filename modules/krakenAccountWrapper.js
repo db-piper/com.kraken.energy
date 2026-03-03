@@ -1,9 +1,10 @@
 'use strict';
 
 const { DateTime } = require('../bundles/luxon');
-const AccountIdSetting = "krakenAccountId";
-const ApiKeySetting = "krakenApiKey";
+const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting } = require('./constants');
+
 
 module.exports = class krakenAccountWrapper {
   /**
@@ -16,9 +17,7 @@ module.exports = class krakenAccountWrapper {
    * @param {krakenDriver}   driver  managing the devices 
    */
   constructor(driver) {
-    driver.homey.log(`krakenAccountWrapper.constructor: Instantiating`);
     this._driver = driver;
-    this._dataFetcher = driver.homey.app.dataFetcher;
     this._valid_device_status_translations = {
       SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
       SMART_CONTROL_CAPABLE: `Device Capable`,
@@ -200,17 +199,6 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Indicate whether a tariff is halfHourly or simple
-   * @param 		{boolean} 		direction		True: export; False: import 
-   * @returns 	{boolean}									True: halfHourly tariff; False: simple tariff
-   */
-  isHalfHourly(direction) {
-    const tariff = this.getTariffDirection(direction);
-    const priceSlots = 'unitRates' in tariff;
-    return priceSlots;
-  }
-
-  /**
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
    * @param   {string}          atTime    ISO format timestamp string
    * @param   {object - JSON}   tariff    Tariff data structure
@@ -231,25 +219,39 @@ module.exports = class krakenAccountWrapper {
       });
 
       if (selectedRate) {
-        const windowRates = tariff.unitRates.filter(rate => DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis() <= tomorrowMs);
+        let minPrice = Infinity;
+        let maxPrice = -Infinity;
 
-        if (windowRates.length > 0) {
-          const values = windowRates.map(rate => rate.value);
-          const minPrice = Math.min(...values);
-          const maxPrice = Math.max(...values);
-          const quartileStep = (maxPrice - minPrice) / 4 || 0; // Avoid division by zero
+        // Optimized single-pass loop to find Min/Max for Today
+        for (const rate of tariff.unitRates) {
+          const rateEndMs = DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis();
 
-          prices = {
-            preVatUnitRate: selectedRate.preVatValue,
-            unitRate: selectedRate.value,
-            preVatStandingCharge: tariff.preVatStandingCharge,
-            standingCharge: tariff.standingCharge,
-            nextSlotStart: selectedRate.validTo,
-            thisSlotStart: selectedRate.validFrom,
-            quartile: Math.min(3, Math.floor((selectedRate.value - minPrice) / quartileStep)),
-            isHalfHourly: true
-          };
+          // Match original filter: only consider rates ending before or at start of tomorrow
+          if (rateEndMs <= tomorrowMs) {
+            if (rate.value < minPrice) minPrice = rate.value;
+            if (rate.value > maxPrice) maxPrice = rate.value;
+          }
         }
+
+        // Fallback: If no window rates found, use the selectedRate itself
+        if (minPrice === Infinity) {
+          minPrice = selectedRate.value;
+          maxPrice = selectedRate.value;
+        }
+
+        const quartileStep = (maxPrice - minPrice) / 4 || 0;
+
+        prices = {
+          preVatUnitRate: selectedRate.preVatValue,
+          unitRate: selectedRate.value,
+          preVatStandingCharge: tariff.preVatStandingCharge,
+          standingCharge: tariff.standingCharge,
+          nextSlotStart: selectedRate.validTo,
+          thisSlotStart: selectedRate.validFrom,
+          // Calculate quartile: 0 (cheapest) to 3 (most expensive)
+          quartile: Math.min(3, Math.floor((selectedRate.value - minPrice) / (quartileStep || 1))),
+          isHalfHourly: true
+        };
       }
     } else if (tariff) {
       const startTime = DateTime.fromISO(atTime, { zone: this._timeZone }).startOf('day');
@@ -299,7 +301,8 @@ module.exports = class krakenAccountWrapper {
    */
   async getPairingData(accountId) {
     const pairingQuery = this.pairingDataQuery(accountId);
-    const pairingData = await this._dataFetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
+    const fetcher = new dataFetcher(this._driver.homey);
+    const pairingData = await fetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
     return pairingData;
   }
 
@@ -328,26 +331,27 @@ module.exports = class krakenAccountWrapper {
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = this.accountDataQuery(this.accountId);
-    const accountData = await this._dataFetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
+    const fetcher = new dataFetcher(this._driver.homey);
+    const accountData = await fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-      // //TODO: REMOVE THIS GASH CODE
-      // accountData.data.devices = [
-      //   {
-      //     id: "00000000-000a-4000-8020-15ffff00d84d",
-      //     name: null,
-      //     status: {
-      //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
-      //     }
-      //   },
-      //   {
-      //     id: "00000000-0009-4000-8020-0000000181f6",
-      //     name: "TEST TEST TEST",
-      //     status: {
-      //       currentState: "SMART_CONTROL_IN_PROGRESS"
-      //     }
-      //   }
-      // ];
-      // //TODO: END GASH
+      //TODO: REMOVE THIS GASH CODE
+      accountData.data.devices = [
+        {
+          id: "00000000-000a-4000-8020-15ffff00d84d",
+          name: null,
+          status: {
+            currentState: "SMART_CONTROL_NOT_AVAILABLE"
+          }
+        },
+        {
+          id: "00000000-0009-4000-8020-0000000181f6",
+          name: "TEST TEST TEST",
+          status: {
+            currentState: "SMART_CONTROL_IN_PROGRESS"
+          }
+        }
+      ];
+      //TODO: END GASH
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
     } else {
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
@@ -368,26 +372,27 @@ module.exports = class krakenAccountWrapper {
     }
 
     const account = pairingData?.data?.account;
-    const devices = pairingData?.data?.devices || [];
+    // //TODO: INCLUDE THIS PRODUCTION CODE
+    //const devices = pairingData?.data?.devices || [];
 
-    // //TODO: REMOVE THIS GASH CODE
-    // devices = [
-    //   {
-    //     id: "00000000-000a-4000-8020-15ffff00d84d",
-    //     name: null,
-    //     status: {
-    //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
-    //     }
-    //   },
-    //   {
-    //     id: "00000000-0009-4000-8020-0000000181f6",
-    //     name: "TEST TEST TEST",
-    //     status: {
-    //       currentState: "SMART_CONTROL_IN_PROGRESS"
-    //     }
-    //   }
-    // ];
-    // //TODO: END GASH
+    //TODO: REMOVE THIS GASH CODE
+    const devices = [
+      {
+        id: "00000000-000a-4000-8020-15ffff00d84d",
+        name: null,
+        status: {
+          currentState: "SMART_CONTROL_NOT_AVAILABLE"
+        }
+      },
+      {
+        id: "00000000-0009-4000-8020-0000000181f6",
+        name: "TEST TEST TEST",
+        status: {
+          currentState: "SMART_CONTROL_IN_PROGRESS"
+        }
+      }
+    ];
+    //TODO: END GASH
 
     const validStatusCodes = Object.keys(this._valid_device_status_translations);
     const dispatchableDevices = devices.filter(device =>
@@ -499,74 +504,83 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return live meter data from the instantiated live meter device
-   * @returns {Promise<object>} reading JSON object representing the current data
+   * @param   {string}          atTime    Datetime of the current event
+   * @param   {string}          meterId   The meter ID of the device
+   * @param   {array<string>}   deviceIds Array of device IDs
+   * @returns {Promise<object>}           Reading JSON object representing the current data
    */
-  async getLiveMeterData(atTime, meterId, accountData) {
+  async getLiveMeterData(atTime, meterId, deviceIds) {
     //this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
-    const deviceIds = this.getDeviceIds(accountData);
-    const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
+    //const deviceIds = this.getDeviceIds(accountData);
+    let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
       reading: undefined,
       dispatches: {}
     };
-    const response = await this._dataFetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
+    const fetcher = new dataFetcher(this._driver.homey);
+    let response = await fetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
-        result.reading = readingArray[0];
+        result.reading = { ...readingArray[0] };
       }
-      // //TODO: REMOVE THIS GASH CODE
-      // let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
-      // let xDispatches = {
-      //   d00000000_0009_4000_8020_0000000181f6: [
-      //     {
-      //       end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 12, minute: 36 }).toISO(), //"2025-10-25T12:36:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
-      //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 18, minute: 15 }).toISO(), //"2025-10-25T19:30:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 19, minute: 45 }).toISO(), //"2025-10-25T17:45:00+00:00",
-      //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 19, minute: 10 }).toISO(), //"2025-10-25T19:30:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
-      //       energyAddedKwh: -70.3,
-      //       start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
-      //       type: "SMART"
-      //     }
-      //   ],
-      //   d00000000_000a_4000_8020_15ffff00d84d: null
-      // };
-      // response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
-      // //TODO: END GASH
+      //TODO: REMOVE THIS GASH CODE
+      let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
+      let xDispatches = {
+        d00000000_0009_4000_8020_0000000181f6: [
+          {
+            end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
+            energyAddedKwh: -11.618,
+            start: today.set({ hour: 12, minute: 36 }).toISO(), //"2025-10-25T12:36:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+            energyAddedKwh: -11.618,
+            start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
+            energyAddedKwh: -11.618,
+            start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
+            energyAddedKwh: -3.417,
+            start: today.set({ hour: 18, minute: 15 }).toISO(), //"2025-10-25T19:30:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.set({ hour: 19, minute: 45 }).toISO(), //"2025-10-25T17:45:00+00:00",
+            energyAddedKwh: -3.417,
+            start: today.set({ hour: 19, minute: 10 }).toISO(), //"2025-10-25T19:30:00+00:00",
+            type: "SMART"
+          },
+          {
+            end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
+            energyAddedKwh: -70.3,
+            start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
+            type: "SMART"
+          }
+        ],
+        d00000000_000a_4000_8020_15ffff00d84d: null
+      };
+      response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
+      //TODO: END GASH
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (Array.isArray(response.data[deviceKey])) {
-          result.dispatches[deviceKey] = response.data[deviceKey];
+          //result.dispatches[deviceKey] = response.data[deviceKey];
+          result.dispatches[deviceKey] = response.data[deviceKey].map(dispatch => ({ ...dispatch }));
         }
       }
     }
+
+    response = null;
+    meterQuery = null;
+
     return result;
   }
 

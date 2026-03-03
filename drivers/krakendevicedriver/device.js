@@ -25,7 +25,6 @@ module.exports = class krakenDevice extends Homey.Device {
 
 		this._requiredCapabilities = {};
 		this._updatedCapabilities = {};
-		this._accountWrapper = this.driver.accountWrapper;
 		this._storeValues = {};
 		await this.migrateSettings(this.getSettings());
 		await this.migrateStore();
@@ -124,6 +123,10 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice Device: migrateStore - migrating settings for device ${this.getName()}.`);
 	}
 
+	get wrapper() {
+		return new krakenAccountWrapper(this.driver);
+	}
+
 	/**
 	 * Get the current dispatch for a given time from the array of planned dispatches for all devices
 	 * @param 	{string} atTime 			String representation of the event time
@@ -137,7 +140,7 @@ module.exports = class krakenDevice extends Homey.Device {
 				dispatches.push(dispatch);
 			}
 		}
-		const currentDispatch = this.accountWrapper.currentExtendedDispatch(atTime, dispatches);
+		const currentDispatch = this.wrapper.currentExtendedDispatch(atTime, dispatches);
 		return currentDispatch;
 	}
 
@@ -152,7 +155,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		let totalDispatchMinutes = 0;
 		for (const device of this.driver.getDevices()) {
 			if (device.getStoreValue("octopusClass") == "smartDevice") {
-				totalDispatchMinutes += device.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
+				totalDispatchMinutes += device.readCapabilityValue(device._capIds.DISPATCH_MINUTES);
 			}
 		}
 		return totalDispatchMinutes;
@@ -187,45 +190,52 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * Perform the queued updates to capability values
-	 * @param 	{boolean}						updates		True iff any preceding capability has been updated
-	 * @returns {Promise<boolean>}						True iff this or any preceding capability has its value changed
+	 * Collects all buffered updates for this device into an array of promises
+	 * @returns {Promise<boolean>[]} Array of "in-flight" update promises
 	 */
-	async updateCapabilities(updates = false) {
-		this.log(`krakenDevice.updateCapabilities: starting`);
-		if (!this.hasOwnProperty("_updatedCapabilities")) {
-			this.log(`krakenDevice.updateCapabilities: _updatedCapabilities not found`);
-			this._updatedCapabilities = {};
+	updateCapabilities() {
+		let updatePromises = [];
+		if (this._updatedCapabilities && Object.keys(this._updatedCapabilities).length > 0) {
+			const entries = Object.entries(this._updatedCapabilities);
+			// Map entries to promises using the Factory
+			updatePromises = entries.map(([id, value]) => {
+				return this.updateCapabilityValue(this._capabilityIds[id], value);
+			});
 		}
-		let updated = updates;
-		for (const capabilityId of Object.keys(this._updatedCapabilities)) {
-			const capabilityName = this._capabilityIds[capabilityId];
-			const value = this._updatedCapabilities[capabilityId];
-			updated = (await this.updateCapabilityValue(capabilityName, value)) || updated;
-		}
-		this._updatedCapabilities = {};																						//IDS - just = {}	
-		return updated;
+
+		// Clear the buffer BEFORE returning, so subsequent calls don't duplicate work
+		this._updatedCapabilities = {};
+
+		return updatePromises;
 	}
 
 	/**
-	 * Tolerant update of a capability value
-	 * @param     {string}  capabilityName    The name of the capability to be updated
-	 * @param     {any}     newValue          The new value to be given to the capability
-	 * @returns   {boolean}                   Indicates the value of the capability has changed
+	 * Tolerant update of a capability value (Promise Factory)
+	 * @param     {string}            capabilityName    The name of the capability
+	 * @param     {any}               newValue          The new value
+	 * @returns   {Promise<boolean>}                    Resolves to true if value changed
 	 */
-	async updateCapabilityValue(capabilityName, newValue) {
-		let updated = false;
-		if (this.hasCapability(capabilityName)) {
-			let oldValue = this.getCapabilityValue(capabilityName);
-			if (oldValue !== newValue) {
-				this.homey.log(`krakenDevice.updateCapabilityValue: ${this.getName()}.${capabilityName} from ${oldValue} to ${newValue}`);
-				await this.setCapabilityValue(capabilityName, newValue);
-				updated = true;
-			}
-		} else {
+	updateCapabilityValue(capabilityName, newValue) {
+		if (!this.hasCapability(capabilityName)) {
 			this.homey.log(`krakenDevice.updateCapabilityValue: ${this.getName()}.${capabilityName} not found`);
+			return Promise.resolve(false);
 		}
-		return updated;
+
+		const oldValue = this.getCapabilityValue(capabilityName);
+
+		if (oldValue !== newValue) {
+			this.homey.log(`krakenDevice.updateCapabilityValue: Updating ${this.getName()}.${capabilityName} from ${oldValue} to ${newValue}`);
+
+			// Fire and return the promise; .then(() => true) ensures we track the change
+			return this.setCapabilityValue(capabilityName, newValue)
+				.then(() => true)
+				.catch(err => {
+					this.error(`krakenDevice.updateCapabilityValue: Failed to set ${capabilityName}: on ${this.getName()}`, err);
+					throw err; // Re-throw so the Orchestrator's catch block sees it
+				});
+		}
+
+		return Promise.resolve(false);
 	}
 
 	/**
@@ -254,14 +264,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async commitCapabilities() {
 		return await this.updateCapabilities();
-	}
-
-	/**
-	 * Return the app's current instance of krakenAccountWrapper
-	 * @returns		{krakenAccountWrapper}		Current app instance of the account wrapper
-	 */
-	get accountWrapper() {
-		return this._accountWrapper;
 	}
 
 	/**
