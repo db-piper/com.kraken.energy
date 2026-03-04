@@ -112,5 +112,8 @@
   },
   "1.1.0": {
     "en": "Attempt to reset publication corruption"
+  },
+  "1.2.0": {
+    "en": "Significant architectural change to improve cpu performance and significantly reduce memory creep; improvements to valuation of energy consumption; improvements to projected bill calculation; reduced app size."
   }
 }
