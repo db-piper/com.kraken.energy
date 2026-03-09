@@ -118,5 +118,8 @@
   },
   "1.2.1": {
     "en": "Resolve (i) Failure to start event loop on pairing first devices; (ii) Inability to pair with Smart Devices; (iii) Wrong currency units on Tariff £/kWh capability; (iv) Calculation of Account Standing Charge capability in pence not pounds.  Unresolved: Inability to change settings values for settings like Exclude From Energy."
+  },
+  "1.2.2": {
+    "en": "Resolve defect preventing modification of device settings"
   }
 }
