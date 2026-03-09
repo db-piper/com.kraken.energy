@@ -178,7 +178,6 @@ module.exports = class krakenDriver extends Homey.Driver {
    * Handles the "Phase Shift" by resetting the timer to the moment of validation.
    */
   startEventPoller() {
-    // GUARD: If we already have an interval, we are done.
     if (this._interval) {
       this.log('krakenDriver.startEventPoller: Heartbeat already active.');
       return;
@@ -191,8 +190,6 @@ module.exports = class krakenDriver extends Homey.Driver {
         await this.onHeartbeat();
       };
 
-      // Start the poller. The eventer.setInterval handles the logic 
-      // to hit the :15s offset you've designed.
       this._interval = this.eventer.setInterval(this.homey, 60000, heartbeatTask, (newId) => {
         this._interval = newId;
         this.log('krakenDriver.startEventPoller: Poller successfully initialized.');

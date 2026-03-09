@@ -48,8 +48,7 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
 
     // Pass the token into your wrapper
-    const wrapper = new krakenAccountWrapper(this.driver);
-    let accountData = await wrapper.accessAccountGraphQL(token);
+    let accountData = await this.wrapper.accessAccountGraphQL(token);
 
     if (accountData) {
       return await this.executeEventOnDevices(atTime, accountData);
@@ -67,12 +66,19 @@ module.exports = class managerEvent {
   }
 
   /**
+   * Return an instance of krakenAccountWrapper
+   * @returns {krakenAccountWrapper}  Instance of krakenAccountWrapper
+   */
+  get wrapper() {
+    return new krakenAccountWrapper(this.driver);
+  }
+
+  /**
    * Retrieve the device definitions from the octopus account data
    * @returns {Promise<object - JSON>}   Structure containing the device definitions for Homey
    */
   async getOctopusDeviceDefinitions() {
-    const wrapper = new krakenAccountWrapper(this.driver);
-    return await wrapper.getOctopusDeviceDefinitions();
+    return await this.wrapper.getOctopusDeviceDefinitions();
   }
 
   /**
@@ -118,7 +124,7 @@ module.exports = class managerEvent {
    */
   async executeEventOnDevices(atTime, accountData) {
     let updates = false;
-    const wrapper = new krakenAccountWrapper(this.driver);
+    const wrapper = this.wrapper;
     const liveMeterId = wrapper.getLiveMeterId(accountData);
     //this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 

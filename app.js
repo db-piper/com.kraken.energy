@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('./modules/constants');
 const Homey = require('homey');
 //const dataFetcher = require('./modules/dataFetcher');
 //const Queries = require('./modules/gQLQueries');

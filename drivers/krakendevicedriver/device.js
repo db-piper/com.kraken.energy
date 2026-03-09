@@ -4,6 +4,7 @@ const Homey = require('homey');
 const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('../../modules/constants');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -44,21 +45,39 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * onSettings is called when the user updates the device's settings.
-	 * @param 	{object} 		event 				The onSettings event data
+	 * @param 	{object} 		event 							The onSettings event data
 	 * @param 	{object} 		event.oldSettings 	The old settings object
 	 * @param 	{object} 		event.newSettings 	The new settings object
-	 * @param 	{string[]} 		event.changedKeys 	An array of keys changed since the previous version
-	 * @returns {Promise<string|void>} 				return a custom message that will be displayed
+	 * @param 	{string[]} 	event.changedKeys 	An array of keys changed since the previous version
+	 * @returns {Promise<string|void>} 					Return a custom message that will be displayed
 	 */
 	async onSettings({ oldSettings, newSettings, changedKeys }) {
 		this.log(`krakenDevice:onSettings settings were changed: ${JSON.stringify(newSettings)}`);
+		const sharedSettings = Object.fromEntries(
+			changedKeys
+				.filter(name => DriverSettingNames.includes(name))
+				.map(name => [name, newSettings[name]])
+		);
+		this.log(`krakenDevice:onSettings - shared settings: ${JSON.stringify(sharedSettings)}`);
 		for (const device of this.driver.getDevices()) {
 			if (!Object.is(device, this)) {
 				this.homey.log(`krakenDevice:onSettings - updating settings for device: ${device.getName()}`);
-				await device.setSettings(newSettings);
+				await device.setSettings(sharedSettings);
 			}
 			await device.onSettingsChanged({ oldSettings, newSettings, changedKeys })
 		}
+	}
+
+	/**
+	 * onSettingsChanged is called when the user updates the device's settings.
+	 * @param 	{object} 		event 				The onSettings event data
+	 * @param 	{object} 		event.oldSettings 	The old settings object
+	 * @param 	{object} 		event.newSettings 	The new settings object
+	 * @param 	{string[]} 	event.changedKeys 	An array of keys changed since the previous version
+	 * @returns {Promise<string|void>} 				return a custom message that will be displayed
+	 */
+	async onSettingsChanged({ oldSettings, newSettings, changedKeys }) {
+		this.log(`krakenDevice:onSettingsChanged settings were changed: ${JSON.stringify(changedKeys)}`);
 	}
 
 	/**

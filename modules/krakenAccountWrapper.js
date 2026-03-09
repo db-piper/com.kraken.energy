@@ -3,7 +3,7 @@
 const { DateTime } = require('../bundles/luxon');
 const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('./constants');
 
 
 module.exports = class krakenAccountWrapper {
