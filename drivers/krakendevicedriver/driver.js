@@ -178,20 +178,27 @@ module.exports = class krakenDriver extends Homey.Driver {
    * Handles the "Phase Shift" by resetting the timer to the moment of validation.
    */
   startEventPoller() {
-    this.log('krakenDriver.startEventPoller: Stopping any existing poller');
-    this.stopEventPoller();
+    // GUARD: If we already have an interval, we are done.
+    if (this._interval) {
+      this.log('krakenDriver.startEventPoller: Heartbeat already active.');
+      return;
+    }
 
     if (this.getDevices().length > 0) {
+      this.log('krakenDriver.startEventPoller: No active poller found. Starting now.');
+
       const heartbeatTask = async () => {
         await this.onHeartbeat();
       };
-      this.log('krakenDriver.runEventPoller: Starting fresh 60s interval.');
-      this._interval = this.eventer.setInterval(this.homey, 60000, heartbeatTask, (newId) => {   //FREQ
-        this._interval = newId; // The Driver manages its own property
-        this.log('krakenDriver.runEventPoller: Poller transitioned from Wait to Loop.');
+
+      // Start the poller. The eventer.setInterval handles the logic 
+      // to hit the :15s offset you've designed.
+      this._interval = this.eventer.setInterval(this.homey, 60000, heartbeatTask, (newId) => {
+        this._interval = newId;
+        this.log('krakenDriver.startEventPoller: Poller successfully initialized.');
       });
     } else {
-      this.log('krakenDriver.runEventPoller: No devices found. Poller isdormant.');
+      this.log('krakenDriver.startEventPoller: No devices extant. Standing by.');
     }
   }
 

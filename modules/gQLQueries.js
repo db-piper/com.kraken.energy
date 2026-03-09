@@ -32,6 +32,9 @@ module.exports = {
         devices(accountNumber: $accountNumber) {
           id
           name
+          status {
+            currentState
+          }
         }
       }`,
       variables: {

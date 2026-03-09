@@ -334,24 +334,30 @@ module.exports = class krakenAccountWrapper {
     const fetcher = new dataFetcher(this._driver.homey);
     const accountData = await fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
+
       // //TODO: REMOVE THIS GASH CODE
       // accountData.data.devices = [
       //   {
-      //     id: "00000000-000a-4000-8020-15ffff00d84d",
-      //     name: null,
-      //     status: {
-      //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
+      //     "id": "00000000-0009-4000-8020-00000007b8d2",
+      //     "name": "TEST Myenergi zappi (all models)",
+      //     "status": {
+      //       "current": "LIVE",
+      //       "currentState": "SMART_CONTROL_CAPABLE",
+      //       "isSuspended": false
       //     }
       //   },
       //   {
-      //     id: "00000000-0009-4000-8020-0000000181f6",
-      //     name: "TEST TEST TEST",
-      //     status: {
-      //       currentState: "SMART_CONTROL_IN_PROGRESS"
+      //     "id": "00000000-000a-4000-8020-0d0000040af2",
+      //     "name": null,
+      //     "status": {
+      //       "current": "LIVE",
+      //       "currentState": "SMART_CONTROL_NOT_AVAILABLE",
+      //       "isSuspended": false
       //     }
       //   }
       // ];
       // //TODO: END GASH
+
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
     } else {
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
@@ -372,33 +378,41 @@ module.exports = class krakenAccountWrapper {
     }
 
     const account = pairingData?.data?.account;
+    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: account ${JSON.stringify(account)}`);
     //TODO: INCLUDE THIS PRODUCTION CODE
     const devices = pairingData?.data?.devices || [];
+    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: devices ${JSON.stringify(devices)}`);
 
     // //TODO: REMOVE THIS GASH CODE
     // const devices = [
     //   {
-    //     id: "00000000-000a-4000-8020-15ffff00d84d",
-    //     name: null,
-    //     status: {
-    //       currentState: "SMART_CONTROL_NOT_AVAILABLE"
+    //     "id": "00000000-0009-4000-8020-00000007b8d2",
+    //     "name": "TEST Myenergi zappi (all models)",
+    //     "status": {
+    //       "current": "LIVE",
+    //       "currentState": "SMART_CONTROL_CAPABLE",
+    //       "isSuspended": false
     //     }
     //   },
     //   {
-    //     id: "00000000-0009-4000-8020-0000000181f6",
-    //     name: "TEST TEST TEST",
-    //     status: {
-    //       currentState: "SMART_CONTROL_IN_PROGRESS"
+    //     "id": "00000000-000a-4000-8020-0d0000040af2",
+    //     "name": null,
+    //     "status": {
+    //       "current": "LIVE",
+    //       "currentState": "SMART_CONTROL_NOT_AVAILABLE",
+    //       "isSuspended": false
     //     }
     //   }
     // ];
     // //TODO: END GASH
+
 
     const validStatusCodes = Object.keys(this._valid_device_status_translations);
     const dispatchableDevices = devices.filter(device =>
       validStatusCodes.includes(device.status?.currentState)
     );
     const isDispatchable = dispatchableDevices.length > 0;
+    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: isDispatchable ${isDispatchable}`);
 
     const hasExportTariff = account?.electricityAgreements?.some(agreement =>
       agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === true
@@ -527,7 +541,7 @@ module.exports = class krakenAccountWrapper {
       // //TODO: REMOVE THIS GASH CODE
       // let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
       // let xDispatches = {
-      //   d00000000_0009_4000_8020_0000000181f6: [
+      //   d00000000_0009_4000_8020_00000007b8d2: [
       //     {
       //       end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
       //       energyAddedKwh: -11.618,
@@ -565,9 +579,9 @@ module.exports = class krakenAccountWrapper {
       //       type: "SMART"
       //     }
       //   ],
-      //   d00000000_000a_4000_8020_15ffff00d84d: null
+      //   d00000000_000a_4000_8020_0d0000040af2: null
       // };
-      // response.data["d00000000_0009_4000_8020_0000000181f6"] = xDispatches["d00000000_0009_4000_8020_0000000181f6"];
+      // response.data["d00000000_0009_4000_8020_00000007b8d2"] = xDispatches["d00000000_0009_4000_8020_00000007b8d2"];
       // //TODO: END GASH
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);

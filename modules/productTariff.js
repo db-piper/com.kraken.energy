@@ -18,7 +18,7 @@ module.exports = class productTariff extends krakenDevice {
 
 		this.defineCapability(this._capIds.PRODUCT_CODE);
 		this.defineCapability(this._capIds.TARIFF_CODE);
-		this.defineCapability(this._capIds.UNIT_PRICE_PAID, { "title": { "en": '£/kWh Paid' }, "decimals": 4, "units": { "en": "£", } }, ['title', 'decimals']);
+		this.defineCapability(this._capIds.UNIT_PRICE_PAID, { "title": { "en": '£/kWh Paid' }, "decimals": 4, "units": { "en": "£", } }, ['title', 'decimals', 'units']);
 		this.defineCapability(this._capIds.STANDING_CHARGE, { "title": { "en": 'Daily Charge', }, "decimals": 4, "units": { "en": "£", } });
 		this.defineCapability(this._capIds.METER_READING, { "title": { "en": 'Cumulative kWh' }, "decimals": 3 });
 		this.defineCapability(this._capIds.SLOT_ENERGY_CONSUMPTION, { "title": { "en": `${slotLabelWord} Energy kWh` }, "decimals": 3 });
@@ -49,6 +49,7 @@ module.exports = class productTariff extends krakenDevice {
 	 * onAdded is called when the user adds the device, called just after pairing.
 	 */
 	async onAdded() {
+		super.onAdded();
 		this.log('productTariff Device:onAdded - has been added');
 	}
 

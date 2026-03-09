@@ -60,6 +60,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * onAdded is called when the user adds the device, called just after pairing.
 	 */
 	async onAdded() {
+		super.onAdded();
 		this.log('energyAccount Device:onAdded - has been added');
 	}
 
@@ -342,11 +343,14 @@ module.exports = class energyAccount extends krakenDevice {
 				projectedBill = aveDaySpend * periodLength;
 			}
 		} else {
-			periodUpdatedStandingCharge = periodDay * (
+			periodUpdatedStandingCharge = .01 * periodDay * (
 				(exportTariffPresent ? exportPrices.standingCharge : 0) +
 				(importTariffPresent ? importPrices.standingCharge : 0)
 			);
 		}
+
+		this.homey.log(`energyAccount.processEvent: periodDay: ${periodDay}, periodUpdatedStandingCharge: ${periodUpdatedStandingCharge}`);
+
 
 		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
 		this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);

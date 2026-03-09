@@ -34,6 +34,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	 * onAdded is called when the user adds the device, called just after pairing.
 	 */
 	async onAdded() {
+		super.onAdded();
 		this.log('smartEnergyDevice:onAdded - has been added');
 	}
 

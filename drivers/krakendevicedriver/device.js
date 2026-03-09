@@ -37,6 +37,8 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * onAdded is called when the user adds the device, called just after pairing.
 	 */
 	async onAdded() {
+		// Trigger the driver to check if the poller needs to start
+		await this.driver.startEventPoller();
 		this.log('krakenDevice:onAdded - generic krakenDevice has been added');
 	}
 
