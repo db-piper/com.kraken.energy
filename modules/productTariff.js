@@ -156,7 +156,6 @@ module.exports = class productTariff extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const direction = this.isExport;
 		const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
 		const eventTime = new Date(atTime);

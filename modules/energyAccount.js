@@ -164,7 +164,6 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTime, periodStartDay) {
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
@@ -179,7 +178,6 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {DateTime}                    The start date of the period
 	 */
 	computePeriodStartDate(atTime, periodStartDay) {
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
@@ -214,7 +212,6 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime));
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;

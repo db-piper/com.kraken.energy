@@ -1,11 +1,10 @@
 'use strict';
 
 const Homey = require('homey');
-const productTariff = require('../../modules/productTariff');
 const energyAccount = require('../../modules/energyAccount');
-const managerEvent = require('../../modules/managerEvent');
+const productTariff = require('../../modules/productTariff');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
-const dataFetcher = require('../../modules/dataFetcher');
+const managerEvent = require('../../modules/managerEvent');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -121,8 +120,7 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
     try {
-      const fetcher = new dataFetcher(this.homey);
-      const token = await fetcher.getApiToken();
+      const token = await this.eventer.getApiToken();
       if (!token) throw new Error('Token acquisition failed');
       await this.eventer.executeEvent(token);
     } catch (err) {
@@ -156,13 +154,12 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async sessionLoginHandler(account, apiKey) {
     this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
-    const fetcher = new dataFetcher(this.homey);
-    const token = await fetcher.getApiToken(apiKey);
+    //const fetcher = new dataFetcher(this.homey);
+    const token = await this.eventer.getApiToken(apiKey);
     let success = false;
     if (token) {
       this.log(`krakenDriver.sessionLoginHandler: Token acquired calling app.setValidAccount`);
-      success = await fetcher.setValidAccount(account, token);
-      //success = await this.homey.app.setValidAccount(account, token);
+      success = await this.eventer.setValidAccount(account, token);
       this.log(`krakenDriver.sessionLoginHandler: app.setValidAccount returned success: ${success}`);
       if (success) {
         this.startEventPoller();

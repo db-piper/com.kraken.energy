@@ -82,24 +82,22 @@ module.exports = class managerEvent {
   }
 
   /**
-   * homey.SetInterval callback function get data from Kraken and update devices from data
+   * Get a valid GQL token using the specified key or a key stored in app settings
+   * @param     {string | null} userSpecifiedKey    Candidate key specified through the user interface
+   * @returns   {Promise<string>}                   Valid GQL token
    */
-  async processIntervalCallback() {
-    const dateTimeNow = new Date();
-    this.driver.log(`managerEvent.processIntervalCallback: start: ${dateTimeNow.toISOString()}:`);
-    try {
-      if (this.driver.getDevices().length > 0) {
-        await this.executeEvent(dateTimeNow.toISOString());
-      } else {
-        this.driver.log(`managerEvent.processIntervalCallback: No devices found. Stopping event loop.`);
-        this.unSetInterval();
-      }
-    } catch (error) {
-      this.driver.error(`managerEvent.processIntervalCallback: Error. Terminating loop.`)
-      this.unSetInterval();
-      throw error;
-    }
-    this.driver.log(`managerEvent.processIntervalCallback: end:`);
+  async getApiToken(userSpecifiedKey = null) {
+    return await this.wrapper.getApiToken(userSpecifiedKey);
+  }
+
+  /**
+   * Proves an Account ID can be accessed by the token derived from the API key and persists it.
+   * @param   {string} accountId The ID to validate and store.
+   * @param   {string} token     The valid JWT to use for the check.
+   * @returns {Promise<boolean>}
+   */
+  async setValidAccount(account, token) {
+    return await this.wrapper.setValidAccount(account, token);
   }
 
   /**
@@ -125,8 +123,8 @@ module.exports = class managerEvent {
   async executeEventOnDevices(atTime, accountData) {
     let updates = false;
     const wrapper = this.wrapper;
+    const eventInterval = this.driver.homey.app.getEventIntervalMinutes(wrapper.getLocalDateTime(new Date(atTime)));
     const liveMeterId = wrapper.getLiveMeterId(accountData);
-    //this.driver.log(`managerEvent.ExecuteEventOnDevices: meterId ${liveMeterId}`);
 
     const deviceIds = wrapper.getDeviceIds(accountData);
     const meterFetchPromise = wrapper.getLiveMeterData(atTime, liveMeterId, deviceIds);
@@ -139,8 +137,6 @@ module.exports = class managerEvent {
 
     const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));
     await Promise.all(availableDevicePromises);
-
-    //this.driver.log(`managerEvent.executeEventOnDevices: Live meter data: ${JSON.stringify(reading)}, ${JSON.stringify(dispatches)}`);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
@@ -168,7 +164,9 @@ module.exports = class managerEvent {
       updates = results.includes(true);
       this.driver.log(`managerEvent.executeEventOnDevices: end commit capabilities`);
 
-      await this.logMemoryToInsights();
+      this.driver.homey.app.eventTime = this.wrapper.getLocalDateTime(new Date(atTime)).toMillis();
+
+      await this.logMemoryToInsights()
 
     } else {
       this.driver.log(`managerEvent.executeEventOnDevices: unable to retrieve live meter data`);

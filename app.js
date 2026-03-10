@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./modules/constants');
 const Homey = require('homey');
 //const dataFetcher = require('./modules/dataFetcher');
 //const Queries = require('./modules/gQLQueries');
@@ -72,5 +72,32 @@ module.exports = class krakenApp extends Homey.App {
   get accountId() {
     return this.homey.settings.get(AccountIdSetting);
   }
+
+  /**
+   * Set the most recently executed event time
+   * @param {number} milliseconds The event time in milliseconds since the epoch
+   */
+  set eventTime(milliseconds) {
+    this.homey.settings.set(EventTime, milliseconds);
+    this.homey.log(`krakenApp.setEventTime: eventTime ${milliseconds}`);
+  }
+
+  /**
+   * Calculate the interval in minutes (and decimals) between the current event and the last event
+   * @param 	{number} eventMillis	Time of the current event in epoch milliseconds 
+   * @returns {number} 						Minutes between eventTime and the last event time				
+   */
+  getEventIntervalMinutes(eventMillis) {
+    let lastEventTime = this.homey.settings.get(EventTime);
+    this.homey.log(`krakenApp.getEventIntervalMinutes: lastEventTime ${lastEventTime}`);
+    if (!lastEventTime) {
+      lastEventTime = eventMillis - 60000;
+      this.eventTime = lastEventTime;
+    }
+    const interval = (eventMillis - lastEventTime) / 60000;
+    this.homey.log(`krakenApp.getEventIntervalMinutes: interval ${interval} minutes.`);
+    return interval;
+  }
+
 
 };

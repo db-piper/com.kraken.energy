@@ -62,7 +62,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	async setDeviceAvailability(accountData) {
 		let available = super.setDeviceAvailability(accountData);
 		const deviceId = this.getStoreValue("deviceId");
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const deviceData = this.wrapper.getDevice(deviceId, accountData);
 		if (!deviceData) {
 			await this.setUnavailable("bad device; please delete.");
@@ -84,7 +83,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		//const wrapper = new krakenAccountWrapper(this.driver);
 		const eventTime = this.wrapper.getLocalDateTime(new Date(atTime));
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.wrapper.hashDeviceId(deviceId);

@@ -3,7 +3,7 @@
 const { DateTime } = require('../bundles/luxon');
 const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./constants');
 
 
 module.exports = class krakenAccountWrapper {
@@ -70,6 +70,34 @@ module.exports = class krakenAccountWrapper {
   get accountId() {
     return this.accessParameters.accountId;
   }
+
+  /**
+   * Return the dataFetcher instance
+   * @returns {dataFetcher}   dataFetcher instance
+   */
+  get fetcher() {
+    return new dataFetcher(this._driver.homey);
+  }
+
+  /**
+   * Return a valid GQL key from the specified key or from a key stored in app settings
+   * @param   {string | null}     userSpecifiedKey    A candidate key to be tested
+   * @returns {Promise<string>}                       API Token
+   */
+  async getApiToken(userSpecifiedKey = null) {
+    return await this.fetcher.getApiToken(userSpecifiedKey);
+  }
+
+  /**
+   * Proves an Account ID can be accessed by the token derived from the API key and persists it.
+   * @param   {string} accountId The ID to validate and store.
+   * @param   {string} token     The valid JWT to use for the check.
+   * @returns {Promise<boolean>}
+   */
+  async setValidAccount(account, token) {
+    return await this.fetcher.setValidAccount(account, token);
+  }
+
 
   /**
    * Get the live meter id on the account
@@ -301,8 +329,7 @@ module.exports = class krakenAccountWrapper {
    */
   async getPairingData(accountId) {
     const pairingQuery = this.pairingDataQuery(accountId);
-    const fetcher = new dataFetcher(this._driver.homey);
-    const pairingData = await fetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
+    const pairingData = await this.fetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
     return pairingData;
   }
 
@@ -331,8 +358,7 @@ module.exports = class krakenAccountWrapper {
   async accessAccountGraphQL() {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = this.accountDataQuery(this.accountId);
-    const fetcher = new dataFetcher(this._driver.homey);
-    const accountData = await fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
+    const accountData = await this.fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
 
       // //TODO: REMOVE THIS GASH CODE
@@ -531,8 +557,7 @@ module.exports = class krakenAccountWrapper {
       reading: undefined,
       dispatches: {}
     };
-    const fetcher = new dataFetcher(this._driver.homey);
-    let response = await fetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
+    let response = await this.fetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
     if ((response !== undefined) && ("data" in response)) {
       const readingArray = response.data.smartMeterTelemetry;
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {

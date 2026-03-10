@@ -4,7 +4,7 @@ const Homey = require('homey');
 const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, DriverSettingNames } = require('../../modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('../../modules/constants');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -277,14 +277,6 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	async setDeviceAvailability(accountData) {
 		return true
-	}
-
-	/**
-	 * Commit changes to the capabilities of the device from the temporary storage map
-	 * @returns {Promise<boolean>}									Indicates if any updates have been committed
-	 */
-	async commitCapabilities() {
-		return await this.updateCapabilities();
 	}
 
 	/**
