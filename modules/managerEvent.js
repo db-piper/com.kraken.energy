@@ -128,11 +128,11 @@ module.exports = class managerEvent {
 
     const deviceIds = wrapper.getDeviceIds(accountData);
     const meterFetchPromise = wrapper.getLiveMeterData(atTime, liveMeterId, deviceIds);
-    const deviceReadyPromises = this.driver.getDevices().map(device => device.ready());
+    const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
-    let [{ reading, dispatches }, ...deviceReadyResults] = await Promise.all([
+    let [{ reading, dispatches }, ...homeyDeviceReadyResults] = await Promise.all([
       meterFetchPromise,
-      ...deviceReadyPromises
+      ...homeyDeviceReadyPromises
     ]);
 
     const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));

@@ -20,7 +20,9 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.defineCapability(this._capIds.CURRENT_DISPATCH_START, { "title": { "en": "Planned Start" } });			//DD/mm HH:MM [dd/LL T]
 		this.defineCapability(this._capIds.CURRENT_DISPATCH_END, { "title": { "en": "Planned Finish" } });				//DD/mm HH:MM [dd/LL T]
 		this.defineCapability(this._capIds.REMAINING_DISPATCH_DURATION, { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
+		this.defineCapability(this._capIds.CURRENT_DISPATCH_TYPE, { "title": { "en": "Dispatch Type" } });			//String
 		this.defineCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
+		this.defineCapability(this._capIds.NEXT_DISPATCH_TYPE, { "title": { "en": "Next Dispatch Type" } });			//String
 		this.defineCapability(this._capIds.NEXT_DISPATCH_START, { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
 		this.defineCapability(this._capIds.DISPATCH_MINUTES, { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
 
@@ -103,6 +105,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let countDownStart = eventTime;
 		let countDown = null;
 		let dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
+		let dispatchType = null;
+		let nextDispatchType = null;
 
 		if (inDispatch) {
 			const startDateTime = this.wrapper.getLocalDateTime(new Date(currentDispatch.start));
@@ -112,10 +116,12 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			countDownStart = endDateTime;
 			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
 			dispatchMinutes = dispatchMinutes + 1;   //FREQ: change to increment by polling interval in minutes
+			dispatchType = currentDispatch.type;
 		}
 
 		if (dispatchCount > 0) {
 			const nextStartDateTime = this.wrapper.getLocalDateTime(new Date(nextDispatch.start));
+			nextDispatchType = nextDispatch.type;
 			nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 		}
@@ -127,9 +133,11 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		this.updateCapability(this._capIds.ALARM_POWER, inDispatch);
 		this.updateCapability(this._capIds.CURRENT_DISPATCH_START, startTime);
 		this.updateCapability(this._capIds.CURRENT_DISPATCH_END, endTime);
+		this.updateCapability(this._capIds.CURRENT_DISPATCH_TYPE, dispatchType);
 		this.updateCapability(this._capIds.REMAINING_DISPATCH_DURATION, duration);
 		this.updateCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, countDown);
 		this.updateCapability(this._capIds.NEXT_DISPATCH_START, nextDispatchStart);
+		this.updateCapability(this._capIds.NEXT_DISPATCH_TYPE, nextDispatchType);
 		this.updateCapability(this._capIds.DISPATCH_MINUTES, dispatchMinutes);
 
 		return updates;

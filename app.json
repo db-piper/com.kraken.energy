@@ -546,6 +546,16 @@
       "icon": "/assets/devices.svg",
       "insights": false
     },
+    "dispatch_type": {
+      "type": "string",
+      "title": {
+        "en": "Dispatch Type"
+      },
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/dispatch.svg",
+      "insights": false
+    },
     "duration": {
       "type": "string",
       "title": {

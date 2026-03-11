@@ -157,7 +157,8 @@ module.exports = class productTariff extends krakenDevice {
 		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
 
 		const direction = this.isExport;
-		const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
+		const isDispatchable = this.isDispatchable;
+		//const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
 		const eventTime = new Date(atTime);
 		const tariff = this.wrapper.getTariffDirection(direction, accountData);
 		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTime, direction, accountData);
@@ -178,13 +179,14 @@ module.exports = class productTariff extends krakenDevice {
 		const tariffCode = tariff.tariffCode;
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%		
 		const minPrice = this.wrapper.minimumPriceOnDate(atTime, direction, accountData);
-		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
+		const maxPrice = this.wrapper.maximumPriceOnDate(atTime, direction, accountData);
+		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches);
 		const inDispatch = currentDispatch !== undefined;
-		//const totalDispatchMinutes = this.getTotalDispatchMinutes();
+		const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
+		const dispatchPrice = discountDispatch ? minPrice : maxPrice;
 		const percentDispatchLimit = 100 * this.getTotalDispatchMinutes() / this.getSettings().dispatchMinutesLimit;
 		const tariffPrice = .01 * tariffPrices.unitRate;
-		const unitPriceTaxed = .01 * ((inDispatch && isDispatchable && percentDispatchLimit < 100) ? minPrice : tariffPrices.unitRate);							//£	
-		//this.homey.log(`productTariff.processEvent: prices: ${JSON.stringify(tariffPrices)} tariffPrice: ${tariffPrice} unitPriceTaxed: ${unitPriceTaxed}`);
+		const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : tariffPrices.unitRate);							//£	
 		const standingChargeTaxed = .01 * tariff.standingCharge;																		//£
 		const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
 		//The prior price paid is used to calculate the value of the energy consumed in the previous tick
@@ -192,7 +194,8 @@ module.exports = class productTariff extends krakenDevice {
 		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
 		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);		//£
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
-		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? 0 : tariffPrices.quartile;
+		const dispatchQuartile = discountDispatch ? 0 : 3;
+		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
 		const shortStart = this.wrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;

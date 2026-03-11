@@ -71,8 +71,10 @@ const SMART_ENERGY_DEVICE = {
   CURRENT_DISPATCH_START: "date_time.current_dispatch_start",
   CURRENT_DISPATCH_END: "date_time.current_dispatch_end",
   REMAINING_DISPATCH_DURATION: "duration.remaining_duration",
+  CURRENT_DISPATCH_TYPE: "dispatch_type.current",
   NEXT_DISPATCH_COUNTDOWN: "duration.next_dispatch_countdown",
   NEXT_DISPATCH_START: "date_time.next_dispatch_start",
+  NEXT_DISPATCH_TYPE: "dispatch_type.next",
   DISPATCH_MINUTES: "item_count.dispatch_minutes",
 };
 

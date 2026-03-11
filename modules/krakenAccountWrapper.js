@@ -18,7 +18,7 @@ module.exports = class krakenAccountWrapper {
    */
   constructor(driver) {
     this._driver = driver;
-    this._valid_device_status_translations = {
+    this._pairable_device_status_translations = {
       SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
       SMART_CONTROL_CAPABLE: `Device Capable`,
       SMART_CONTROL_IN_PROGRESS: `Device Available`,
@@ -26,6 +26,7 @@ module.exports = class krakenAccountWrapper {
       SMART_CONTROL_OFF: `Smart Control Off`,
       LOST_CONNECTION: `Device Connection Lost`
     };
+    this._dispatchable_device_status = ["SMART_CONTROL_CAPABLE", "SMART_CONTROL_IN_PROGRESS", "BOOSTING"];
     this._timeZone = this._driver.homey.clock.getTimezone();
   }
 
@@ -124,11 +125,11 @@ module.exports = class krakenAccountWrapper {
    * @returns {string[]}                        Array of smart device IDs
    */
   getDeviceIds(accountData) {
-    const statusCodes = Object.keys(this._valid_device_status_translations);
+    //const statusCodes = Object.keys(this._valid_device_status_translations);
     const devices = accountData?.data?.devices || [];
-
+    //change from filter on statusCodes
     const deviceIds = devices
-      .filter(device => statusCodes.includes(device.status?.currentState))
+      .filter(device => this._dispatchable_device_status.includes(device.status?.currentState))
       .map(device => device.id);
 
     this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} smart devices`);
@@ -316,8 +317,8 @@ module.exports = class krakenAccountWrapper {
    */
   translateDeviceStatus(status) {
     let translation = null;
-    if (status in this._valid_device_status_translations) {
-      translation = this._valid_device_status_translations[status];
+    if (status in this._pairable_device_status_translations) {
+      translation = this._pairable_device_status_translations[status];
     }
     return translation;
   }
@@ -405,12 +406,10 @@ module.exports = class krakenAccountWrapper {
 
     const account = pairingData?.data?.account;
     this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: account ${JSON.stringify(account)}`);
-    //TODO: INCLUDE THIS PRODUCTION CODE
-    const devices = pairingData?.data?.devices || [];
-    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: devices ${JSON.stringify(devices)}`);
+    let devices = pairingData?.data?.devices || [];
 
     // //TODO: REMOVE THIS GASH CODE
-    // const devices = [
+    // let devices = [
     //   {
     //     "id": "00000000-0009-4000-8020-00000007b8d2",
     //     "name": "TEST Myenergi zappi (all models)",
@@ -432,8 +431,9 @@ module.exports = class krakenAccountWrapper {
     // ];
     // //TODO: END GASH
 
+    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: devices ${JSON.stringify(devices)}`);
 
-    const validStatusCodes = Object.keys(this._valid_device_status_translations);
+    const validStatusCodes = Object.keys(this._pairable_device_status_translations);
     const dispatchableDevices = devices.filter(device =>
       validStatusCodes.includes(device.status?.currentState)
     );
@@ -470,7 +470,7 @@ module.exports = class krakenAccountWrapper {
             octopusClass: "octopusTariff",
             isExport: !!tariff.isExport,
             isHalfHourly: isHalfHourly,
-            isDispatchable: isDispatchable
+            isDispatchable: isDispatchable && isHalfHourly && !tariff.isExport
           },
           icon: `/${direction.toLowerCase()}.svg`
         });
@@ -536,10 +536,44 @@ module.exports = class krakenAccountWrapper {
     } else if ('nightRate' in tariff) {
       minimumPrice = tariff.nightRate;
     } else {
-      minimumPrice = tariff.dayRate || 0;
+      minimumPrice = tariff.unitRate || 0;
     }
 
     return minimumPrice;
+  }
+
+  /**
+   * Return the maximum price for the tariff for the day
+   * @param   {string}    atTime    Datetime of the current event
+   * @param   {boolean}   isExport  True iff export tariff, false otherwise
+   * @returns {float}               The maximum price for the day  
+   */
+  maximumPriceOnDate(atTime, isExport, accountData) {
+    const tariff = this.getTariffDirection(isExport, accountData);
+    let maximumPrice = 0;
+
+    if (!tariff) return undefined;
+
+    if (Array.isArray(tariff.unitRates)) {
+      const boundaryMs = DateTime.fromISO(atTime, { zone: this._timeZone })
+        .plus({ days: 1 })
+        .startOf('day')
+        .toMillis();
+
+      const validRates = tariff.unitRates
+        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis() < boundaryMs)
+        .map(rate => rate.value);
+
+      if (validRates.length > 0) {
+        maximumPrice = Math.max(...validRates);
+      }
+    } else if ('dayRate' in tariff) {
+      maximumPrice = tariff.dayRate;
+    } else {
+      maximumPrice = tariff.unitRate || 0;
+    }
+
+    return maximumPrice;
   }
 
   /**
@@ -571,7 +605,7 @@ module.exports = class krakenAccountWrapper {
       //       end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
       //       energyAddedKwh: -11.618,
       //       start: today.set({ hour: 12, minute: 36 }).toISO(), //"2025-10-25T12:36:00+00:00",
-      //       type: "SMART"
+      //       type: "BOOST"
       //     },
       //     {
       //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
@@ -583,7 +617,7 @@ module.exports = class krakenAccountWrapper {
       //       end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
       //       energyAddedKwh: -11.618,
       //       start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "SMART"
+      //       type: "BOOST"
       //     },
       //     {
       //       end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
@@ -679,7 +713,7 @@ module.exports = class krakenAccountWrapper {
   currentPlannedDispatch(atTime, plannedDispatches) {
     const eventTime = this.getLocalDateTime(new Date(atTime));
     const selectedDispatches = plannedDispatches.filter((dispatch) =>
-      (this.getLocalDateTime(new Date(dispatch.start)) < eventTime) &&
+      (this.getLocalDateTime(new Date(dispatch.start)) <= eventTime) &&
       (this.getLocalDateTime(new Date(dispatch.end)) > eventTime)
     );
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
