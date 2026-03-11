@@ -1,0 +1,2 @@
+# Ignore test data and any variant folder names in published release
+/test_data*/

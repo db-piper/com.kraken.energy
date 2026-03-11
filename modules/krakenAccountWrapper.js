@@ -5,6 +5,13 @@ const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./constants');
 
+let TestData = null;
+try {
+  // Path assumes this file is in /drivers/kraken/
+  TestData = require('../test_data');
+} catch (err) {
+  // TestData remains null in production
+}
 
 module.exports = class krakenAccountWrapper {
   /**
@@ -361,30 +368,7 @@ module.exports = class krakenAccountWrapper {
     const accountQuery = this.accountDataQuery(this.accountId);
     const accountData = await this.fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
-
-      // //TODO: REMOVE THIS GASH CODE
-      // accountData.data.devices = [
-      //   {
-      //     "id": "00000000-0009-4000-8020-00000007b8d2",
-      //     "name": "TEST Myenergi zappi (all models)",
-      //     "status": {
-      //       "current": "LIVE",
-      //       "currentState": "SMART_CONTROL_CAPABLE",
-      //       "isSuspended": false
-      //     }
-      //   },
-      //   {
-      //     "id": "00000000-000a-4000-8020-0d0000040af2",
-      //     "name": null,
-      //     "status": {
-      //       "current": "LIVE",
-      //       "currentState": "SMART_CONTROL_NOT_AVAILABLE",
-      //       "isSuspended": false
-      //     }
-      //   }
-      // ];
-      // //TODO: END GASH
-
+      accountData.data.devices = (TestData) ? TestData.getMockDevices() : (accountData?.data?.devices || []);
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
     } else {
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
@@ -405,40 +389,13 @@ module.exports = class krakenAccountWrapper {
     }
 
     const account = pairingData?.data?.account;
-    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: account ${JSON.stringify(account)}`);
-    let devices = pairingData?.data?.devices || [];
-
-    // //TODO: REMOVE THIS GASH CODE
-    // let devices = [
-    //   {
-    //     "id": "00000000-0009-4000-8020-00000007b8d2",
-    //     "name": "TEST Myenergi zappi (all models)",
-    //     "status": {
-    //       "current": "LIVE",
-    //       "currentState": "SMART_CONTROL_CAPABLE",
-    //       "isSuspended": false
-    //     }
-    //   },
-    //   {
-    //     "id": "00000000-000a-4000-8020-0d0000040af2",
-    //     "name": null,
-    //     "status": {
-    //       "current": "LIVE",
-    //       "currentState": "SMART_CONTROL_NOT_AVAILABLE",
-    //       "isSuspended": false
-    //     }
-    //   }
-    // ];
-    // //TODO: END GASH
-
-    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: devices ${JSON.stringify(devices)}`);
+    const devices = (TestData) ? TestData.getMockDevices() : (pairingData?.data?.devices || []);
 
     const validStatusCodes = Object.keys(this._pairable_device_status_translations);
     const dispatchableDevices = devices.filter(device =>
       validStatusCodes.includes(device.status?.currentState)
     );
     const isDispatchable = dispatchableDevices.length > 0;
-    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: isDispatchable ${isDispatchable}`);
 
     const hasExportTariff = account?.electricityAgreements?.some(agreement =>
       agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === true
@@ -584,8 +541,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<object>}           Reading JSON object representing the current data
    */
   async getLiveMeterData(atTime, meterId, deviceIds) {
-    //this._driver.log(`krakenAccountWrapper.getLiveMeterData: meterId ${meterId}`);
-    //const deviceIds = this.getDeviceIds(accountData);
     let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
     const result = {
       reading: undefined,
@@ -597,51 +552,10 @@ module.exports = class krakenAccountWrapper {
       if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
         result.reading = { ...readingArray[0] };
       }
-      // //TODO: REMOVE THIS GASH CODE
-      // let today = this.getLocalDateTime(new Date()).set({ second: 0, millisecond: 0 });
-      // let xDispatches = {
-      //   d00000000_0009_4000_8020_00000007b8d2: [
-      //     {
-      //       end: today.set({ hour: 12, minute: 50 }).toISO(), //"2025-10-25T12:50:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 12, minute: 36 }).toISO(), //"2025-10-25T12:36:00+00:00",
-      //       type: "BOOST"
-      //     },
-      //     {
-      //       end: today.set({ hour: 15, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 13, minute: 56 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 17, minute: 30 }).toISO(), //"2025-10-25T15:30:00+00:00",
-      //       energyAddedKwh: -11.618,
-      //       start: today.set({ hour: 16, minute: 15 }).toISO(), //"2025-10-25T13:56:00+00:00",
-      //       type: "BOOST"
-      //     },
-      //     {
-      //       end: today.set({ hour: 19, minute: 0 }).toISO(), //"2025-10-25T17:45:00+00:00",
-      //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 18, minute: 15 }).toISO(), //"2025-10-25T19:30:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.set({ hour: 19, minute: 45 }).toISO(), //"2025-10-25T17:45:00+00:00",
-      //       energyAddedKwh: -3.417,
-      //       start: today.set({ hour: 19, minute: 10 }).toISO(), //"2025-10-25T19:30:00+00:00",
-      //       type: "SMART"
-      //     },
-      //     {
-      //       end: today.plus({ days: 1 }).set({ hour: 6, minute: 0 }).toISO(), //"2025-10-26T06:00:00+00:00",
-      //       energyAddedKwh: -70.3,
-      //       start: today.set({ hour: 20, minute: 0 }).toISO(), //"2025-10-25T20:30:00+00:00",
-      //       type: "SMART"
-      //     }
-      //   ],
-      //   d00000000_000a_4000_8020_0d0000040af2: null
-      // };
-      // response.data["d00000000_0009_4000_8020_00000007b8d2"] = xDispatches["d00000000_0009_4000_8020_00000007b8d2"];
-      // //TODO: END GASH
+      if (TestData) {
+        const mockDispatches = TestData.getMockDispatches(DateTime, this._timeZone);
+        Object.assign(response.data, mockDispatches);
+      }
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (Array.isArray(response.data[deviceKey])) {
