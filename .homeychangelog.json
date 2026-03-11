@@ -121,5 +121,8 @@
   },
   "1.2.2": {
     "en": "Resolve defect preventing modification of device settings"
+  },
+  "1.2.3": {
+    "en": "Modify dispatch handling to require the device to be SMART_CONTROL_CAPABLE, SMART_CONTROL_IN_PROGRESS or BOOSTING in order for planned dispatches to be processed; add dispatch type to the SmartEnergyDevice for current and next dispatches; show max price in the Import Tariff when receiving a BOOST dispatch; use formal injection pattern for handling test data; use .homeyIgnore to ensure test data is not published."
   }
 }
