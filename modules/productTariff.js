@@ -2,6 +2,8 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("./krakenAccountWrapper");
+const { DateTime } = require('../bundles/luxon');
+
 
 module.exports = class productTariff extends krakenDevice {
 
@@ -147,19 +149,22 @@ module.exports = class productTariff extends krakenDevice {
 
 	/**
 	 * Process an event for the tariff.
-	 * @param     {string}        atTime            String representation of the event time
+	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
 	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 
-		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
 
 		const direction = this.isExport;
 		const isDispatchable = this.isDispatchable;
 		//const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
-		const eventTime = new Date(atTime);
+		//convert eventTime to luxon.DateTime rather than JSDate
+		const eventTime = DateTime.fromMillis(atTimeMillis);
+		//TODO: Convert all references to atTime to atTimeMillis
+		const atTime = eventTime.toISO();
 		const tariff = this.wrapper.getTariffDirection(direction, accountData);
 		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTime, direction, accountData);
 		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
@@ -180,7 +185,7 @@ module.exports = class productTariff extends krakenDevice {
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%		
 		const minPrice = this.wrapper.minimumPriceOnDate(atTime, direction, accountData);
 		const maxPrice = this.wrapper.maximumPriceOnDate(atTime, direction, accountData);
-		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches);
+		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
 		const inDispatch = currentDispatch !== undefined;
 		const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
 		const dispatchPrice = discountDispatch ? minPrice : maxPrice;

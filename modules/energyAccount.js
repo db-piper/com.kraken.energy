@@ -2,6 +2,7 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
+const { DateTime } = require('../bundles/luxon');
 
 module.exports = class energyAccount extends krakenDevice {
 
@@ -140,11 +141,16 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	async updatePeriodDay(startDay) {
 		this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
-		const atTime = (new Date()).toISOString();
-		const periodDay = this.computePeriodDay(atTime, Number(startDay));
-		const periodStartDate = this.computePeriodStartDate(atTime, startDay);
-		const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toISO(), startDay);
-		const periodLength = this.computePeriodLength(atTime, Number(startDay));
+		//const atTime = (new Date()).toISOString();
+		const atTimeMillis = DateTime.now().toMillis();
+		const periodDay = this.computePeriodDay(atTimeMillis, Number(startDay));
+		const periodStartDate = this.computePeriodStartDate(atTimeMillis, startDay);
+		const nextStartDate = periodStartDate.plus({ months: 1 });
+		const periodLength = nextStartDate.diff(periodStartDate, 'days').days;
+		//TODO: Remove comments
+		//const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toMillis(), startDay);
+		//TODO: Review need for computePeriodLength
+		//const periodLength = this.computePeriodLength(atTimeMillis, Number(startDay));
 
 		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
 		this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.toFormat("yyyy-LL-dd"));
@@ -159,26 +165,29 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * For a given date compute the number of the day in the period 
-	 * @param   {string}    atTime            Date to compute period-day of
+	 * @param   {number}    atTimeMillis      Date in epoch milliseconds to compute the period day for
 	 * @param   {integer}   periodStartDay    The day in month when the period starts 
 	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
-	computePeriodDay(atTime, periodStartDay) {
-		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
-		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
+	computePeriodDay(atTimeMillis, periodStartDay) {
+		//TODO: Remove comments
+		//const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
+		const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
-		this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
+		//this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
 		return periodDay;
 	}
 
 	/**
 	 * Compute the start date of the period
-	 * @param   {string}    atTime            Date to compute period start from
+	 * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
 	 * @param   {integer}   periodStartDay    The day in month when the period starts 
 	 * @returns {DateTime}                    The start date of the period
 	 */
-	computePeriodStartDate(atTime, periodStartDay) {
-		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+	computePeriodStartDate(atTimeMillis, periodStartDay) {
+		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
+		//const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTimeMillis)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
 			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :
@@ -187,13 +196,13 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	/**
-	 * Compute the length of the period that started on the specified date in days
-	 * @param   {string}    atTime            Date to compute period length from
+	 * Compute the length of the period that includes the specified date in days
+	 * @param   {number}    atTimeMillis      Datetime in milliseconds since the epoch to be included in the period
 	 * @param   {integer}   periodStartDay    The day in month when the period starts 
 	 * @returns {integer}                     The length of the period
 	 */
-	computePeriodLength(atTime, periodStartDay) {
-		const periodStartDate = this.computePeriodStartDate(atTime, periodStartDay);
+	computePeriodLength(atTimeMillis, periodStartDay) {
+		const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
 		const periodEndDate = periodStartDate.plus({ months: 1 });
 		const length = periodEndDate.diff(periodStartDate, 'days').days;
 		this.homey.log(`energyAccount.computePeriodLength: periodLength ${length}`);
@@ -202,24 +211,27 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * Process a event
-	 * @param   {string}    atTime            Date-time to process event for
+	 * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
 	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
 	 * @param   {JSON}      liveMeterReading  The live meter reading data
 	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
 	 * @returns {boolean}                     True if any capabilities were updated
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 
-		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime));
+		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTimeMillis));
+		//TODO: Convert all references to atTime to atTimeMillis
+		const atTime = eventDateTime.toISO();
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
-		const periodLength = this.computePeriodLength(atTime, billingPeriodStartDay);
+		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
 
-		const currentDispatch = this.getCurrentDispatch(atTime, plannedDispatches)
+		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
+		//TODO: Replace atTime with atTimeMillis
 		const minPrice = this.wrapper.minimumPriceOnDate(atTime, false, accountData);							// Pence
 		const currentBalance = this.wrapper.getCurrentBalance(accountData);
 		const exportPrices = this.wrapper.getTariffDirectionPrices(atTime, true, accountData);
@@ -251,7 +263,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let nextPeriodStartDate = this.wrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
 		const newChunk = [0, 30].includes(eventDateTime.minute);
-		const periodDay = this.computePeriodDay(atTime, billingPeriodStartDay);
+		const periodDay = this.computePeriodDay(atTimeMillis, billingPeriodStartDay);
 
 		let deltaExport = 0;
 		let deltaExportValue = 0;

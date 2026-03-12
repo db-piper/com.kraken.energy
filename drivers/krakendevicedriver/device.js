@@ -150,17 +150,19 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Get the current dispatch for a given time from the array of planned dispatches for all devices
-	 * @param 	{string} atTime 			String representation of the event time
+	 * @param 	{number} atTimeMillis 			String representation of the event time
 	 * @param 	{object} plannedDispatches 	JSON object containing planned dispatches for all devices
-	 * @returns {object} 					Current dispatch or undefined if no dispatch currently active
+	 * @returns {object} 										Current dispatch or undefined if no dispatch currently active
 	 */
-	getCurrentDispatch(atTime, plannedDispatches) {
+	getCurrentDispatch(atTimeMillis, plannedDispatches) {
 		let dispatches = [];
 		for (const deviceHash of Object.keys(plannedDispatches)) {
 			for (const dispatch of plannedDispatches[deviceHash]) {
 				dispatches.push(dispatch);
 			}
 		}
+		const atTime = DateTime.fromMillis(atTimeMillis).toISO();
+		//TODO: Replace atTime with atTimeMillis
 		const currentDispatch = this.wrapper.currentExtendedDispatch(atTime, dispatches);
 		return currentDispatch;
 	}
@@ -261,12 +263,12 @@ module.exports = class krakenDevice extends Homey.Device {
 
 	/**
 	 * Define the standard interface for processEvent.
-	 * @param     {string}        atTime            String representation of the event time
+	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 		return false;
 	}
 

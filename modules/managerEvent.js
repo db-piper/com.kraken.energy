@@ -44,14 +44,14 @@ module.exports = class managerEvent {
    * @param {string} token - Valid JWT token from the App/Airlock
    */
   async executeEvent(token) {
-    const atTime = new Date().toISOString();
+    const atTimeMillis = DateTime.now().toMillis();
     this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
 
     // Pass the token into your wrapper
     let accountData = await this.wrapper.accessAccountGraphQL(token);
 
     if (accountData) {
-      return await this.executeEventOnDevices(atTime, accountData);
+      return await this.executeEventOnDevices(atTimeMillis, accountData);
     } else {
       throw new Error('Unable to access account data');
     }
@@ -102,13 +102,13 @@ module.exports = class managerEvent {
 
   /**
    * Indicate that, given the event interval specified, the event is the first of the day
-   * @param     {string}  atTime  event time string in ISO format 
-   * @returns   {boolean}         less than interval milliseconds have passed since midnight
+   * @param     {number}  atTimeMillis  event time in milliseconds since the epoch
+   * @returns   {boolean}               true iff less than interval milliseconds have passed since midnight
    */
-  newDay(atTime) {
+  isNewDay(atTimeMillis) {
     const timeZone = this.driver.homey.clock.getTimezone();
-    const eventDateTime = DateTime.fromJSDate(new Date(atTime)).setZone(timeZone);
-    const midnight = eventDateTime.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
+    const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
+    const midnight = eventDateTime.startOf('day');
     const elapsed = eventDateTime.diff(midnight, 'milliseconds');
     const isNewDay = elapsed.toMillis() < this._period;
     return isNewDay
@@ -116,18 +116,18 @@ module.exports = class managerEvent {
 
   /**
    * Loop over devices, executing the event
-   * @param   {string}            atTime      string representation of the event time in the form "yyyy-mm-ddTHH:MM:SS±hh:mm" 
-   * @param   {object}            accountData kraken account data
-   * @returns {promise<boolean>}              Booleans indicating whether any device has been updated by the event
+   * @param   {number}            atTimeMillis  event time in milliseconds since the epoch
+   * @param   {object}            accountData   kraken account data
+   * @returns {promise<boolean>}                True iff any device has been updated by the event
    */
-  async executeEventOnDevices(atTime, accountData) {
+  async executeEventOnDevices(atTimeMillis, accountData) {
     let updates = false;
-    const wrapper = this.wrapper;
-    const eventInterval = this.driver.homey.app.getEventIntervalMinutes(wrapper.getLocalDateTime(new Date(atTime)));
-    const liveMeterId = wrapper.getLiveMeterId(accountData);
+    //const wrapper = this.wrapper;
+    const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
+    const liveMeterId = this.wrapper.getLiveMeterId(accountData);
 
-    const deviceIds = wrapper.getDeviceIds(accountData);
-    const meterFetchPromise = wrapper.getLiveMeterData(atTime, liveMeterId, deviceIds);
+    const deviceIds = this.wrapper.getDeviceIds(accountData);
+    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches }, ...homeyDeviceReadyResults] = await Promise.all([
@@ -140,10 +140,12 @@ module.exports = class managerEvent {
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
+      const isNewDay = this.isNewDay(atTimeMillis);
+      this.driver.log(`managerEvent.executeEventOnDevices: atTime: ${DateTime.fromMillis(atTimeMillis).toISO()}, isNewDay: ${isNewDay}`)
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
-          device.processEvent(atTime, this.newDay(atTime), reading, dispatches, accountData);
+          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, accountData);
           this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }
@@ -164,7 +166,7 @@ module.exports = class managerEvent {
       updates = results.includes(true);
       this.driver.log(`managerEvent.executeEventOnDevices: end commit capabilities`);
 
-      this.driver.homey.app.eventTime = this.wrapper.getLocalDateTime(new Date(atTime)).toMillis();
+      this.driver.homey.app.eventTime = atTimeMillis;
 
       await this.logMemoryToInsights()
 

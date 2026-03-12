@@ -2,6 +2,7 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
+const { DateTime } = require('../bundles/luxon');
 
 module.exports = class smartEnergyDevice extends krakenDevice {
 
@@ -75,17 +76,19 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 	/**
 	 * Process a timed event
-	 * @param   {string}    atTime            Date-time to process event for
+	 * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
 	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
 	 * @param   {JSON}      liveMeterReading  The live meter reading data
 	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
 	 * @returns {boolean}                     True if any capabilities were updated
 	 */
-	processEvent(atTime, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
 
-		let updates = super.processEvent(atTime, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const eventTime = this.wrapper.getLocalDateTime(new Date(atTime));
+		const eventTime = this.wrapper.getLocalDateTime(new Date(atTimeMillis));
+		//TODO: Convert all references to atTime to atTimeMillis
+		const atTime = eventTime.toISO();
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.wrapper.hashDeviceId(deviceId);
 		const deviceData = this.wrapper.getDevice(deviceId, accountData);

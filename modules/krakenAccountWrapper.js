@@ -79,6 +79,10 @@ module.exports = class krakenAccountWrapper {
     return this.accessParameters.accountId;
   }
 
+  get dateTime() {
+    return DateTime;
+  }
+
   /**
    * Return the dataFetcher instance
    * @returns {dataFetcher}   dataFetcher instance
@@ -535,13 +539,13 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return live meter data from the instantiated live meter device
-   * @param   {string}          atTime    Datetime of the current event
-   * @param   {string}          meterId   The meter ID of the device
-   * @param   {array<string>}   deviceIds Array of device IDs
-   * @returns {Promise<object>}           Reading JSON object representing the current data
+   * @param   {number}          atTimeMillis  Datetime of the current event in milliseconds since the epoch
+   * @param   {string}          meterId       The meter ID of the device
+   * @param   {array<string>}   deviceIds     Array of device IDs
+   * @returns {Promise<object>}               Reading JSON object representing the current data
    */
-  async getLiveMeterData(atTime, meterId, deviceIds) {
-    let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTime);
+  async getLiveMeterData(atTimeMillis, meterId, deviceIds) {
+    let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
     const result = {
       reading: undefined,
       dispatches: {}
@@ -667,14 +671,15 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Build the live data query using the live meter Id and intelligent device Ids
-   * @param   {string}      meterId     The id of the live meter (e.g. Octopus Home Mini) 
-   * @param   {string[]}    deviceIds   Array of intelligent device Ids  
-   * @param   {string}      atTime      The time at which to get the data
-   * @returns {object}                  JSON result of Graph QL query
+   * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini) 
+   * @param   {string[]}    deviceIds     Array of intelligent device Ids  
+   * @param   {number}      atTimeMillis  The time at which to get the data in milliseconds since the epoch
+   * @returns {object}                    JSON result of Graph QL query
    */
-  buildDispatchQuery(meterId, deviceIds, atTime) {
+  buildDispatchQuery(meterId, deviceIds, atTimeMillis) {
     // 1. Logic-Heavy calculation (State/Context)
-    const endTime = this.getLocalDateTime(new Date(atTime)).set({ seconds: 0, milliseconds: 0 });
+    //const endTime = this.getLocalDateTime(new Date(atTimeMillis)).set({ seconds: 0, milliseconds: 0 });
+    const endTime = DateTime.fromMillis(atTimeMillis, { zone: this._timeZone }).set({ seconds: 0, milliseconds: 0 });
     const startTime = endTime.minus({ minutes: 1 });
 
     // 2. Prepare the device array for the factory
