@@ -97,10 +97,10 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
 	/**
-	 * onUnit is called when the device is destroyed
+	 * onUninit is called when the device is destroyed
 	 */
-	async onUnit() {
-		this.log('krakenDevice:onInit - generic krakenDevice UnInitialization Started');
+	async onUninit() {
+		this.log('krakenDevice:onUninit - generic krakenDevice UnInitialization Started');
 		this._requiredCapabilities = null;
 		this._updatedCapabilities = null;
 		//this._storeValues = null;
@@ -144,6 +144,10 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice Device: migrateStore - migrating settings for device ${this.getName()}.`);
 	}
 
+	/**
+	 * Manufacture an instance of krakenAccountWrapper
+	 * @returns {krakenAccountWrapper} 	Instance of krakenAccountWrapper
+	 */
 	get wrapper() {
 		return new krakenAccountWrapper(this.driver);
 	}
@@ -161,9 +165,7 @@ module.exports = class krakenDevice extends Homey.Device {
 				dispatches.push(dispatch);
 			}
 		}
-		const atTime = DateTime.fromMillis(atTimeMillis).toISO();
-		//TODO: Replace atTime with atTimeMillis
-		const currentDispatch = this.wrapper.currentExtendedDispatch(atTime, dispatches);
+		const currentDispatch = this.wrapper.currentExtendedDispatch(atTimeMillis, dispatches);
 		return currentDispatch;
 	}
 

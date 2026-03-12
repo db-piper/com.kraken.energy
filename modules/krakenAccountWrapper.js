@@ -7,7 +7,6 @@ const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, Event
 
 let TestData = null;
 try {
-  // Path assumes this file is in /drivers/kraken/
   TestData = require('../test_data');
 } catch (err) {
   // TestData remains null in production
@@ -79,16 +78,20 @@ module.exports = class krakenAccountWrapper {
     return this.accessParameters.accountId;
   }
 
-  get dateTime() {
-    return DateTime;
-  }
-
   /**
    * Return the dataFetcher instance
    * @returns {dataFetcher}   dataFetcher instance
    */
   get fetcher() {
     return new dataFetcher(this._driver.homey);
+  }
+
+  /**
+   * Return the timezone of the homey device
+   * @returns {string}    Timezone in the form Europe/London
+   */
+  get timeZone() {
+    return this._timeZone;
   }
 
   /**
@@ -174,14 +177,14 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the prices for the accounts import or export tariff
-   * @param   {string}    atTime        String representation of the event date and time
+   * @param   {number}    atTimeMillis  String representation of the event date and time in milliseconds
    * @param   {boolean}   direction     True: export tariff; False: import tariff
-   * @returns {object}                  JSON tariff price structure or undefined if no prices available atTime
+   * @returns {object}                  JSON tariff price structure or undefined if no prices available atTimeMillis
    */
-  getTariffDirectionPrices(atTime, direction, accountData) {
+  getTariffDirectionPrices(atTimeMillis, direction, accountData) {
     const tariff = this.getTariffDirection(direction, accountData);
     if (tariff !== undefined) {
-      const prices = this.getPrices(atTime, tariff);
+      const prices = this.getPrices(atTimeMillis, tariff);
       return prices;
     } else {
       return undefined;
@@ -190,15 +193,16 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the price slot details of the next slot returning default values if not present
-   * @param 	{string}	slotStart		Start datetime in ISO format
+   * @param 	{string}	slotStart		Start datetime in ISO format from tariff slot data NOT MILLISECONDS
    * @param 	{boolean} direction		True - export; false - import 
    * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
    * @returns {object}							Price slot structure with empty values if absent
    */
   getNextTariffSlotPrices(slotStart, halfHourly, direction, accountData) {
+    const slotStartMs = DateTime.fromISO(slotStart, { zone: this.timeZone }).toMillis();
     let nextPrices = undefined;
     if (slotStart !== null) {
-      nextPrices = this.getTariffDirectionPrices(slotStart, direction, accountData);
+      nextPrices = this.getTariffDirectionPrices(slotStartMs, direction, accountData);
     }
     if (nextPrices === undefined) {
       nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
@@ -208,13 +212,13 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Indicate whether next day prcies are available
-   * @param		{string}		atTime				DateTime that is sometime "today"
-   * @param		{boolean}		direction			True for export, false for import
-   * @returns {any}											Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
+   * @param		{number}		atTimeMillis		Time in epoch milliseconds
+   * @param		{boolean}		direction				True for export, false for import
+   * @returns {any}											  Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
    */
-  getTomorrowsPricesPresent(atTime, direction, accountData) {
-    const nextDay = (this.getLocalDateTime(new Date(atTime))).plus({ days: 1 });
-    const nextDayPrices = this.getTariffDirectionPrices(nextDay.toISO(), direction, accountData);
+  getTomorrowsPricesPresent(atTimeMillis, direction, accountData) {
+    const nextDay = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 });
+    const nextDayPrices = this.getTariffDirectionPrices(nextDay.toMillis(), direction, accountData);
     let present = false;
     if (nextDayPrices === undefined) {
       present = false;
@@ -228,33 +232,33 @@ module.exports = class krakenAccountWrapper {
     return present;
   }
 
-  /**
-   * Get date/time in Homey timezone
-   * @param		{Date}				jsDate			JS Date object
-   * @returns {DateTime}								DateTime object in Homey's timezone
-   */
-  getLocalDateTime(jsDate) {
-    const dateTime = DateTime.fromJSDate(jsDate).setZone(this._timeZone);
-    return dateTime;
-  }
+  // /**
+  //  * Get date/time in Homey timezone
+  //  * @param		{Date}				jsDate			JS Date object
+  //  * @returns {DateTime}								DateTime object in Homey's timezone
+  //  */
+  // getLocalDateTime(jsDate) {
+  //   const dateTime = DateTime.fromJSDate(jsDate).setZone(this.timeZone);
+  //   return dateTime;
+  // }
 
   /**
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
-   * @param   {string}          atTime    ISO format timestamp string
-   * @param   {object - JSON}   tariff    Tariff data structure
+   * @param   {number}          atTimeMillis  Event date and time in epoch milliseconds
+   * @param   {object - JSON}   tariff        Tariff data structure
    * @returns {object - JSON}   {preVatUnitRate, unitRate, preVatStandingCharge, standingCharge, ...}; undefined if no prices available
    */
-  getPrices(atTime, tariff) {
+  getPrices(atTimeMillis, tariff) {
     let prices = undefined;
 
     if (tariff && "unitRates" in tariff) {
-      const target = DateTime.fromISO(atTime, { zone: this._timeZone });
+      const target = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
       const targetMs = target.toMillis();
       const tomorrowMs = target.plus({ days: 1 }).startOf('day').toMillis();
 
       const selectedRate = tariff.unitRates.find(rate => {
-        const start = DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis();
-        const end = DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis();
+        const start = DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis();
+        const end = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
         return start <= targetMs && end > targetMs;
       });
 
@@ -264,7 +268,7 @@ module.exports = class krakenAccountWrapper {
 
         // Optimized single-pass loop to find Min/Max for Today
         for (const rate of tariff.unitRates) {
-          const rateEndMs = DateTime.fromISO(rate.validTo, { zone: this._timeZone }).toMillis();
+          const rateEndMs = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
 
           // Match original filter: only consider rates ending before or at start of tomorrow
           if (rateEndMs <= tomorrowMs) {
@@ -294,7 +298,7 @@ module.exports = class krakenAccountWrapper {
         };
       }
     } else if (tariff) {
-      const startTime = DateTime.fromISO(atTime, { zone: this._timeZone }).startOf('day');
+      const startTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('day');
       prices = {
         preVatUnitRate: tariff.preVatUnitRate,
         unitRate: tariff.unitRate,
@@ -471,24 +475,24 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the minimum price for the tariff for the day
-   * @param   {string}    atTime    Datetime of the current event
-   * @param   {boolean}   isExport  True iff export tariff, false otherwise
-   * @returns {float}               The minimum price for the day  
+   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
+   * @param   {boolean}   isExport          True iff export tariff, false otherwise
+   * @returns {float}                       The minimum price for the day  
    */
-  minimumPriceOnDate(atTime, isExport, accountData) {
+  minimumPriceOnDate(atTimeMillis, isExport, accountData) {
     const tariff = this.getTariffDirection(isExport, accountData);
     let minimumPrice = 0;
 
     if (!tariff) return undefined;
 
     if (Array.isArray(tariff.unitRates)) {
-      const boundaryMs = DateTime.fromISO(atTime, { zone: this._timeZone })
+      const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone })
         .plus({ days: 1 })
         .startOf('day')
         .toMillis();
 
       const validRates = tariff.unitRates
-        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis() < boundaryMs)
+        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
@@ -505,24 +509,24 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the maximum price for the tariff for the day
-   * @param   {string}    atTime    Datetime of the current event
-   * @param   {boolean}   isExport  True iff export tariff, false otherwise
-   * @returns {float}               The maximum price for the day  
+   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
+   * @param   {boolean}   isExport          True iff export tariff, false otherwise
+   * @returns {float}                       The maximum price for the day  
    */
-  maximumPriceOnDate(atTime, isExport, accountData) {
+  maximumPriceOnDate(atTimeMillis, isExport, accountData) {
     const tariff = this.getTariffDirection(isExport, accountData);
     let maximumPrice = 0;
 
     if (!tariff) return undefined;
 
     if (Array.isArray(tariff.unitRates)) {
-      const boundaryMs = DateTime.fromISO(atTime, { zone: this._timeZone })
+      const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone })
         .plus({ days: 1 })
         .startOf('day')
         .toMillis();
 
       const validRates = tariff.unitRates
-        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this._timeZone }).toMillis() < boundaryMs)
+        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
@@ -557,7 +561,7 @@ module.exports = class krakenAccountWrapper {
         result.reading = { ...readingArray[0] };
       }
       if (TestData) {
-        const mockDispatches = TestData.getMockDispatches(DateTime, this._timeZone);
+        const mockDispatches = TestData.getMockDispatches(DateTime, this.timeZone);
         Object.assign(response.data, mockDispatches);
       }
       for (const deviceId of deviceIds) {
@@ -597,26 +601,26 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the planned dispatches that start after the specified time
-   * @param       {string}    atTime            Time to check against
+   * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {[JSON]}                      Selected dispatches
    */
-  futureDispatches(atTime, plannedDispatches) {
-    const eventTime = this.getLocalDateTime(new Date(atTime));
-    const selectedItems = plannedDispatches.filter((dispatch) => this.getLocalDateTime(new Date(dispatch.start)) > eventTime);
+  futureDispatches(atTimeMillis, plannedDispatches) {
+    const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
+    const selectedItems = plannedDispatches.filter((dispatch) => DateTime.fromISO(dispatch.start, { zone: this.timeZone }) > eventTime);
     return selectedItems;
   }
 
   /**
    * Return the dispatch that is currently active from an array of planned dispatches, using extended times
-   * @param       {string}    atTime            Time to check against
+   * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {JSON}                        Selected dispatch or undefined
    */
-  currentExtendedDispatch(atTime, plannedDispatches) {
-    const eventTime = this.getLocalDateTime(new Date(atTime));
+  currentExtendedDispatch(atTimeMillis, plannedDispatches) {
+    const eventTime = DateTime.fromMillis(atTimeMillis);
     const selectedDispatches = plannedDispatches.filter((dispatch) =>
-      (this.advanceTime(dispatch.start) < eventTime) &&
+      (this.advanceTime(dispatch.start) <= eventTime) &&
       (this.extendTime(dispatch.end) > eventTime)
     );
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
@@ -624,37 +628,37 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the dispatch that is currently active from an array of planned dispatches using planned times
-   * @param       {string}    atTime            Time to check against
+   * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param       {[JSON]}    plannedDispatches Array of dispatches
    * @returns     {JSON}                        Selected dispatch or undefined
    */
-  currentPlannedDispatch(atTime, plannedDispatches) {
-    const eventTime = this.getLocalDateTime(new Date(atTime));
+  currentPlannedDispatch(atTimeMillis, plannedDispatches) {
+    const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
     const selectedDispatches = plannedDispatches.filter((dispatch) =>
-      (this.getLocalDateTime(new Date(dispatch.start)) <= eventTime) &&
-      (this.getLocalDateTime(new Date(dispatch.end)) > eventTime)
+      (DateTime.fromISO(dispatch.start, { zone: this.timeZone }) <= eventTime) &&
+      (DateTime.fromISO(dispatch.end, { zone: this.timeZone }) > eventTime)
     );
     return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
   }
 
   /**
    * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
-   * @param   {string}      time     String datetime to be advanced, in ISO format
+   * @param   {string}      time     String datetime to be advanced, in ISO format from dispatch data [NOT MILLIS]
    * @returns {DateTime}             <time> advanced to the preceding 30 minute boundary
    */
   advanceTime(time) {
-    const dateTime = this.getLocalDateTime(new Date(time));
+    const dateTime = DateTime.fromISO(time, { zone: this.timeZone });
     return this.retardDateTime(dateTime);
   }
 
   /**
    * Extend an end time to the following 30 minute boundary (00 or 30 minutes past the hour)
-   * @param   {string}        time    String datetime to be extend, in ISO format 
+   * @param   {string}        time    String datetime to be extend, in ISO format from dispatch data [NOT MILLISECONDS]
    * @returns {DateTime}              <time> extended to the following 30 minute boundary
    */
   extendTime(time) {
     //Advance the time by 30 minutes, then retard the result
-    const dateTime = this.getLocalDateTime(new Date(time)).plus({ minutes: 29 });
+    const dateTime = DateTime.fromISO(time, { zone: this.timeZone }).plus({ minutes: 29 });
     return this.retardDateTime(dateTime);
   }
 
@@ -678,8 +682,7 @@ module.exports = class krakenAccountWrapper {
    */
   buildDispatchQuery(meterId, deviceIds, atTimeMillis) {
     // 1. Logic-Heavy calculation (State/Context)
-    //const endTime = this.getLocalDateTime(new Date(atTimeMillis)).set({ seconds: 0, milliseconds: 0 });
-    const endTime = DateTime.fromMillis(atTimeMillis, { zone: this._timeZone }).set({ seconds: 0, milliseconds: 0 });
+    const endTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('minute');
     const startTime = endTime.minus({ minutes: 1 });
 
     // 2. Prepare the device array for the factory
@@ -708,7 +711,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return a price slot structure with appropriate values for a missing slot
-   * @param 	{string}	start				Start datetime in ISO format or null
+   * @param 	{string}	start				Start datetime in ISO format or null [NOT MILLISECONDS]
    * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
    */
   getEmptyPriceSlot(start, halfHourly) {

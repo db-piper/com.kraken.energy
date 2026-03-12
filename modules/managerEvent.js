@@ -141,7 +141,7 @@ module.exports = class managerEvent {
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       const isNewDay = this.isNewDay(atTimeMillis);
-      this.driver.log(`managerEvent.executeEventOnDevices: atTime: ${DateTime.fromMillis(atTimeMillis).toISO()}, isNewDay: ${isNewDay}`)
+      this.driver.log(`managerEvent.executeEventOnDevices: at: ${DateTime.fromMillis(atTimeMillis).toISO()}, isNewDay: ${isNewDay}`)
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);

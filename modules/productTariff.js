@@ -4,7 +4,6 @@ const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("./krakenAccountWrapper");
 const { DateTime } = require('../bundles/luxon');
 
-
 module.exports = class productTariff extends krakenDevice {
 
 	/**
@@ -160,13 +159,9 @@ module.exports = class productTariff extends krakenDevice {
 
 		const direction = this.isExport;
 		const isDispatchable = this.isDispatchable;
-		//const isDispatchable = this.wrapper.getDeviceIds(accountData).length > 0;
-		//convert eventTime to luxon.DateTime rather than JSDate
 		const eventTime = DateTime.fromMillis(atTimeMillis);
-		//TODO: Convert all references to atTime to atTimeMillis
-		const atTime = eventTime.toISO();
 		const tariff = this.wrapper.getTariffDirection(direction, accountData);
-		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTime, direction, accountData);
+		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, direction, accountData);
 		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
 		const nextTariffPrices = this.wrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
 		const nextTariffAbsent = nextTariffPrices.unitRate === null;
@@ -183,8 +178,8 @@ module.exports = class productTariff extends krakenDevice {
 		const productCode = tariff.productCode;
 		const tariffCode = tariff.tariffCode;
 		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%		
-		const minPrice = this.wrapper.minimumPriceOnDate(atTime, direction, accountData);
-		const maxPrice = this.wrapper.maximumPriceOnDate(atTime, direction, accountData);
+		const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, direction, accountData);
+		const maxPrice = this.wrapper.maximumPriceOnDate(atTimeMillis, direction, accountData);
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
 		const inDispatch = currentDispatch !== undefined;
 		const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
@@ -202,17 +197,14 @@ module.exports = class productTariff extends krakenDevice {
 		const dispatchQuartile = discountDispatch ? 0 : 3;
 		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariffPrices.quartile;
 		const slotStart = tariffPrices.thisSlotStart;															//ISO
-		const shortStart = this.wrapper.getLocalDateTime(new Date(slotStart)).toFormat("dd/LL T");
+		const shortStart = DateTime.fromISO(slotStart, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
 		const slotEnd = tariffPrices.nextSlotStart;
-		const shortEnd = this.wrapper.getLocalDateTime(new Date(slotEnd)).toFormat("dd/LL T");			//ISO
+		const shortEnd = DateTime.fromISO(slotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");			//ISO
 		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;					//£
 		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
-		const nextDayPresent = this.wrapper.getTomorrowsPricesPresent(atTime, direction, accountData);			//Boolean
+		const nextDayPresent = this.wrapper.getTomorrowsPricesPresent(atTimeMillis, direction, accountData);			//Boolean
 		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;							//ISO
-		let shortNextEnd = null;
-		if (!nextTariffAbsent) {
-			shortNextEnd = this.wrapper.getLocalDateTime(new Date(nextSlotEnd)).toFormat("dd/LL T");
-		}
+		const shortNextEnd = nextTariffAbsent ? null : DateTime.fromISO(nextSlotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
 
 		this.updateCapability(this._capIds.PRODUCT_CODE, productCode);
 		this.updateCapability(this._capIds.TARIFF_CODE, tariffCode);

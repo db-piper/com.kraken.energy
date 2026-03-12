@@ -141,16 +141,11 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	async updatePeriodDay(startDay) {
 		this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
-		//const atTime = (new Date()).toISOString();
 		const atTimeMillis = DateTime.now().toMillis();
 		const periodDay = this.computePeriodDay(atTimeMillis, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTimeMillis, startDay);
 		const nextStartDate = periodStartDate.plus({ months: 1 });
 		const periodLength = nextStartDate.diff(periodStartDate, 'days').days;
-		//TODO: Remove comments
-		//const nextStartDate = this.computePeriodStartDate(periodStartDate.plus({ months: 1 }).toMillis(), startDay);
-		//TODO: Review need for computePeriodLength
-		//const periodLength = this.computePeriodLength(atTimeMillis, Number(startDay));
 
 		this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
 		this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.toFormat("yyyy-LL-dd"));
@@ -170,12 +165,9 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTimeMillis, periodStartDay) {
-		//TODO: Remove comments
-		//const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTime)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
 		const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
-		//this.homey.log(`energyAccount.computePeriodDay: periodDay ${periodDay}`);
 		return periodDay;
 	}
 
@@ -187,7 +179,6 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	computePeriodStartDate(atTimeMillis, periodStartDay) {
 		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
-		//const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTimeMillis)).set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
 			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :
@@ -221,9 +212,8 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
 
-		const eventDateTime = this.wrapper.getLocalDateTime(new Date(atTimeMillis));
-		//TODO: Convert all references to atTime to atTimeMillis
-		const atTime = eventDateTime.toISO();
+		const timeZone = this.wrapper.timeZone;
+		const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
@@ -231,12 +221,11 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		//TODO: Replace atTime with atTimeMillis
-		const minPrice = this.wrapper.minimumPriceOnDate(atTime, false, accountData);							// Pence
+		const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, false, accountData);							// Pence
 		const currentBalance = this.wrapper.getCurrentBalance(accountData);
-		const exportPrices = this.wrapper.getTariffDirectionPrices(atTime, true, accountData);
+		const exportPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, true, accountData);
 		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = this.wrapper.getTariffDirectionPrices(atTime, false, accountData);
+		const importPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, false, accountData);
 		const importTariffPresent = importPrices !== undefined;
 
 		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);
@@ -259,8 +248,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
 		const priorImportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_IMPORT_PRICE_PAID);			//pounds
 
-		let currentPeriodStartDate = this.wrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME)));
-		let nextPeriodStartDate = this.wrapper.getLocalDateTime(new Date(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME)));
+		let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
+		let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
 		const newPeriod = eventDateTime >= nextPeriodStartDate;
 		const newChunk = [0, 30].includes(eventDateTime.minute);
 		const periodDay = this.computePeriodDay(atTimeMillis, billingPeriodStartDay);
@@ -322,6 +311,7 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 
 			if (importTariffPresent) {
+				//TODO: Add boost pricing here.
 				importPrice = .01 * (dispatchPricing ? minPrice : importPrices.unitRate);										//pounds	
 				deltaImport = liveMeterReading.consumption - currentImport;																	//watts
 				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
