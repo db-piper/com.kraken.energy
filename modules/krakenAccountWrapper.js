@@ -232,16 +232,6 @@ module.exports = class krakenAccountWrapper {
     return present;
   }
 
-  // /**
-  //  * Get date/time in Homey timezone
-  //  * @param		{Date}				jsDate			JS Date object
-  //  * @returns {DateTime}								DateTime object in Homey's timezone
-  //  */
-  // getLocalDateTime(jsDate) {
-  //   const dateTime = DateTime.fromJSDate(jsDate).setZone(this.timeZone);
-  //   return dateTime;
-  // }
-
   /**
    * Return the prices for a tariff for the timeslot immediately preceding the time specified
    * @param   {number}          atTimeMillis  Event date and time in epoch milliseconds
