@@ -76,10 +76,7 @@ module.exports = class managerEvent {
    * @returns {krakenAccountWrapper}  Instance of krakenAccountWrapper
    */
   get wrapper() {
-    if (!this._wrapper) {
-      this._wrapper = new krakenAccountWrapper(this.driver);
-    }
-    return this._wrapper;
+    return this.driver.wrapper;
   }
 
   /**

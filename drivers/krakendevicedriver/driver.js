@@ -5,6 +5,7 @@ const energyAccount = require('../../modules/energyAccount');
 const productTariff = require('../../modules/productTariff');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
 const managerEvent = require('../../modules/managerEvent');
+const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -103,6 +104,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     this.log("krakenDriver.onUninit - driver has been terminated");
     this.stopEventPoller();
     this._eventer = null;
+    this._wrapper = null;
   }
 
   get eventer() {
@@ -110,6 +112,13 @@ module.exports = class krakenDriver extends Homey.Driver {
       this._eventer = new managerEvent(this);
     }
     return this._eventer;
+  }
+
+  get wrapper() {
+    if (!this._wrapper) {
+      this._wrapper = new krakenAccountWrapper(this);
+    }
+    return this._wrapper;
   }
 
   /**
