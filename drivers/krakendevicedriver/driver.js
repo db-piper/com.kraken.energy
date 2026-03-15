@@ -102,10 +102,14 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onUninit() {
     this.log("krakenDriver.onUninit - driver has been terminated");
     this.stopEventPoller();
+    this._eventer = null;
   }
 
   get eventer() {
-    return new managerEvent(this);
+    if (!this._eventer) {
+      this._eventer = new managerEvent(this);
+    }
+    return this._eventer;
   }
 
   /**

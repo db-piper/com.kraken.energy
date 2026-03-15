@@ -103,6 +103,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onUninit - generic krakenDevice UnInitialization Started');
 		this._requiredCapabilities = null;
 		this._updatedCapabilities = null;
+		this._wrapper = null;
 	}
 
 	/**
@@ -148,7 +149,10 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {krakenAccountWrapper} 	Instance of krakenAccountWrapper
 	 */
 	get wrapper() {
-		return new krakenAccountWrapper(this.driver);
+		if (!this._wrapper) {
+			this._wrapper = new krakenAccountWrapper(this.driver);
+		}
+		return this._wrapper;
 	}
 
 	/**

@@ -73,7 +73,10 @@ module.exports = class krakenAccountWrapper {
    * @returns {dataFetcher}   dataFetcher instance
    */
   get fetcher() {
-    return new dataFetcher(this._driver.homey);
+    if (!this._fetcher) {
+      this._fetcher = new dataFetcher(this._driver.homey);
+    }
+    return this._fetcher;
   }
 
   /**
