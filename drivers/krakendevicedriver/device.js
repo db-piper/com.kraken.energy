@@ -268,9 +268,14 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
+	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
+	 * @param			{object}				account						Account abstract from Kraken
+	 * @param			{object}				importTariff			Import tariff object from Kraken
+	 * @param			{object}				exportTariff			Export tariff object from Kraken
+	 * @param			{object}				devices						Map of devices from Kraken
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
 		return false;
 	}
 

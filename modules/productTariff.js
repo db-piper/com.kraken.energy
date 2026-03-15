@@ -13,9 +13,14 @@ module.exports = class productTariff extends krakenDevice {
 		this.log('productTariff Device:onInit - productTariff Initialization Started');
 		await super.onInit();
 
+		//TODO: this.isDispatchable and this.isHalfHourly are set at device creation but are not updated
+		//TODO: if the user changes the tariff to one with different characteristics.  Capabilities will
+		//TODO: need to be added or removed accordingly.
+
 		const isHalfHourly = this.isHalfHourly;
 		const isDispatchable = this.isDispatchable;
 		const slotLabelWord = isHalfHourly ? "Slot" : "Day";
+		this.log(`productTariff Device:onInit - isHalfHourly: ${isHalfHourly}, isDispatchable: ${isDispatchable}, slotLabelWord: ${slotLabelWord}`);
 
 		this.defineCapability(this._capIds.PRODUCT_CODE);
 		this.defineCapability(this._capIds.TARIFF_CODE);
@@ -147,85 +152,78 @@ module.exports = class productTariff extends krakenDevice {
 	}
 
 	/**
-	 * Process an event for the tariff.
+	 * Define the standard interface for processEvent.
 	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
-	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt} 
-	 * @returns   {boolean}                         Indicates if any updates have been made to the device capabilities
+	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
+	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
+	 * @param			{object}				account						Account abstract from Kraken
+	 * @param			{object}				importTariff			Import tariff object from Kraken
+	 * @param			{object}				exportTariff			Export tariff object from Kraken
+	 * @param			{object}				devices						Map of devices from Kraken
+	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
 		const direction = this.isExport;
 		const isDispatchable = this.isDispatchable;
 		const eventTime = DateTime.fromMillis(atTimeMillis);
-		const tariff = this.wrapper.getTariffDirection(direction, accountData);
-		const tariffPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, direction, accountData);
+		const tariff = direction ? exportTariff : importTariff;
+		const propertyName = direction ? "export" : "consumption";
 		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
-		const nextTariffPrices = this.wrapper.getNextTariffSlotPrices(tariffPrices.nextSlotStart, tariffPrices.isHalfHourly, direction, accountData);
-		const nextTariffAbsent = nextTariffPrices.unitRate === null;
 		const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
 		const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
 		const firstTime = recordedSlotEnd === null;
-		const propertyName = direction ? "export" : "consumption";
-		const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
 		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));																				//Boolean
-		const duration = firstTime ? 0 : ((eventTime - new Date(recordedSlotStart)) / (60 * 60 * 1000));											//Decimal hours
+		const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
+		const duration = firstTime ? 0 : ((eventTime - DateTime.fromISO(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
 		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
 		const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));						//Wh
 		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);											//£
-		const productCode = tariff.productCode;
-		const tariffCode = tariff.tariffCode;
-		const taxRate = 100 * (tariffPrices.unitRate - tariffPrices.preVatUnitRate) / tariffPrices.preVatUnitRate;		//%		
-		const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, direction, accountData);
-		const maxPrice = this.wrapper.maximumPriceOnDate(atTimeMillis, direction, accountData);
+		const minPrice = tariff.minimumPriceToday;
+		const maxPrice = tariff.maximumPriceToday;
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
 		const inDispatch = currentDispatch !== undefined;
 		const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
 		const dispatchPrice = discountDispatch ? minPrice : maxPrice;
 		const percentDispatchLimit = 100 * this.getTotalDispatchMinutes() / this.getSettings().dispatchMinutesLimit;
-		const tariffPrice = .01 * tariffPrices.unitRate;
-		const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : tariffPrices.unitRate);							//£	
-		const standingChargeTaxed = .01 * tariff.standingCharge;																		//£
+		const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : tariff.unitRate);							//£	
 		const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
-		//The prior price paid is used to calculate the value of the energy consumed in the previous tick
 		const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£
 		const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
 		const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);		//£
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
 		const dispatchQuartile = discountDispatch ? 0 : 3;
-		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariffPrices.quartile;
-		const slotStart = tariffPrices.thisSlotStart;															//ISO
+		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariff.slotQuartile;
+		const slotStart = tariff.slotStart;
 		const shortStart = DateTime.fromISO(slotStart, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
-		const slotEnd = tariffPrices.nextSlotStart;
+		const slotEnd = tariff.slotEnd;
 		const shortEnd = DateTime.fromISO(slotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");			//ISO
-		const nextUnitPriceTaxed = nextTariffAbsent ? null : .01 * nextTariffPrices.unitRate;					//£
-		const nextQuartile = nextTariffAbsent ? null : nextTariffPrices.quartile;
-		const nextDayPresent = this.wrapper.getTomorrowsPricesPresent(atTimeMillis, direction, accountData);			//Boolean
-		const nextSlotEnd = nextTariffAbsent ? null : nextTariffPrices.nextSlotStart;							//ISO
-		const shortNextEnd = nextTariffAbsent ? null : DateTime.fromISO(nextSlotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
+		const nextSlotEnd = tariff.nextSlotEnd;
+		const shortNextEnd = tariff.nextUnitPrice === null ? null : DateTime.fromISO(nextSlotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
 
-		this.updateCapability(this._capIds.PRODUCT_CODE, productCode);
-		this.updateCapability(this._capIds.TARIFF_CODE, tariffCode);
+		this.updateCapability(this._capIds.PRODUCT_CODE, tariff.productCode);
+		this.updateCapability(this._capIds.TARIFF_CODE, tariff.tariffCode);
 		this.updateCapability(this._capIds.UNIT_PRICE_PAID, unitPriceTaxed);
-		this.updateCapability(this._capIds.STANDING_CHARGE, standingChargeTaxed);
+		this.updateCapability(this._capIds.STANDING_CHARGE, .01 * tariff.standingCharge);
 		this.updateCapability(this._capIds.METER_READING, newEnergyReading / 1000);
 		this.updateCapability(this._capIds.SLOT_ENERGY_CONSUMPTION, updatedSlotEnergy);
 		this.updateCapability(this._capIds.SLOT_ENERGY_VALUE, updatedSlotValueTaxed);
 		this.updateCapability(this._capIds.AVERAGE_POWER, slotPower);
 		this.updateCapability(this._capIds.SLOT_QUARTILE, slotQuartile);
-		this.updateCapability(this._capIds.TAX_RATE, taxRate);
+		this.updateCapability(this._capIds.TAX_RATE, tariff.taxRate);
 		this.updateCapability(this._capIds.SLOT_START_TIME, shortStart);
 		this.updateCapability(this._capIds.SLOT_START_DATETIME, slotStart);
 		this.updateCapability(this._capIds.SLOT_END_TIME, shortEnd);
 		this.updateCapability(this._capIds.SLOT_END_DATETIME, slotEnd);
-		this.updateCapability(this._capIds.NEXT_DAY_PRICES_INDICATOR, nextDayPresent);
-		this.updateCapability(this._capIds.NEXT_UNIT_PRICE, nextUnitPriceTaxed);
-		this.updateCapability(this._capIds.NEXT_SLOT_QUARTILE, nextQuartile);
+		this.updateCapability(this._capIds.NEXT_DAY_PRICES_INDICATOR, tariff.hasTomorrowsPrices);
+		this.updateCapability(this._capIds.NEXT_UNIT_PRICE, .01 * tariff.nextUnitPrice);
+		this.updateCapability(this._capIds.NEXT_SLOT_QUARTILE, tariff.nextSlotQuartile);
 		this.updateCapability(this._capIds.NEXT_SLOT_END_TIME, shortNextEnd);
 		this.updateCapability(this._capIds.DISPATCH_PRICING_INDICATOR, inDispatch);
-		this.updateCapability(this._capIds.UNIT_PRICE_TARIFF, tariffPrice);
+		this.updateCapability(this._capIds.UNIT_PRICE_TARIFF, .01 * tariff.unitRate);
 		this.updateCapability(this._capIds.DISPATCH_LIMIT_PERCENT, percentDispatchLimit);
 
 		return updates;

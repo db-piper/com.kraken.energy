@@ -120,9 +120,9 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
     try {
-      const token = await this.eventer.getApiToken();
-      if (!token) throw new Error('Token acquisition failed');
-      await this.eventer.executeEvent(token);
+      // const token = await this.eventer.getApiToken();
+      // if (!token) throw new Error('Token acquisition failed');
+      await this.eventer.executeEvent();
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.stack}`);
@@ -171,28 +171,47 @@ module.exports = class krakenDriver extends Homey.Driver {
   }
 
   /**
-   * Ensures the heartbeat is active and synchronized with current credentials.
-   * Handles the "Phase Shift" by resetting the timer to the moment of validation.
+   * Ensures the heartbeat is active and synchronized to the :15s mark of every minute.
+   * Uses Luxon for precise time-of-minute anchoring to prevent execution drift.
    */
   startEventPoller() {
-    if (this._interval) {
+    if (this._pollerTimeout) {
       this.log('krakenDriver.startEventPoller: Heartbeat already active.');
       return;
     }
 
     if (this.getDevices().length > 0) {
-      this.log('krakenDriver.startEventPoller: No active poller found. Starting now.');
+      const scheduleNext = () => {
+        const now = DateTime.now();
 
-      const heartbeatTask = async () => {
-        await this.onHeartbeat();
+        // Target the 15-second mark of the current minute
+        let nextRun = now.set({ second: 15, millisecond: 0 });
+
+        // If we are already past :15s, move target to the next minute
+        if (nextRun <= now) {
+          nextRun = nextRun.plus({ minutes: 1 });
+        }
+
+        const delay = nextRun.diff(now).milliseconds;
+
+        // Recursive timeout ensures drift is corrected every minute
+        this._pollerTimeout = this.homey.setTimeout(async () => {
+          try {
+            this.log(`krakenDriver.onHeartbeat: Tick start at ${DateTime.now().toISO()}`);
+            await this.onHeartbeat();
+          } catch (err) {
+            this.error('krakenDriver.onHeartbeat: Error during execution', err);
+          } finally {
+            this._pollerTimeout = null;
+            scheduleNext(); // Re-calculate the next :15s gap
+          }
+        }, delay);
       };
 
-      this._interval = this.eventer.setInterval(this.homey, 60000, heartbeatTask, (newId) => {
-        this._interval = newId;
-        this.log('krakenDriver.startEventPoller: Poller successfully initialized.');
-      });
+      scheduleNext();
+      this.log('krakenDriver.startEventPoller: Poller anchored to :15s.');
     } else {
-      this.log('krakenDriver.startEventPoller: No devices extant. Standing by.');
+      this.log('krakenDriver.startEventPoller: No devices found. Standing by.');
     }
   }
 
@@ -200,15 +219,12 @@ module.exports = class krakenDriver extends Homey.Driver {
    * Ensures the heartbeat is stopped.
    */
   stopEventPoller() {
-    this.log('krakenDriver: Ensuring poller is stopped');
-    if (this._interval) {
-      this.homey.clearTimeout(this._interval);
-      this.homey.clearInterval(this._interval);
-      this._interval = undefined;
-      this.log('krakenDriver: Poller stopped.');
+    if (this._pollerTimeout) {
+      this.homey.clearTimeout(this._pollerTimeout);
+      this._pollerTimeout = null;
+      this.log('krakenDriver.stopEventPoller: Poller stopped.');
     }
   }
-
   /**
    * Returns devices sorted by a custom priority list
    * @param   {string[]}        orderedKeys Class names of the devices in the priority order

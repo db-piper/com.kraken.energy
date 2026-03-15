@@ -59,13 +59,13 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 	/**
 	 * Indicate if the device is (still) an available device
-	 * @param			{object}				accountData				Current account data from Kraken
-	 * @returns		{Promise<boolean>}								Indicates if the device is available
+	 * @param			{object}							deviceMap				Current device map from Kraken
+	 * @returns		{Promise<boolean>}										Indicates if the device is available
 	 */
-	async setDeviceAvailability(accountData) {
-		let available = super.setDeviceAvailability(accountData);
+	async setDeviceAvailability(deviceMap) {
+		let available = super.setDeviceAvailability(deviceMap);
 		const deviceId = this.getStoreValue("deviceId");
-		const deviceData = this.wrapper.getDevice(deviceId, accountData);
+		const deviceData = deviceMap?.[this.wrapper.hashDeviceId(deviceId)];
 		if (!deviceData) {
 			await this.setUnavailable("bad device; please delete.");
 			available = false;
@@ -75,29 +75,31 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 
 	/**
-	 * Process a timed event
-	 * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
-	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
-	 * @param   {JSON}      liveMeterReading  The live meter reading data
-	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
-	 * @returns {boolean}                     True if any capabilities were updated
+	 * Define the standard interface for processEvent.
+	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
+	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
+	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
+	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
+	 * @param			{object}				account						Account abstract from Kraken
+	 * @param			{object}				importTariff			Import tariff object from Kraken
+	 * @param			{object}				exportTariff			Export tariff object from Kraken
+	 * @param			{object}				devices						Map of devices from Kraken
+	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
 		const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timezone });
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.wrapper.hashDeviceId(deviceId);
-		const deviceData = this.wrapper.getDevice(deviceId, accountData);
-		const deviceName = deviceData.name;
-		const deviceStatus = this.wrapper.translateDeviceStatus(deviceData.status.currentState);
+		const deviceData = devices[deviceKey];
 		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
 		const futureDispatches = this.wrapper.futureDispatches(atTimeMillis, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
-		const currentDispatch = this.wrapper.currentPlannedDispatch(atTimeMillis, deviceDispatches);   //dispatch or undefined
-		const nextDispatch = this.wrapper.earliestDispatch(futureDispatches)               //dispatch or undefined
-		const inDispatch = currentDispatch !== undefined;                                               //receiving reduced price domestic energy
+		const currentDispatch = this.wrapper.currentPlannedDispatch(atTimeMillis, deviceDispatches)   //dispatch or undefined
+		const nextDispatch = this.wrapper.earliestDispatch(futureDispatches)               						//dispatch or undefined
+		const inDispatch = currentDispatch !== undefined;                                             //receiving reduced price domestic energy
 
 		let startTime = null;
 		let endTime = null;
@@ -127,8 +129,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 		}
 
-		this.updateCapability(this._capIds.DEVICE_NAME, deviceName);
-		this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
+		this.updateCapability(this._capIds.DEVICE_NAME, deviceData.name);
+		this.updateCapability(this._capIds.DEVICE_STATUS, deviceData.currentStateTitle);
 		this.updateCapability(this._capIds.PLANNED_DISPATCHES, dispatchCount);
 		this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
 		this.updateCapability(this._capIds.ALARM_POWER, inDispatch);

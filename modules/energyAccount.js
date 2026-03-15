@@ -201,19 +201,27 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
 	/**
-	 * Process a event
-	 * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
-	 * @param   {boolean}   newDay            Indicates the event is the first in a new day
-	 * @param   {JSON}      liveMeterReading  The live meter reading data
-	 * @param   {[JSON]}    plannedDispatches Array of planned dispatches
-	 * @returns {boolean}                     True if any capabilities were updated
+	 * Define the standard interface for processEvent.
+	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
+	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
+	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
+	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
+	 * @param			{object}				account						Account abstract from Kraken
+	 * @param			{object}				importTariff			Import tariff object from Kraken
+	 * @param			{object}				exportTariff			Export tariff object from Kraken
+	 * @param			{object}				devices						Map of devices from Kraken
+	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, accountData = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, accountData);
+		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
 		const timeZone = this.wrapper.timeZone;
 		const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
+		let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
+		let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
+		const newPeriod = eventDateTime >= nextPeriodStartDate;
+		const newChunk = [0, 30].includes(eventDateTime.minute);
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
@@ -221,15 +229,18 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, false, accountData);							// Pence
-		const currentBalance = this.wrapper.getCurrentBalance(accountData);
-		const exportPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, true, accountData);
-		const exportTariffPresent = exportPrices !== undefined;
-		const importPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, false, accountData);
-		const importTariffPresent = importPrices !== undefined;
+		//const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, false, accountData);							// Pence
+		const minPrice = importTariff.minimumPriceToday;
+		//const currentBalance = this.wrapper.getCurrentBalance(accountData);
+		const currentBalance = .01 * account.balance;
+		//const exportPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, true, accountData);
+		//const exportTariffPresent = exportPrices !== undefined;
+		const exportTariffPresent = exportTariff.present;
+		//const importPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, false, accountData);
+		//const importTariffPresent = importPrices !== undefined;
+		const importTariffPresent = importTariff.present;
 
 		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);
-
 		const currentExport = 1000 * this.readCapabilityValue(this._capIds.EXPORT_READING);								//watts
 		const periodCurrentExport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_EXPORT_ENERGY);		//watts
 		const periodCurrentExportValue = this.readCapabilityValue(this._capIds.PERIOD_EXPORT_VALUE);			//pounds
@@ -248,10 +259,6 @@ module.exports = class energyAccount extends krakenDevice {
 		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
 		const priorImportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_IMPORT_PRICE_PAID);			//pounds
 
-		let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
-		let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
-		const newPeriod = eventDateTime >= nextPeriodStartDate;
-		const newChunk = [0, 30].includes(eventDateTime.minute);
 		const periodDay = this.computePeriodDay(atTimeMillis, billingPeriodStartDay);
 
 		let deltaExport = 0;
@@ -296,15 +303,15 @@ module.exports = class energyAccount extends krakenDevice {
 
 		if (!firstTime) {
 			if (exportTariffPresent) {
-				exportPrice = .01 * exportPrices.unitRate;																									//pounds
+				exportPrice = .01 * exportTariff.unitRate;																									//pounds
 				deltaExport = liveMeterReading.export - currentExport;																			//watts
-				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
+				//The prior price received is used to calculate the value of the energy exported in the previous tick
 				deltaExportValue = (deltaExport / 1000) * priorExportPricePaid;															//pounds
 				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watts
 				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);		//pounds
 				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watts
 				dayUpdatedExportValue = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);						//pounds
-				dayExportStandingCharge = exportPrices.standingCharge;																			//pence
+				dayExportStandingCharge = exportTariff.standingCharge;																			//pence
 				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);											//watts
 				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);			//pounds
 				powerExport = deltaExport * 60;				//FREQ: 60 / pollinginterval													//watts
@@ -312,7 +319,7 @@ module.exports = class energyAccount extends krakenDevice {
 
 			if (importTariffPresent) {
 				//TODO: Add boost pricing here.
-				importPrice = .01 * (dispatchPricing ? minPrice : importPrices.unitRate);										//pounds	
+				importPrice = .01 * (dispatchPricing ? minPrice : importTariff.unitRate);										//pounds	
 				deltaImport = liveMeterReading.consumption - currentImport;																	//watts
 				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
 				deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
@@ -320,7 +327,7 @@ module.exports = class energyAccount extends krakenDevice {
 				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);		//pounds
 				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watts
 				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);						//pounds
-				dayImportStandingCharge = importPrices.standingCharge;																			//pence
+				dayImportStandingCharge = importTariff.standingCharge;																			//pence
 				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);											//watts
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);			//pounds
 				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 													//watts
@@ -335,7 +342,7 @@ module.exports = class energyAccount extends krakenDevice {
 			billValue = periodUpdatedStandingCharge + periodUpdatedImportValue - periodUpdatedExportValue;
 			if (observedDays > 0) {
 				const startOfDay = eventDateTime.startOf('day');
-				const fractionOfDay = eventDateTime.diff(startOfDay, "milliseconds") / (24 * 60 * 60 * 1000);
+				const fractionOfDay = (eventDateTime - startOfDay) / (24 * 60 * 60 * 1000);
 				const observedFraction = observedDays + fractionOfDay;
 				const dayStandingCharge = .01 * (dayExportStandingCharge + dayImportStandingCharge);
 				const aveDaySpend = dayStandingCharge + (periodUpdatedImportValue - periodUpdatedExportValue) / observedFraction;
@@ -343,8 +350,8 @@ module.exports = class energyAccount extends krakenDevice {
 			}
 		} else {
 			periodUpdatedStandingCharge = .01 * periodDay * (
-				(exportTariffPresent ? exportPrices.standingCharge : 0) +
-				(importTariffPresent ? importPrices.standingCharge : 0)
+				(exportTariffPresent ? exportTariff.standingCharge : 0) +
+				(importTariffPresent ? importTariff.standingCharge : 0)
 			);
 		}
 

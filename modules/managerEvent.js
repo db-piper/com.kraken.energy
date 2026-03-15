@@ -41,17 +41,15 @@ module.exports = class managerEvent {
 
   /**
    * Execute a timed event.
-   * @param {string} token - Valid JWT token from the App/Airlock
    */
-  async executeEvent(token) {
+  async executeEvent() {
     const atTimeMillis = DateTime.now().toMillis();
     this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
 
-    // Pass the token into your wrapper
-    let accountData = await this.wrapper.accessAccountGraphQL(token);
+    const { account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis);
 
-    if (accountData) {
-      return await this.executeEventOnDevices(atTimeMillis, accountData);
+    if (account) {
+      return await this.executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices);
     } else {
       throw new Error('Unable to access account data');
     }
@@ -117,17 +115,18 @@ module.exports = class managerEvent {
   /**
    * Loop over devices, executing the event
    * @param   {number}            atTimeMillis  event time in milliseconds since the epoch
-   * @param   {object}            accountData   kraken account data
+   * @param   {object}            account       kraken account header data
+   * @param   {object}            importTariff  kraken import tariff data
+   * @param   {object}            exportTariff  kraken export tariff data
+   * @param   {object}            devices       kraken device data
    * @returns {promise<boolean>}                True iff any device has been updated by the event
    */
-  async executeEventOnDevices(atTimeMillis, accountData) {
+  async executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices) {
     let updates = false;
-    //const wrapper = this.wrapper;
+    this._driver.homey.log(`managerEvent.executeEventOnDevices: account: ${JSON.stringify(account)} `);
     const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
-    const liveMeterId = this.wrapper.getLiveMeterId(accountData);
-
-    const deviceIds = this.wrapper.getDeviceIds(accountData);
-    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
+    const deviceIds = this.wrapper.getDeviceIds(devices);
+    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches }, ...homeyDeviceReadyResults] = await Promise.all([
@@ -135,22 +134,20 @@ module.exports = class managerEvent {
       ...homeyDeviceReadyPromises
     ]);
 
-    const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(accountData));
+    const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(devices));
     await Promise.all(availableDevicePromises);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       const isNewDay = this.isNewDay(atTimeMillis);
-      this.driver.log(`managerEvent.executeEventOnDevices: at: ${DateTime.fromMillis(atTimeMillis).toISO()}, isNewDay: ${isNewDay}`)
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
-          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, accountData);
+          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, account, importTariff, exportTariff, devices);
           this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }
 
-      accountData = null;
       reading = null;
       dispatches = null;
 

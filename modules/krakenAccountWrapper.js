@@ -135,18 +135,13 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the IDs of the smart devices on the account
-   * @param   {object | undefined} accountData  Kraken account data
+   * @param   {object | undefined} devices      Map of devices registered on the account
    * @returns {string[]}                        Array of smart device IDs
    */
-  getDeviceIds(accountData) {
-    //const statusCodes = Object.keys(this._valid_device_status_translations);
-    const devices = accountData?.data?.devices || [];
-    //change from filter on statusCodes
-    const deviceIds = devices
-      .filter(device => this._dispatchable_device_status.includes(device.status?.currentState))
+  getDeviceIds(devices) {
+    const deviceIds = Object.values(devices)
+      .filter(device => this._dispatchable_device_status.includes(device.currentState))
       .map(device => device.id);
-
-    this._driver.homey.log(`krakenAccountWrapper.getDeviceIds: ${deviceIds.length} smart devices`);
     return deviceIds;
   }
 
@@ -208,6 +203,18 @@ module.exports = class krakenAccountWrapper {
       nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
     }
     return nextPrices;
+  }
+
+  /**
+   * Indicate if tomorow's prices are available
+   * @param		{number}		atTimeMillis		Time in epoch milliseconds
+   * @param		{object}		tariff  				The tariff data to check
+   * @returns {any}								        Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
+   */
+  hasTomorrowsPricesPresent(atTimeMillis, tariff) {
+    const tomorrow = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 }).toMillis();
+    const nextDayPrices = this.getPrices(tomorrow, tariff);
+    return (nextDayPrices === undefined) ? false : (nextDayPrices?.isHalfHourly === true) ? true : null;
   }
 
   /**
@@ -305,17 +312,6 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the device details for the specified device ID
-   * @param   {string}        id    Device ID
-   * @returns {JSON|undefined}      Device data structure or undefined if no device with the specified ID
-   */
-  getDevice(id, accountData = undefined) {
-    const devices = accountData?.data?.devices;
-    if (!Array.isArray(devices)) return undefined;
-    return devices.find(device => device.id === id);
-  }
-
-  /**
    * Translate the device status to a human readable string
    * @param   {string}        status    Device status
    * @returns {string}                  Human readable string or null if no translation available
@@ -359,19 +355,98 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Access the account data using the current access parameters and make the data retrieved current
-   * @returns {Promise<Object|undefined>}           The account data; undefined if access failed
+   * @param   {number}                    atTimeMillis  The time in milliseconds to get the prices for
+   * @returns {Promise<Object|undefined>}               Extracts from kraken account data; undefined if access failed
    */
-  async accessAccountGraphQL() {
+  async accessAccountGraphQL(atTimeMillis) {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = this.accountDataQuery(this.accountId);
     const accountData = await this.fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
       accountData.data.devices = (TestData) ? TestData.getMockDevices() : (accountData?.data?.devices || []);
       this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
+      const account = this.extractAccountData(accountData);
+      const importTariff = this.extractTariffData(atTimeMillis, false, accountData);
+      const exportTariff = this.extractTariffData(atTimeMillis, true, accountData);
+      const devices = this.extractDeviceData(accountData);
+      return { account, importTariff, exportTariff, devices };
     } else {
       this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
+      return { account: undefined, importTariff: undefined, exportTariff: undefined, devices: undefined };
     }
-    return accountData;
+  }
+
+  /**
+   * Extract simple device definitions from the devices array
+   * @param   {object}              accountData account data from Kraken
+   * @returns {object | undefined}              extracted device definitions
+   */
+  extractDeviceData(accountData) {
+    const devices = accountData?.data?.devices;
+    const deviceExtracts = (devices) ? {} : undefined;
+    if (devices) {
+      for (const device of devices) {
+        const deviceExtract = {};
+        deviceExtract.id = device.id;
+        deviceExtract.hashDeviceId = this.hashDeviceId(device.id);
+        deviceExtract.name = device.name;
+        deviceExtract.currentState = device.status?.currentState;
+        deviceExtract.currentStateTitle = this.translateDeviceStatus(device.status?.currentState);
+        deviceExtracts[deviceExtract.hashDeviceId] = deviceExtract;
+      }
+    }
+    return deviceExtracts;
+  }
+
+  /**
+   * Extract simple account data from the account object
+   * @param   {object}               accountData account data from Kraken
+   * @returns {object | undefined}               extracted account data
+   */
+  extractAccountData(accountData) {
+    const account = accountData?.data?.account;
+    const accountExtract = (account) ? {} : undefined;
+    if (account) {
+      accountExtract.balance = account.balance;
+      accountExtract.billingStartDate = account?.billingOptions?.currentBillingPeriodStartDate;
+      accountExtract.liveMeterId = this.getLiveMeterId(accountData);
+    }
+    return accountExtract;
+  }
+
+  /**
+   * From the mass of accountData abstract the key data items required by the homey devices
+   * @param   {number}               atTimeMillis  The time in milliseconds to get the prices for  
+   * @param   {boolean}              isExport      True iff the required tariff is for export, false iff for import    
+   * @param   {object}               accountData   The account data from Kraken
+   * @returns {object | undefined}                 The extracted account data
+   */
+  extractTariffData(atTimeMillis, isExport, accountData) {
+    const tariffDefinition = this.getTariffDirection(isExport, accountData);
+    const tariffData = { present: !!tariffDefinition };                                                       //boolean
+    if (tariffDefinition) {
+      tariffData.productCode = tariffDefinition.productCode;                                                  //string
+      tariffData.tariffCode = tariffDefinition.tariffCode;                                                    //string
+      tariffData.isExport = isExport;                                                                         //boolean
+      tariffData.isHalfHourly = tariffDefinition.__typename === 'HalfHourlyTariff';                           //boolean
+      tariffData.hasTomorrowsPrices = this.hasTomorrowsPricesPresent(atTimeMillis, tariffDefinition);         //boolean
+      const pricesNow = this.getPrices(atTimeMillis, tariffDefinition);
+      tariffData.unitRate = pricesNow.unitRate;                                                               //pence
+      tariffData.preVatUnitRate = pricesNow.preVatUnitRate;                                                   //pence
+      tariffData.standingCharge = pricesNow.standingCharge;                                                   //pence
+      tariffData.taxRate = 100 * (pricesNow.unitRate - pricesNow.preVatUnitRate) / pricesNow.preVatUnitRate;  //percent
+      tariffData.minimumPriceToday = this.minimumTariffPrice(atTimeMillis, tariffDefinition);                 //pence
+      tariffData.maximumPriceToday = this.maximumTariffPrice(atTimeMillis, tariffDefinition);                 //pence
+      tariffData.slotStart = pricesNow.thisSlotStart;                                                         //ISO datetime
+      tariffData.slotEnd = pricesNow.nextSlotStart;                                                           //ISO datetime
+      tariffData.slotQuartile = pricesNow.quartile;                                                           //integer 0-3
+      const slotEndDateTime = DateTime.fromISO(tariffData.slotEnd, { zone: this.timeZone }).toMillis();
+      const pricesNext = this.getPrices(slotEndDateTime, tariffDefinition);
+      tariffData.nextUnitPrice = (pricesNext === undefined) ? null : pricesNext.unitRate;                     //pence
+      tariffData.nextSlotEnd = (pricesNext === undefined) ? null : pricesNext.nextSlotStart;                  //ISO datetime
+      tariffData.nextSlotQuartile = (pricesNext === undefined) ? null : pricesNext.quartile;                  //integer 0-3
+    }
+    return tariffData;
   }
 
   /**
@@ -466,66 +541,88 @@ module.exports = class krakenAccountWrapper {
   /**
    * Return the minimum price for the tariff for the day
    * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param   {boolean}   isExport          True iff export tariff, false otherwise
+   * @param   {object}    tariffDefinition  The tariff definition
    * @returns {float}                       The minimum price for the day  
    */
-  minimumPriceOnDate(atTimeMillis, isExport, accountData) {
-    const tariff = this.getTariffDirection(isExport, accountData);
+  minimumTariffPrice(atTimeMillis, tariffDefinition) {
     let minimumPrice = 0;
 
-    if (!tariff) return undefined;
+    if (!tariffDefinition) return undefined;
 
-    if (Array.isArray(tariff.unitRates)) {
+    if (Array.isArray(tariffDefinition.unitRates)) {
       const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone })
         .plus({ days: 1 })
         .startOf('day')
         .toMillis();
 
-      const validRates = tariff.unitRates
+      const validRates = tariffDefinition.unitRates
         .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
         minimumPrice = Math.min(...validRates);
       }
-    } else if ('nightRate' in tariff) {
-      minimumPrice = tariff.nightRate;
+    } else if ('nightRate' in tariffDefinition) {
+      minimumPrice = tariffDefinition.nightRate;
     } else {
-      minimumPrice = tariff.unitRate || 0;
+      minimumPrice = tariffDefinition.unitRate || 0;
     }
 
     return minimumPrice;
   }
 
   /**
+   * Return the minimum price for the tariff for the day
+   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
+   * @param   {boolean}   isExport          True iff export tariff, false otherwise
+   * @param   {object}    accountData       The account data from Kraken
+   * @returns {float}                       The minimum price for the day  
+   */
+  minimumPriceOnDate(atTimeMillis, isExport, accountData) {
+    const tariffDefinition = this.getTariffDirection(isExport, accountData);
+    return this.minimumTariffPrice(atTimeMillis, tariffDefinition);
+  }
+
+  /**
    * Return the maximum price for the tariff for the day
    * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param   {boolean}   isExport          True iff export tariff, false otherwise
+   * @param   {object}    accountData       The account data from Kraken
    * @returns {float}                       The maximum price for the day  
    */
   maximumPriceOnDate(atTimeMillis, isExport, accountData) {
-    const tariff = this.getTariffDirection(isExport, accountData);
+    const tariffDefinition = this.getTariffDirection(isExport, accountData);
+    return this.maximumTariffPrice(atTimeMillis, tariffDefinition);
+  }
+
+  /**
+   * Return the maximum price for the tariff for the day
+   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
+   * @param   {object}    tariffDefinition  The tariff definition
+   * @returns {float}                       The maximum price for the day  
+   */
+  maximumTariffPrice(atTimeMillis, tariffDefinition) {
     let maximumPrice = 0;
 
-    if (!tariff) return undefined;
+    if (!tariffDefinition) return undefined;
 
-    if (Array.isArray(tariff.unitRates)) {
+    if (Array.isArray(tariffDefinition.unitRates)) {
       const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone })
         .plus({ days: 1 })
         .startOf('day')
         .toMillis();
 
-      const validRates = tariff.unitRates
+      const validRates = tariffDefinition.unitRates
         .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
         maximumPrice = Math.max(...validRates);
       }
-    } else if ('dayRate' in tariff) {
-      maximumPrice = tariff.dayRate;
+    } else if ('dayRate' in tariffDefinition) {
+      maximumPrice = tariffDefinition.dayRate;
     } else {
-      maximumPrice = tariff.unitRate || 0;
+      maximumPrice = tariffDefinition.unitRate || 0;
     }
 
     return maximumPrice;
