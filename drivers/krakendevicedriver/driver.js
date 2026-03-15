@@ -182,7 +182,7 @@ module.exports = class krakenDriver extends Homey.Driver {
 
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
-        const now = DateTime.now();
+        const now = this.eventer.DateTime.now();
 
         // Target the 15-second mark of the current minute
         let nextRun = now.set({ second: 15, millisecond: 0 });
@@ -197,7 +197,7 @@ module.exports = class krakenDriver extends Homey.Driver {
         // Recursive timeout ensures drift is corrected every minute
         this._pollerTimeout = this.homey.setTimeout(async () => {
           try {
-            this.log(`krakenDriver.onHeartbeat: Tick start at ${DateTime.now().toISO()}`);
+            this.log(`krakenDriver.onHeartbeat: Tick start at ${this.eventer.DateTime.now().toISO()}`);
             await this.onHeartbeat();
           } catch (err) {
             this.error('krakenDriver.onHeartbeat: Error during execution', err);

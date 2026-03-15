@@ -64,6 +64,14 @@ module.exports = class managerEvent {
   }
 
   /**
+   * Return a reference to luxon DateTime
+   * @returns {DateTime} reference to luxon DateTime
+   */
+  get DateTime() {
+    return DateTime;
+  }
+
+  /**
    * Return an instance of krakenAccountWrapper
    * @returns {krakenAccountWrapper}  Instance of krakenAccountWrapper
    */
@@ -124,7 +132,6 @@ module.exports = class managerEvent {
   async executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices) {
     let updates = false;
     this._driver.homey.log(`managerEvent.executeEventOnDevices: account: ${JSON.stringify(account)} `);
-    const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
     const deviceIds = this.wrapper.getDeviceIds(devices);
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
@@ -140,6 +147,8 @@ module.exports = class managerEvent {
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       const isNewDay = this.isNewDay(atTimeMillis);
+      const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
+
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
