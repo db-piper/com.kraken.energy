@@ -152,7 +152,7 @@ module.exports = class productTariff extends krakenDevice {
 	}
 
 	/**
-	 * Define the standard interface for processEvent.
+	 * Process an event on a Product Tariff device
 	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
 	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}

@@ -132,8 +132,7 @@ module.exports = class managerEvent {
   async executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices) {
     let updates = false;
     this._driver.homey.log(`managerEvent.executeEventOnDevices: account: ${JSON.stringify(account)} `);
-    const deviceIds = this.wrapper.getDeviceIds(devices);
-    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, deviceIds);
+    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, devices);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches }, ...homeyDeviceReadyResults] = await Promise.all([
@@ -183,18 +182,6 @@ module.exports = class managerEvent {
     return updates;
   }
 
-  /**
-   * Indicate that the day has changed between two timestamps in extended ISO format
-   * @param   {string}  laterTime     The new timestamp
-   * @param   {string}  earlierTime   The old timestamp
-   * @returns {boolean}               True when the day has changed
-   */
-  changeOfDay(laterTime, earlierTime) {
-    const timeZone = this.driver.homey.clock.getTimezone();
-    const newDay = DateTime.fromJSDate(new Date(laterTime)).setZone(timeZone).day;
-    const oldDay = DateTime.fromJSDate(new Date(earlierTime)).setZone(timeZone).day;
-    return newDay != oldDay;
-  }
 
   async logMemoryToInsights() {
     try {

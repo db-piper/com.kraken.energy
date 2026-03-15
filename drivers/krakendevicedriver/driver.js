@@ -56,9 +56,6 @@ module.exports = class krakenDriver extends Homey.Driver {
    * @param {PairSession} session   The session using this driver
    */
   async onPair(session) {
-    // let account = "";
-    // let apiKey = "";
-
     /**
      * Set a handler for the login event
      * @param   {object}  data  contains credential login information
@@ -87,9 +84,6 @@ module.exports = class krakenDriver extends Homey.Driver {
    * @param {Device}      device    The device being repaired
    */
   async onRepair(session, device) {
-    // let account = "";
-    // let apiKey = "";
-
     /**
      * Set a handler for the login event
      * @param   {object}  data  contains credential login information
@@ -120,8 +114,6 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
     try {
-      // const token = await this.eventer.getApiToken();
-      // if (!token) throw new Error('Token acquisition failed');
       await this.eventer.executeEvent();
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
@@ -154,7 +146,6 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async sessionLoginHandler(account, apiKey) {
     this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
-    //const fetcher = new dataFetcher(this.homey);
     const token = await this.eventer.getApiToken(apiKey);
     let success = false;
     if (token) {

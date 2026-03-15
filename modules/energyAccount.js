@@ -229,15 +229,9 @@ module.exports = class energyAccount extends krakenDevice {
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches)
 		const inDispatch = currentDispatch !== undefined;
 
-		//const minPrice = this.wrapper.minimumPriceOnDate(atTimeMillis, false, accountData);							// Pence
 		const minPrice = importTariff.minimumPriceToday;
-		//const currentBalance = this.wrapper.getCurrentBalance(accountData);
 		const currentBalance = .01 * account.balance;
-		//const exportPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, true, accountData);
-		//const exportTariffPresent = exportPrices !== undefined;
 		const exportTariffPresent = exportTariff.present;
-		//const importPrices = this.wrapper.getTariffDirectionPrices(atTimeMillis, false, accountData);
-		//const importTariffPresent = importPrices !== undefined;
 		const importTariffPresent = importTariff.present;
 
 		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);

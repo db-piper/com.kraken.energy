@@ -20,7 +20,7 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Constructor for krakenAccountWrapper
-   * @param {krakenDriver}   driver  managing the devices 
+   * @param {krakenDriver}   driver  managing the devices
    */
   constructor(driver) {
     this._driver = driver;
@@ -36,16 +36,6 @@ module.exports = class krakenAccountWrapper {
     this._timeZone = this._driver.homey.clock.getTimezone();
   }
 
-  /**
-   * Persist the parameters that give access to the Kraken account's data
-   * @param {string} accountId    Kraken account Id in the form A-9A999999 
-   * @param {string} apiKey       Kraken account specific API key 32 alpha numeric characters starting sk_live_...          
-   */
-  setAccessParameters(accountId, apiKey) {
-    const settings = this._driver.homey.settings;
-    settings.set(AccountIdSetting, accountId);
-    settings.set(ApiKeySetting, apiKey);
-  }
 
   /**
    * Retrieve the parameters that give access to the Kraken account's data
@@ -116,7 +106,8 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the live meter id on the account
-   * @returns {string}      Live meter ID
+   * @param   {object} accountData  Account data from Kraken
+   * @returns {string}              Live meter ID
    */
   getLiveMeterId(accountData) {
     let meterId = undefined;
@@ -171,41 +162,6 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the prices for the accounts import or export tariff
-   * @param   {number}    atTimeMillis  String representation of the event date and time in milliseconds
-   * @param   {boolean}   direction     True: export tariff; False: import tariff
-   * @returns {object}                  JSON tariff price structure or undefined if no prices available atTimeMillis
-   */
-  getTariffDirectionPrices(atTimeMillis, direction, accountData) {
-    const tariff = this.getTariffDirection(direction, accountData);
-    if (tariff !== undefined) {
-      const prices = this.getPrices(atTimeMillis, tariff);
-      return prices;
-    } else {
-      return undefined;
-    }
-  }
-
-  /**
-   * Get the price slot details of the next slot returning default values if not present
-   * @param 	{string}	slotStart		Start datetime in ISO format from tariff slot data NOT MILLISECONDS
-   * @param 	{boolean} direction		True - export; false - import 
-   * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
-   * @returns {object}							Price slot structure with empty values if absent
-   */
-  getNextTariffSlotPrices(slotStart, halfHourly, direction, accountData) {
-    const slotStartMs = DateTime.fromISO(slotStart, { zone: this.timeZone }).toMillis();
-    let nextPrices = undefined;
-    if (slotStart !== null) {
-      nextPrices = this.getTariffDirectionPrices(slotStartMs, direction, accountData);
-    }
-    if (nextPrices === undefined) {
-      nextPrices = this.getEmptyPriceSlot(slotStart, halfHourly);
-    }
-    return nextPrices;
-  }
-
-  /**
    * Indicate if tomorow's prices are available
    * @param		{number}		atTimeMillis		Time in epoch milliseconds
    * @param		{object}		tariff  				The tariff data to check
@@ -215,28 +171,6 @@ module.exports = class krakenAccountWrapper {
     const tomorrow = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 }).toMillis();
     const nextDayPrices = this.getPrices(tomorrow, tariff);
     return (nextDayPrices === undefined) ? false : (nextDayPrices?.isHalfHourly === true) ? true : null;
-  }
-
-  /**
-   * Indicate whether next day prcies are available
-   * @param		{number}		atTimeMillis		Time in epoch milliseconds
-   * @param		{boolean}		direction				True for export, false for import
-   * @returns {any}											  Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
-   */
-  getTomorrowsPricesPresent(atTimeMillis, direction, accountData) {
-    const nextDay = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 });
-    const nextDayPrices = this.getTariffDirectionPrices(nextDay.toMillis(), direction, accountData);
-    let present = false;
-    if (nextDayPrices === undefined) {
-      present = false;
-    } else {
-      if (('isHalfHourly' in nextDayPrices) && nextDayPrices.isHalfHourly) {
-        present = true;
-      } else {
-        present = null;
-      }
-    }
-    return present;
   }
 
   /**
@@ -325,32 +259,14 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * 
+   *
    * @param   {string} accountId      The account to retrieve pairing data for
    * @returns {promise<string|undefined>}      The data to process for pairing
    */
   async getPairingData(accountId) {
-    const pairingQuery = this.pairingDataQuery(accountId);
+    const pairingQuery = Queries.getPairingData(accountId);
     const pairingData = await this.fetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
     return pairingData;
-  }
-
-  /**
-   * Return the GraphQL query string for essential device pairing data
-   * @param   {string} accountId  Used as the query parameter
-   * @returns {string}            Stringified JSON representing the query
-   */
-  pairingDataQuery(accountId) {
-    return Queries.getPairingData(accountId);
-  }
-
-  /**
-   * Return the GraphQL query string to obtain the Octopus Account Information
-   * @param   {string} accountId  used as the query parameter 
-   * @returns {string}            Stringified JSON representing the query
-   */
-  accountDataQuery(accountId) {
-    return Queries.getAccountData(accountId);
   }
 
   /**
@@ -360,7 +276,7 @@ module.exports = class krakenAccountWrapper {
    */
   async accessAccountGraphQL(atTimeMillis) {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
-    const accountQuery = this.accountDataQuery(this.accountId);
+    const accountQuery = Queries.getAccountData(this.accountId);
     const accountData = await this.fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
     if (accountData !== undefined) {
       accountData.data.devices = (TestData) ? TestData.getMockDevices() : (accountData?.data?.devices || []);
@@ -416,8 +332,8 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * From the mass of accountData abstract the key data items required by the homey devices
-   * @param   {number}               atTimeMillis  The time in milliseconds to get the prices for  
-   * @param   {boolean}              isExport      True iff the required tariff is for export, false iff for import    
+   * @param   {number}               atTimeMillis  The time in milliseconds to get the prices for
+   * @param   {boolean}              isExport      True iff the required tariff is for export, false iff for import
    * @param   {object}               accountData   The account data from Kraken
    * @returns {object | undefined}                 The extracted account data
    */
@@ -542,7 +458,7 @@ module.exports = class krakenAccountWrapper {
    * Return the minimum price for the tariff for the day
    * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param   {object}    tariffDefinition  The tariff definition
-   * @returns {float}                       The minimum price for the day  
+   * @returns {float}                       The minimum price for the day
    */
   minimumTariffPrice(atTimeMillis, tariffDefinition) {
     let minimumPrice = 0;
@@ -571,35 +487,12 @@ module.exports = class krakenAccountWrapper {
     return minimumPrice;
   }
 
-  /**
-   * Return the minimum price for the tariff for the day
-   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param   {boolean}   isExport          True iff export tariff, false otherwise
-   * @param   {object}    accountData       The account data from Kraken
-   * @returns {float}                       The minimum price for the day  
-   */
-  minimumPriceOnDate(atTimeMillis, isExport, accountData) {
-    const tariffDefinition = this.getTariffDirection(isExport, accountData);
-    return this.minimumTariffPrice(atTimeMillis, tariffDefinition);
-  }
-
-  /**
-   * Return the maximum price for the tariff for the day
-   * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param   {boolean}   isExport          True iff export tariff, false otherwise
-   * @param   {object}    accountData       The account data from Kraken
-   * @returns {float}                       The maximum price for the day  
-   */
-  maximumPriceOnDate(atTimeMillis, isExport, accountData) {
-    const tariffDefinition = this.getTariffDirection(isExport, accountData);
-    return this.maximumTariffPrice(atTimeMillis, tariffDefinition);
-  }
 
   /**
    * Return the maximum price for the tariff for the day
    * @param   {number}    atTimeMillis      Time to check against in epoch milliseconds
    * @param   {object}    tariffDefinition  The tariff definition
-   * @returns {float}                       The maximum price for the day  
+   * @returns {float}                       The maximum price for the day
    */
   maximumTariffPrice(atTimeMillis, tariffDefinition) {
     let maximumPrice = 0;
@@ -632,10 +525,11 @@ module.exports = class krakenAccountWrapper {
    * Return live meter data from the instantiated live meter device
    * @param   {number}          atTimeMillis  Datetime of the current event in milliseconds since the epoch
    * @param   {string}          meterId       The meter ID of the device
-   * @param   {array<string>}   deviceIds     Array of device IDs
+   * @param   {object}          devices       Map of device objects from Kraken
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
-  async getLiveMeterData(atTimeMillis, meterId, deviceIds) {
+  async getLiveMeterData(atTimeMillis, meterId, devices) {
+    const deviceIds = this.getDeviceIds(devices);
     let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
     const result = {
       reading: undefined,
@@ -654,7 +548,6 @@ module.exports = class krakenAccountWrapper {
       for (const deviceId of deviceIds) {
         const deviceKey = this.hashDeviceId(deviceId);
         if (Array.isArray(response.data[deviceKey])) {
-          //result.dispatches[deviceKey] = response.data[deviceKey];
           result.dispatches[deviceKey] = response.data[deviceKey].map(dispatch => ({ ...dispatch }));
         }
       }
@@ -729,7 +622,7 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour) 
+   * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour)
    * @param   {string}      time     String datetime to be advanced, in ISO format from dispatch data [NOT MILLIS]
    * @returns {DateTime}             <time> advanced to the preceding 30 minute boundary
    */
@@ -762,8 +655,8 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Build the live data query using the live meter Id and intelligent device Ids
-   * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini) 
-   * @param   {string[]}    deviceIds     Array of intelligent device Ids  
+   * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini)
+   * @param   {string[]}    deviceIds     Array of intelligent device Ids
    * @param   {number}      atTimeMillis  The time at which to get the data in milliseconds since the epoch
    * @returns {object}                    JSON result of Graph QL query
    */
@@ -789,40 +682,12 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Hash a deviceId into a valid GQL query label
-   * @param   {string}    deviceId    DeviceId to be hashed 
-   * @returns {string}                Hashed deviceId usable as a GQL query label        
+   * @param   {string}    deviceId    DeviceId to be hashed
+   * @returns {string}                Hashed deviceId usable as a GQL query label
    */
   hashDeviceId(deviceId) {
     return `d${deviceId.replaceAll("-", "_")}`;
   }
 
-  /**
-   * Return a price slot structure with appropriate values for a missing slot
-   * @param 	{string}	start				Start datetime in ISO format or null [NOT MILLISECONDS]
-   * @param 	{boolean} halfHourly	True - tariff has slots; false - no slots
-   */
-  getEmptyPriceSlot(start, halfHourly) {
-    const nextPrices = {
-      preVatUnitRate: null,
-      unitRate: null,
-      preVatStandingCharge: null,
-      standingCharge: null,
-      nextSlotStart: null,
-      thisSlotStart: start,
-      isHalfHourly: halfHourly,
-      quartile: null
-    };
-    return nextPrices;
-  }
-
-  /**
-   * Get the current balance of the account from account data
-   * @returns {float}         Balance amount
-   */
-  getCurrentBalance(accountData) {
-    const pence = accountData?.data?.account?.balance;
-    const value = (typeof pence === 'number') ? Math.round(pence) / 100 : 0;
-    return value;
-  }
 
 }

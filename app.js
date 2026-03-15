@@ -1,8 +1,6 @@
 'use strict';
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./modules/constants');
 const Homey = require('homey');
-//const dataFetcher = require('./modules/dataFetcher');
-//const Queries = require('./modules/gQLQueries');
 
 module.exports = class krakenApp extends Homey.App {
 
@@ -11,7 +9,6 @@ module.exports = class krakenApp extends Homey.App {
    */
   async onInit() {
     this.homey.log('krakenApp.onInit: App Initialization Started');
-    //this._dataFetcher = new dataFetcher(this.homey);
 
     this.registerConditionCardListener('slot_relative_price', 'getCurrentlyCheaper');
     this.registerConditionCardListener('price_less_than_tariff', 'getPriceLessThanTariff');

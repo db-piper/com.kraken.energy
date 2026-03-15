@@ -87,7 +87,6 @@ module.exports = class dataFetcher {
    */
   async getDataUsingGraphQL(queryString, apiKey) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
-    //let validToken = await this.getGraphQlApiToken(apiKey);
     let validToken = await this.getApiToken(apiKey);
     if (validToken) {
       try {
@@ -117,14 +116,11 @@ module.exports = class dataFetcher {
    */
   async runGraphQlQuery(queryString, token) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");
-    //this.homey.log(`dataFetcher.runGraphQlQuery: GQL Token: ${JSON.stringify(token, null, 2)}`)
     try {
       const url = `${this._baseURL}${this._graphQlPath}`;
       let fetchParams = this.buildGraphQLFetchParams(queryString, token);
-      //this.homey.log(`dataFetcher.runGraphQlQuery: Fetch Params: ${JSON.stringify(fetchParams, null, 2)}`);
 
       let response = await fetch(url, fetchParams); // Use await with fetch
-      //this.homey.log(`dataFetcher.runGraphQlQuery: Back from FETCH. Response: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text(); // Read the error response body
@@ -133,7 +129,6 @@ module.exports = class dataFetcher {
 
       let rawjson = await response.json();
       const result = JSON.parse(JSON.stringify(rawjson));
-      //const result = structuredClone(rawjson);
 
       response = null;
       rawjson = null;
@@ -203,7 +198,6 @@ module.exports = class dataFetcher {
    */
   async setValidAccount(accountId, token) {
     this.homey.log(`dataFetcher.setValidAccount: Validating account ${accountId}...`);
-    //const fetcher = new dataFetcher(this.homey);
     const isValid = await this.verifyAccountId(Queries.getPairingData(accountId), token);
     this.homey.log(`dataFetcher.setValidAccount: verifyAccountId returned ${isValid}`);
 

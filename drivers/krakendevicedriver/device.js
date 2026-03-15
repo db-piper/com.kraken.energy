@@ -103,7 +103,6 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onUninit - generic krakenDevice UnInitialization Started');
 		this._requiredCapabilities = null;
 		this._updatedCapabilities = null;
-		//this._storeValues = null;
 	}
 
 	/**
@@ -141,7 +140,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {promise<void>}
 	 */
 	async migrateStore() {
-		this.log(`krakenDevice Device: migrateStore - migrating settings for device ${this.getName()}.`);
+		this.log(`krakenDevice Device: migrateStore - migrating store values for device ${this.getName()}.`);
 	}
 
 	/**
@@ -392,17 +391,6 @@ module.exports = class krakenDevice extends Homey.Device {
 		return this.getCapabilityValue(name);
 	}
 
-	/**
-	 * Define a value to be added to the device's store
-	 * @param {string} 		name				Name of the value
-	 * @param {any} 		value 				Value to be associated with the name
-	 */
-	defineStoreValue(name, value) {
-		if (!this.hasOwnProperty("_storeValues")) {
-			this._storeValues = {};
-		}
-		this._storeValues[name] = value;
-	}
 
 	/**
 	 * Add defined values to the device's store
