@@ -90,7 +90,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
 		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
-		const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timezone });
+		const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
 		const deviceId = this.getStoreValue("deviceId");
 		const deviceKey = this.wrapper.hashDeviceId(deviceId);
 		const deviceData = devices[deviceKey];
@@ -112,9 +112,9 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		let nextDispatchType = null;
 
 		if (inDispatch) {
-			const startDateTime = DateTime.fromISO(currentDispatch.start, { zone: this.wrapper.timezone });
+			const startDateTime = DateTime.fromISO(currentDispatch.start, { zone: this.wrapper.timeZone });
 			startTime = startDateTime.toFormat("dd/LL T");
-			const endDateTime = DateTime.fromISO(currentDispatch.end, { zone: this.wrapper.timezone })
+			const endDateTime = DateTime.fromISO(currentDispatch.end, { zone: this.wrapper.timeZone })
 			endTime = endDateTime.toFormat("dd/LL T");
 			countDownStart = endDateTime;
 			duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
@@ -123,7 +123,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 		}
 
 		if (dispatchCount > 0) {
-			const nextStartDateTime = DateTime.fromISO(nextDispatch.start, { zone: this.wrapper.timezone });
+			const nextStartDateTime = DateTime.fromISO(nextDispatch.start, { zone: this.wrapper.timeZone });
 			nextDispatchType = nextDispatch.type;
 			nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");

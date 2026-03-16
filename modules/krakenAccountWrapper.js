@@ -306,11 +306,11 @@ module.exports = class krakenAccountWrapper {
     if (devices) {
       for (const device of devices) {
         const deviceExtract = {};
-        deviceExtract.id = device.id;
-        deviceExtract.hashDeviceId = this.hashDeviceId(device.id);
-        deviceExtract.name = device.name;
-        deviceExtract.currentState = device.status?.currentState;
-        deviceExtract.currentStateTitle = this.translateDeviceStatus(device.status?.currentState);
+        deviceExtract.id = String(device.id);
+        deviceExtract.hashDeviceId = this.hashDeviceId(deviceExtract.id);
+        deviceExtract.name = String(device.name);
+        deviceExtract.currentState = `${device.status?.currentState || ''}`;
+        deviceExtract.currentStateTitle = this.translateDeviceStatus(deviceExtract.currentState);
         deviceExtracts[deviceExtract.hashDeviceId] = deviceExtract;
       }
     }
@@ -326,9 +326,9 @@ module.exports = class krakenAccountWrapper {
     const account = accountData?.data?.account;
     const accountExtract = (account) ? {} : undefined;
     if (account) {
-      accountExtract.balance = account.balance;
-      accountExtract.billingStartDate = account?.billingOptions?.currentBillingPeriodStartDate;
-      accountExtract.liveMeterId = this.getLiveMeterId(accountData);
+      accountExtract.balance = account.balance;                                                             //number, pence
+      accountExtract.billingStartDate = `${account?.billingOptions?.currentBillingPeriodStartDate || ''}`;  //string, YYYY-MM-DD
+      accountExtract.liveMeterId = `${this.getLiveMeterId(accountData) || ''}`;                             //string
     }
     return accountExtract;
   }
@@ -342,30 +342,35 @@ module.exports = class krakenAccountWrapper {
    */
   extractTariffData(atTimeMillis, isExport, accountData) {
     const tariffDefinition = this.getTariffDirection(isExport, accountData);
-    const tariffData = { present: !!tariffDefinition };                                                       //boolean
-    if (tariffDefinition) {
-      tariffData.productCode = tariffDefinition.productCode;                                                  //string
-      tariffData.tariffCode = tariffDefinition.tariffCode;                                                    //string
-      tariffData.isExport = isExport;                                                                         //boolean
-      tariffData.isHalfHourly = tariffDefinition.__typename === 'HalfHourlyTariff';                           //boolean
-      tariffData.hasTomorrowsPrices = this.hasTomorrowsPricesPresent(atTimeMillis, tariffDefinition);         //boolean
-      const pricesNow = this.getPrices(atTimeMillis, tariffDefinition);
-      tariffData.unitRate = pricesNow.unitRate;                                                               //pence
-      tariffData.preVatUnitRate = pricesNow.preVatUnitRate;                                                   //pence
-      tariffData.standingCharge = pricesNow.standingCharge;                                                   //pence
-      tariffData.taxRate = 100 * (pricesNow.unitRate - pricesNow.preVatUnitRate) / pricesNow.preVatUnitRate;  //percent
-      tariffData.minimumPriceToday = this.minimumTariffPrice(atTimeMillis, tariffDefinition);                 //pence
-      tariffData.maximumPriceToday = this.maximumTariffPrice(atTimeMillis, tariffDefinition);                 //pence
-      tariffData.slotStart = pricesNow.thisSlotStart;                                                         //ISO datetime
-      tariffData.slotEnd = pricesNow.nextSlotStart;                                                           //ISO datetime
-      tariffData.slotQuartile = pricesNow.quartile;                                                           //integer 0-3
-      const slotEndDateTime = DateTime.fromISO(tariffData.slotEnd, { zone: this.timeZone }).toMillis();
-      const pricesNext = this.getPrices(slotEndDateTime, tariffDefinition);
-      tariffData.nextUnitPrice = (pricesNext === undefined) ? null : pricesNext.unitRate;                     //pence
-      tariffData.nextSlotEnd = (pricesNext === undefined) ? null : pricesNext.nextSlotStart;                  //ISO datetime
-      tariffData.nextSlotQuartile = (pricesNext === undefined) ? null : pricesNext.quartile;                  //integer 0-3
-    }
-    return tariffData;
+    if (!tariffDefinition) return { present: false };
+
+    const pricesNow = this.getPrices(atTimeMillis, tariffDefinition);
+    // Use a clean local variable for calculations
+    const slotEndStr = `${pricesNow.nextSlotStart || ''}`;
+    const slotEndDateTime = DateTime.fromISO(slotEndStr, { zone: this.timeZone }).toMillis();
+    const pricesNext = this.getPrices(slotEndDateTime, tariffDefinition);
+
+    return {
+      present: true,
+      productCode: `${tariffDefinition.productCode}`,
+      tariffCode: `${tariffDefinition.tariffCode}`,
+      isExport: !!isExport,
+      isHalfHourly: tariffDefinition.__typename === 'HalfHourlyTariff',
+      // Ensure these return primitives only:
+      hasTomorrowsPrices: !!this.hasTomorrowsPricesPresent(atTimeMillis, tariffDefinition),
+      unitRate: pricesNow.unitRate,
+      preVatUnitRate: pricesNow.preVatUnitRate,
+      standingCharge: pricesNow.standingCharge,
+      taxRate: 100 * (pricesNow.unitRate - pricesNow.preVatUnitRate) / pricesNow.preVatUnitRate,
+      minimumPriceToday: this.minimumTariffPrice(atTimeMillis, tariffDefinition),
+      maximumPriceToday: this.maximumTariffPrice(atTimeMillis, tariffDefinition),
+      slotStart: `${pricesNow.thisSlotStart}`,
+      slotEnd: slotEndStr,
+      slotQuartile: pricesNow.quartile,
+      nextUnitPrice: pricesNext?.unitRate ?? null,
+      nextSlotEnd: pricesNext ? `${pricesNext.nextSlotStart}` : null,
+      nextSlotQuartile: pricesNext?.quartile ?? null
+    };
   }
 
   /**

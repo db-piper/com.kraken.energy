@@ -128,10 +128,11 @@ module.exports = class dataFetcher {
       }
 
       let rawjson = await response.json();
-      const result = JSON.parse(JSON.stringify(rawjson));
+      //const result = JSON.parse(JSON.stringify(rawjson));
+      const result = structuredClone(rawjson);
 
-      response = null;
       rawjson = null;
+      response = null;
       fetchParams = null;
 
       if (typeof global.gc === 'function') {
