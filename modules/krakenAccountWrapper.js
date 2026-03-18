@@ -186,23 +186,27 @@ module.exports = class krakenAccountWrapper {
     let prices = undefined;
 
     if (tariff && "unitRates" in tariff) {
-      const target = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
-      const targetMs = target.toMillis();
-      const tomorrowMs = target.plus({ days: 1 }).startOf('day').toMillis();
+      //const target = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
+      //const targetMs = target.toMillis();
+      //const tomorrowMs = target.plus({ days: 1 }).startOf('day').toMillis();
 
       const selectedRate = tariff.unitRates.find(rate => {
-        const start = DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis();
-        const end = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
-        return start <= targetMs && end > targetMs;
+        //const start = DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis();
+        //const end = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
+        const start = Date.parse(rate.validFrom);
+        const end = Date.parse(rate.validTo);
+        return start <= atTimeMillis && end > atTimeMillis;
       });
 
       if (selectedRate) {
         let minPrice = Infinity;
         let maxPrice = -Infinity;
+        const tomorrowMs = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 }).startOf('day').toMillis();
 
         // Optimized single-pass loop to find Min/Max for Today
         for (const rate of tariff.unitRates) {
-          const rateEndMs = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
+          //const rateEndMs = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
+          const rateEndMs = Date.parse(rate.validTo);
 
           // Match original filter: only consider rates ending before or at start of tomorrow
           if (rateEndMs <= tomorrowMs) {
@@ -224,8 +228,8 @@ module.exports = class krakenAccountWrapper {
           unitRate: selectedRate.value,
           preVatStandingCharge: tariff.preVatStandingCharge,
           standingCharge: tariff.standingCharge,
-          nextSlotStart: selectedRate.validTo,
-          thisSlotStart: selectedRate.validFrom,
+          nextSlotStart: `${selectedRate.validTo}`,
+          thisSlotStart: `${selectedRate.validFrom}`,
           // Calculate quartile: 0 (cheapest) to 3 (most expensive)
           quartile: Math.min(3, Math.floor((selectedRate.value - minPrice) / (quartileStep || 1))),
           isHalfHourly: true
@@ -360,8 +364,8 @@ module.exports = class krakenAccountWrapper {
     const pricesNow = this.getPrices(atTimeMillis, tariffDefinition);
     // Use a clean local variable for calculations
     const slotEndStr = `${pricesNow.nextSlotStart || ''}`;
-    const slotEndDateTime = DateTime.fromISO(slotEndStr, { zone: this.timeZone }).toMillis();
-    const pricesNext = this.getPrices(slotEndDateTime, tariffDefinition);
+    const slotEndDateTime = DateTime.fromISO(slotEndStr, { zone: this.timeZone });
+    const pricesNext = this.getPrices(slotEndDateTime.toMillis(), tariffDefinition);
 
     return {
       present: true,
@@ -378,10 +382,13 @@ module.exports = class krakenAccountWrapper {
       minimumPriceToday: this.minimumTariffPrice(atTimeMillis, tariffDefinition),
       maximumPriceToday: this.maximumTariffPrice(atTimeMillis, tariffDefinition),
       slotStart: `${pricesNow.thisSlotStart}`,
+      slotStartShort: DateTime.fromISO(pricesNow.thisSlotStart, { zone: this.timeZone }).toFormat('dd/LL T'),
       slotEnd: slotEndStr,
+      slotEndShort: slotEndDateTime.toFormat('dd/LL T'),
       slotQuartile: pricesNow.quartile,
       nextUnitPrice: pricesNext?.unitRate ?? null,
       nextSlotEnd: pricesNext ? `${pricesNext.nextSlotStart}` : null,
+      nextSlotEndShort: pricesNext ? DateTime.fromISO(pricesNext.nextSlotStart, { zone: this.timeZone }).toFormat('dd/LL T') : null,
       nextSlotQuartile: pricesNext?.quartile ?? null
     };
   }

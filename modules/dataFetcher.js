@@ -103,6 +103,7 @@ module.exports = class dataFetcher {
         } else {
           this.homey.log(`dataFetcher.getDataUsingGraphQL: malformed query result:`);
           if (result.errors) this.homey.log(JSON.stringify(result.errors));
+          result = null;
           return undefined;
         }
       } catch (err) {

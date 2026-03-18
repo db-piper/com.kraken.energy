@@ -169,16 +169,15 @@ module.exports = class productTariff extends krakenDevice {
 
 		const direction = this.isExport;
 		const isDispatchable = this.isDispatchable;
-		const eventTime = DateTime.fromMillis(atTimeMillis);
 		const tariff = direction ? exportTariff : importTariff;
 		const propertyName = direction ? "export" : "consumption";
 		const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
 		const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
 		const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
 		const firstTime = recordedSlotEnd === null;
-		const slotChange = firstTime ? true : (eventTime >= new Date(recordedSlotEnd));																				//Boolean
+		const slotChange = firstTime ? true : (atTimeMillis >= Date.parse(recordedSlotEnd));																															//Boolean
 		const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
-		const duration = firstTime ? 0 : ((eventTime - DateTime.fromISO(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
+		const duration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));									//Decimal hours
 		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
 		const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));						//Wh
 		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);											//£
@@ -197,12 +196,6 @@ module.exports = class productTariff extends krakenDevice {
 		const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
 		const dispatchQuartile = discountDispatch ? 0 : 3;
 		const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariff.slotQuartile;
-		const slotStart = tariff.slotStart;
-		const shortStart = DateTime.fromISO(slotStart, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
-		const slotEnd = tariff.slotEnd;
-		const shortEnd = DateTime.fromISO(slotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");			//ISO
-		const nextSlotEnd = tariff.nextSlotEnd;
-		const shortNextEnd = tariff.nextUnitPrice === null ? null : DateTime.fromISO(nextSlotEnd, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
 
 		this.updateCapability(this._capIds.PRODUCT_CODE, tariff.productCode);
 		this.updateCapability(this._capIds.TARIFF_CODE, tariff.tariffCode);
@@ -214,14 +207,14 @@ module.exports = class productTariff extends krakenDevice {
 		this.updateCapability(this._capIds.AVERAGE_POWER, slotPower);
 		this.updateCapability(this._capIds.SLOT_QUARTILE, slotQuartile);
 		this.updateCapability(this._capIds.TAX_RATE, tariff.taxRate);
-		this.updateCapability(this._capIds.SLOT_START_TIME, shortStart);
-		this.updateCapability(this._capIds.SLOT_START_DATETIME, slotStart);
-		this.updateCapability(this._capIds.SLOT_END_TIME, shortEnd);
-		this.updateCapability(this._capIds.SLOT_END_DATETIME, slotEnd);
+		this.updateCapability(this._capIds.SLOT_START_TIME, tariff.slotStartShort);
+		this.updateCapability(this._capIds.SLOT_START_DATETIME, tariff.slotStart);
+		this.updateCapability(this._capIds.SLOT_END_TIME, tariff.slotEndShort);
+		this.updateCapability(this._capIds.SLOT_END_DATETIME, tariff.slotEnd);
 		this.updateCapability(this._capIds.NEXT_DAY_PRICES_INDICATOR, tariff.hasTomorrowsPrices);
 		this.updateCapability(this._capIds.NEXT_UNIT_PRICE, .01 * tariff.nextUnitPrice);
 		this.updateCapability(this._capIds.NEXT_SLOT_QUARTILE, tariff.nextSlotQuartile);
-		this.updateCapability(this._capIds.NEXT_SLOT_END_TIME, shortNextEnd);
+		this.updateCapability(this._capIds.NEXT_SLOT_END_TIME, tariff.nextSlotEndShort);
 		this.updateCapability(this._capIds.DISPATCH_PRICING_INDICATOR, inDispatch);
 		this.updateCapability(this._capIds.UNIT_PRICE_TARIFF, .01 * tariff.unitRate);
 		this.updateCapability(this._capIds.DISPATCH_LIMIT_PERCENT, percentDispatchLimit);
