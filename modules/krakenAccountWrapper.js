@@ -262,13 +262,18 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   *
-   * @param   {string} accountId      The account to retrieve pairing data for
-   * @returns {promise<string|undefined>}      The data to process for pairing
+   * Retrieve pairing data for the account
+   * @param   {string}                     accountId          The account to retrieve pairing data for
+   * @param   {function}                   transformFunction  Function to transform the pairing data
+   * @returns {promise<string|undefined>}                     The Pairing definitions of available kraken homey devices
    */
-  async getPairingData(accountId) {
+  async getPairingData(accountId, transformFunction = null) {
     const pairingQuery = Queries.getPairingData(accountId);
-    const pairingData = await this.fetcher.getDataUsingGraphQL(pairingQuery, this.accessParameters.apiKey);
+    const pairingData = await this.fetcher.getDataUsingGraphQL(
+      pairingQuery,
+      this.accessParameters.apiKey,
+      transformFunction
+    );
     return pairingData;
   }
 
@@ -280,39 +285,47 @@ module.exports = class krakenAccountWrapper {
   async accessAccountGraphQL(atTimeMillis) {
     this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Starting.");
     const accountQuery = Queries.getAccountData(this.accountId);
-    const accountData = await this.fetcher.getDataUsingGraphQL(accountQuery, this.accessParameters.apiKey);
-    if (accountData !== undefined) {
-      accountData.data.devices = (TestData) ? TestData.getMockDevices() : (accountData?.data?.devices || []);
-      this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: Access success:`);
-      const account = this.extractAccountData(accountData);
-      const importTariff = this.extractTariffData(atTimeMillis, false, accountData);
-      const exportTariff = this.extractTariffData(atTimeMillis, true, accountData);
-      const devices = this.extractDeviceData(accountData);
-      return { account, importTariff, exportTariff, devices };
+    const accountData = await this.fetcher.getDataUsingGraphQL(
+      accountQuery,
+      this.accessParameters.apiKey,
+      (queryResultData) => {
+        // 1. Resolve source for devices (No mutation of rawjson)
+        const deviceData = (!TestData) ? queryResultData?.data?.devices : TestData.getMockDevices();
+
+        // 2. Extract atomized data
+        const account = this.extractAccountData(queryResultData);
+        const importTariff = this.extractTariffData(atTimeMillis, false, queryResultData);
+        const exportTariff = this.extractTariffData(atTimeMillis, true, queryResultData);
+        const devices = this.extractDeviceData(deviceData);
+
+        // 3. Assemble final object
+        return { account, importTariff, exportTariff, devices };  //RETURN from closure function
+      }
+    );
+
+    if (accountData) {
+      return accountData;
     } else {
-      this._driver.homey.log("krakenAccountWrapper.accessAccountGraphQL: Access failed.");
       return { account: undefined, importTariff: undefined, exportTariff: undefined, devices: undefined };
     }
   }
 
   /**
    * Extract simple device definitions from the devices array
-   * @param   {object}              accountData account data from Kraken
+   * @param   {object}              devices     devices data from Kraken
    * @returns {object | undefined}              extracted device definitions
    */
-  extractDeviceData(accountData) {
-    const devices = accountData?.data?.devices;
-    const deviceExtracts = (devices) ? {} : undefined;
-    if (devices) {
-      for (const device of devices) {
-        const deviceExtract = {};
-        deviceExtract.id = String(device.id);
-        deviceExtract.hashDeviceId = this.hashDeviceId(deviceExtract.id);
-        deviceExtract.name = String(device.name);
-        deviceExtract.currentState = `${device.status?.currentState || ''}`;
-        deviceExtract.currentStateTitle = this.translateDeviceStatus(deviceExtract.currentState);
-        deviceExtracts[deviceExtract.hashDeviceId] = deviceExtract;
-      }
+  extractDeviceData(devices) {
+    if (!devices || !Array.isArray(devices)) return undefined;
+    const deviceExtracts = {};
+    for (const device of devices) {
+      const deviceExtract = {};
+      deviceExtract.id = `${device.id}`;
+      deviceExtract.hashDeviceId = this.hashDeviceId(deviceExtract.id);
+      deviceExtract.name = `${device.name}`;
+      deviceExtract.currentState = `${device.status?.currentState || ''}`;
+      deviceExtract.currentStateTitle = this.translateDeviceStatus(deviceExtract.currentState);
+      deviceExtracts[deviceExtract.hashDeviceId] = deviceExtract;
     }
     return deviceExtracts;
   }
@@ -375,21 +388,35 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Get the product and tariff JSON for all MPAN on the account
-   * @returns {Promise<object>} JSON containing the productId and tariffId
+   * @returns {Promise<object[]>} Array of kraken homey device definitions 
    */
   async getOctopusDeviceDefinitions() {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
-    const pairingData = await this.getPairingData(this.accountId)
-    if (!pairingData) {
-      throw new Error("Failed to retrieve pairing data from Kraken");
+    const definitions = await this.getPairingData(this.accountId, (rawParingData) => {
+      return this.extractDeviceDefinitions(rawParingData);
+    })
+
+    if (!definitions) {
+      throw new Error("Failed to retrieve device definitions from Kraken");
     }
 
-    const account = pairingData?.data?.account;
-    const devices = (TestData) ? TestData.getMockDevices() : (pairingData?.data?.devices || []);
+    return definitions;
+  }
+
+  /**
+   * Surgical extraction of account/device definitions from raw pairing data
+   * @param   {object}    rawPairingData    pairing data from Kraken
+   * @returns {object[]}                    array of extracted kraken device definitions
+   */
+  extractDeviceDefinitions(rawPairingData) {
+    const account = rawPairingData?.data?.account;
+
+    // Preferred TestData formulation
+    const rawDevices = (!TestData) ? (rawPairingData?.data?.devices || []) : TestData.getMockDevices();
 
     const validStatusCodes = Object.keys(this._pairable_device_status_translations);
-    const dispatchableDevices = devices.filter(device =>
+    const dispatchableDevices = rawDevices.filter(device =>
       validStatusCodes.includes(device.status?.currentState)
     );
     const isDispatchable = dispatchableDevices.length > 0;
@@ -401,11 +428,12 @@ module.exports = class krakenAccountWrapper {
     const billingDate = account?.billingOptions?.currentBillingPeriodStartDate;
     let periodStartDay = 1;
     if (billingDate) {
-      periodStartDay = DateTime.fromISO(billingDate).minus({ days: 1 }).day;
+      periodStartDay = DateTime.fromISO(`${billingDate}`).minus({ days: 1 }).day;
     }
 
     const definitions = [];
 
+    // 1. Process Tariffs
     if (account?.electricityAgreements) {
       for (const agreement of account.electricityAgreements) {
         const tariff = agreement.meterPoint?.agreements?.[0]?.tariff;
@@ -417,9 +445,7 @@ module.exports = class krakenAccountWrapper {
         definitions.push({
           name: `${direction} Tariff`,
           data: { id: `${this.accountId} ${direction}` },
-          settings: {
-            periodStartDay: periodStartDay
-          },
+          settings: { periodStartDay },
           store: {
             octopusClass: "octopusTariff",
             isExport: !!tariff.isExport,
@@ -431,12 +457,11 @@ module.exports = class krakenAccountWrapper {
       }
     }
 
+    // 2. Add Account Definition
     definitions.push({
       name: "Octopus Account",
       data: { id: `${this.accountId} Octopus Account` },
-      settings: {
-        periodStartDay: periodStartDay
-      },
+      settings: { periodStartDay },
       store: {
         octopusClass: "octopusAccount",
         hasExport: hasExportTariff
@@ -444,22 +469,21 @@ module.exports = class krakenAccountWrapper {
       icon: "/account.svg"
     });
 
+    // 3. Add Device Definitions
     for (const device of dispatchableDevices) {
       definitions.push({
-        name: device.name || "Unknown Device",
-        data: { id: device.id },
-        settings: {
-          periodStartDay: periodStartDay
-        },
+        name: `${device.name || "Unknown Device"}`,
+        data: { id: `${device.id}` },
+        settings: { periodStartDay },
         store: {
           octopusClass: "smartDevice",
-          deviceId: device.id // Just the ID as requested
+          deviceId: `${device.id}`
         },
         icon: "/device.svg"
       });
     }
 
-    return definitions;
+    return definitions; // clean result - pairingBlob is now eligible for GC
   }
 
   /**
@@ -538,33 +562,63 @@ module.exports = class krakenAccountWrapper {
    */
   async getLiveMeterData(atTimeMillis, meterId, devices) {
     const deviceIds = this.getDeviceIds(devices);
-    let meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
-    const result = {
-      reading: undefined,
-      dispatches: {}
+    const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
+
+    return await this.fetcher.getDataUsingGraphQL(
+      meterQuery,
+      this.accessParameters.apiKey,
+      (queryResultData) => {
+        // Coordinate the extraction
+        const reading = this.extractLiveReading(queryResultData);
+        const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceIds);
+
+        // Return the clean assembly
+        return { reading, dispatches };   //Return from the closure
+      }
+    );
+  }
+
+  /**
+   * Extract the live meter reading from the GraphQL query result data
+   * @param   {object}    queryData    The raw GraphQL query result data
+   * @returns {object}                 The live meter reading
+   */
+  extractLiveReading(queryData) {
+    const reading = queryData?.data?.smartMeterTelemetry?.[0];
+    if (!reading) return undefined;
+
+    return {
+      demand: Number(reading.demand),             //Current energy w (positive import, negative export)
+      export: Number(reading.export),             //Current export meter reading kWh since meter installed
+      consumption: Number(reading.consumption),   //Current import meter reading kWh since meter installed
+      readAt: `${reading.readAt}`                 //ISO DateTime string
     };
-    let response = await this.fetcher.getDataUsingGraphQL(meterQuery, this.accessParameters.apiKey);
-    if ((response !== undefined) && ("data" in response)) {
-      const readingArray = response.data.smartMeterTelemetry;
-      if ((readingArray !== null) && (Array.isArray(readingArray)) && (readingArray.length > 0)) {
-        result.reading = { ...readingArray[0] };
-      }
-      if (TestData) {
-        const mockDispatches = TestData.getMockDispatches(DateTime, this.timeZone);
-        Object.assign(response.data, mockDispatches);
-      }
-      for (const deviceId of deviceIds) {
-        const deviceKey = this.hashDeviceId(deviceId);
-        if (Array.isArray(response.data[deviceKey])) {
-          result.dispatches[deviceKey] = response.data[deviceKey].map(dispatch => ({ ...dispatch }));
-        }
+  }
+
+  /**
+   * Iterates through devices and extracts atomized dispatch arrays
+   */
+  extractAllDeviceDispatches(rawPayload, deviceIds) {
+    const dispatchMap = {};
+
+    for (const deviceId of deviceIds) {
+      const deviceKey = this.hashDeviceId(deviceId);
+
+      // Selection logic using your preferred formulation
+      const source = (!TestData)
+        ? rawPayload?.data?.[deviceKey]
+        : TestData.getMockDispatches(DateTime, this.timeZone)?.[deviceKey];
+
+      if (Array.isArray(source)) {
+        dispatchMap[deviceKey] = source.map(dispatch => ({
+          start: `${dispatch.start}`,                // ISO DateTime string
+          end: `${dispatch.end}`,                    // ISO DateTime string
+          energyAdded: Number(dispatch.energyAdded), // Number kWh
+          type: `${dispatch.type || ''}`             // String SMART/BOOST
+        }));
       }
     }
-
-    response = null;
-    meterQuery = null;
-
-    return result;
+    return dispatchMap;
   }
 
   /**

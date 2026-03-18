@@ -85,17 +85,24 @@ module.exports = class dataFetcher {
    * @param   {string} queryString  the GraphQL query to be performed
    * @returns {promise<object>}     a JSON object representing the result of the query or undefined if query fails to execute
    */
-  async getDataUsingGraphQL(queryString, apiKey) {
+  async getDataUsingGraphQL(queryString, apiKey, transformFunction = null) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getApiToken(apiKey);
     if (validToken) {
       try {
-        let result = await this.runGraphQlQuery(queryString, validToken);
-        if ((result !== undefined) && ("data" in result)) {
+        let result = await this.runGraphQlQuery(queryString, validToken, transformFunction);
+        if (!result) {
+          this.homey.log("dataFetcher.getDataUsingGraphQL: No result returned from fetcher");
+          return undefined;
+        }
+
+        const isValid = transformFunction ? !!result : ("data" in result);
+
+        if (isValid) {
           return result;
         } else {
           this.homey.log(`dataFetcher.getDataUsingGraphQL: malformed query result:`);
-          this.homey.log(JSON.stringify(result));
+          if (result.errors) this.homey.log(JSON.stringify(result.errors));
           return undefined;
         }
       } catch (err) {
@@ -114,13 +121,12 @@ module.exports = class dataFetcher {
    * @param   {string}          token         Current GraphQL access token (empty if no security header is needed)
    * @returns {promise<object>}               JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
    */
-  async runGraphQlQuery(queryString, token) {
+  async runGraphQlQuery(queryString, token, transformFunction = null) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");
     try {
       const url = `${this._baseURL}${this._graphQlPath}`;
       let fetchParams = this.buildGraphQLFetchParams(queryString, token);
-
-      let response = await fetch(url, fetchParams); // Use await with fetch
+      let response = await fetch(url, fetchParams);
 
       if (!response.ok) {
         const errorText = await response.text(); // Read the error response body
@@ -128,20 +134,29 @@ module.exports = class dataFetcher {
       }
 
       let rawjson = await response.json();
+      let result;
       //const result = JSON.parse(JSON.stringify(rawjson));
-      const result = structuredClone(rawjson);
+
+      if (typeof transformFunction === 'function') {
+        // Strategy 2: The Airlock (Efficient)
+        result = transformFunction(rawjson);
+      } else {
+        // Legacy Fallback: JSON-JSON (Slow but safe reference breaking)
+        this.homey.log("dataFetcher: Using legacy JSON-JSON fallback");
+        result = JSON.parse(JSON.stringify(rawjson));
+      }
 
       rawjson = null;
       response = null;
       fetchParams = null;
 
-      if (typeof global.gc === 'function') {
-        this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
-        global.gc();
-      } else {
-        // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
-        this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
-      }
+      // if (typeof global.gc === 'function') {
+      //   this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
+      //   global.gc();
+      // } else {
+      //   // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
+      //   this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
+      // }
 
       return result;
     }

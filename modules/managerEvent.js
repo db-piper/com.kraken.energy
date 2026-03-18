@@ -131,7 +131,6 @@ module.exports = class managerEvent {
    */
   async executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices) {
     let updates = false;
-    this._driver.homey.log(`managerEvent.executeEventOnDevices: account: ${JSON.stringify(account)} `);
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, devices);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
