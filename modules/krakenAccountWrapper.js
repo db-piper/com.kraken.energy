@@ -166,9 +166,9 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Indicate if tomorow's prices are available
-   * @param		{number}		atTimeMillis		Time in epoch milliseconds
-   * @param		{object}		tariff  				The tariff data to check
-   * @returns {any}								        Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
+   * @param             {number}        atTimeMillis     Time in epoch milliseconds
+   * @param             {object}        tariff           The tariff data to check
+   * @returns {any}                                      Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
    */
   hasTomorrowsPricesPresent(atTimeMillis, tariff) {
     const tomorrow = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).plus({ days: 1 }).toMillis();

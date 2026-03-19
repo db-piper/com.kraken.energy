@@ -151,13 +151,13 @@ module.exports = class dataFetcher {
       response = null;
       fetchParams = null;
 
-      // if (typeof global.gc === 'function') {
-      //   this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
-      //   global.gc();
-      // } else {
-      //   // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
-      //   this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
-      // }
+      if (typeof global.gc === 'function') {
+        this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
+        global.gc();
+      } else {
+        // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
+        this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
+      }
 
       return result;
     }
