@@ -124,17 +124,21 @@ module.exports = class dataFetcher {
    */
   async runGraphQlQuery(queryString, token, transformFunction = null) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");
+    let rawjson;
+    let response;
+    let fetchParams;
+    let result = undefined;
     try {
       const url = `${this._baseURL}${this._graphQlPath}`;
-      let fetchParams = this.buildGraphQLFetchParams(queryString, token);
-      let response = await fetch(url, fetchParams);
+      fetchParams = this.buildGraphQLFetchParams(queryString, token);
+      response = await fetch(url, fetchParams);
 
       if (!response.ok) {
         const errorText = await response.text(); // Read the error response body
         throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
 
-      let rawjson = await response.json();
+      rawjson = await response.json();
       let result;
       //const result = JSON.parse(JSON.stringify(rawjson));
 
@@ -147,6 +151,15 @@ module.exports = class dataFetcher {
         result = JSON.parse(JSON.stringify(rawjson));
       }
 
+      return result;
+    } catch (err) {
+      this.homey.log("dataFetcher.runGraphQlQuery: error block");
+      this.homey.log(err);
+      return undefined;
+    } finally {
+      if (response && response.body && !response.bodyUsed) {
+        await response.body.cancel().catch(() => { });
+      }
       rawjson = null;
       response = null;
       fetchParams = null;
@@ -158,13 +171,6 @@ module.exports = class dataFetcher {
         // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
         this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
       }
-
-      return result;
-    }
-    catch (err) {
-      this.homey.log("dataFetcher.runGraphQlQuery: error block");
-      this.homey.log(err);
-      return undefined;
     }
   }
 

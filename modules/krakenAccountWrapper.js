@@ -186,13 +186,7 @@ module.exports = class krakenAccountWrapper {
     let prices = undefined;
 
     if (tariff && "unitRates" in tariff) {
-      //const target = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
-      //const targetMs = target.toMillis();
-      //const tomorrowMs = target.plus({ days: 1 }).startOf('day').toMillis();
-
       const selectedRate = tariff.unitRates.find(rate => {
-        //const start = DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis();
-        //const end = DateTime.fromISO(rate.validTo, { zone: this.timeZone }).toMillis();
         const start = Date.parse(rate.validFrom);
         const end = Date.parse(rate.validTo);
         return start <= atTimeMillis && end > atTimeMillis;
@@ -364,8 +358,8 @@ module.exports = class krakenAccountWrapper {
     const pricesNow = this.getPrices(atTimeMillis, tariffDefinition);
     // Use a clean local variable for calculations
     const slotEndStr = `${pricesNow.nextSlotStart || ''}`;
-    const slotEndDateTime = DateTime.fromISO(slotEndStr, { zone: this.timeZone });
-    const pricesNext = this.getPrices(slotEndDateTime.toMillis(), tariffDefinition);
+    const slotEndMs = Date.parse(slotEndStr);
+    const pricesNext = this.getPrices(slotEndMs, tariffDefinition);
 
     return {
       present: true,
@@ -384,7 +378,7 @@ module.exports = class krakenAccountWrapper {
       slotStart: `${pricesNow.thisSlotStart}`,
       slotStartShort: DateTime.fromISO(pricesNow.thisSlotStart, { zone: this.timeZone }).toFormat('dd/LL T'),
       slotEnd: slotEndStr,
-      slotEndShort: slotEndDateTime.toFormat('dd/LL T'),
+      slotEndShort: DateTime.fromMillis(slotEndMs, { zone: this.timeZone }).toFormat('dd/LL T'),
       slotQuartile: pricesNow.quartile,
       nextUnitPrice: pricesNext?.unitRate ?? null,
       nextSlotEnd: pricesNext ? `${pricesNext.nextSlotStart}` : null,
@@ -511,7 +505,8 @@ module.exports = class krakenAccountWrapper {
         .toMillis();
 
       const validRates = tariffDefinition.unitRates
-        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
+        //.filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
+        .filter(rate => Date.parse(rate.validFrom) < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
@@ -545,7 +540,8 @@ module.exports = class krakenAccountWrapper {
         .toMillis();
 
       const validRates = tariffDefinition.unitRates
-        .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
+        // .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
+        .filter(rate => Date.parse(rate.validFrom) < boundaryMs)
         .map(rate => rate.value);
 
       if (validRates.length > 0) {
@@ -639,10 +635,7 @@ module.exports = class krakenAccountWrapper {
     }
 
     const earliest = dispatchArray.reduce((prev, curr) => {
-      const prevTime = new Date(prev.start).getTime();
-      const currTime = new Date(curr.start).getTime();
-
-      return currTime < prevTime ? curr : prev;
+      return Date.parse(prev.start) < Date.parse(curr.start) ? prev : curr;
     });
 
     return earliest;
@@ -655,8 +648,8 @@ module.exports = class krakenAccountWrapper {
    * @returns     {[JSON]}                      Selected dispatches
    */
   futureDispatches(atTimeMillis, plannedDispatches) {
-    const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
-    const selectedItems = plannedDispatches.filter((dispatch) => DateTime.fromISO(dispatch.start, { zone: this.timeZone }) > eventTime);
+    if (!Array.isArray(plannedDispatches)) return [];
+    const selectedItems = plannedDispatches.filter((dispatch) => Date.parse(dispatch.start) > atTimeMillis);
     return selectedItems;
   }
 
@@ -667,59 +660,38 @@ module.exports = class krakenAccountWrapper {
    * @returns     {JSON}                        Selected dispatch or undefined
    */
   currentExtendedDispatch(atTimeMillis, plannedDispatches) {
-    const eventTime = DateTime.fromMillis(atTimeMillis);
-    const selectedDispatches = plannedDispatches.filter((dispatch) =>
-      (this.advanceTime(dispatch.start) <= eventTime) &&
-      (this.extendTime(dispatch.end) > eventTime)
-    );
-    return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
+    const halfHourMs = 1800000;
+
+    // .find() returns the first match it hits, then STOPS iterating.
+    // If no match is found, it returns undefined automatically.
+    return plannedDispatches.find((dispatch) => {
+      const startMs = Date.parse(dispatch.start);
+      const endMs = Date.parse(dispatch.end);
+
+      const advancedStart = Math.floor(startMs / halfHourMs) * halfHourMs;
+      const extendedEnd = Math.floor((endMs + 1799999) / halfHourMs) * halfHourMs;
+
+      return (advancedStart <= atTimeMillis) && (extendedEnd > atTimeMillis);
+    });
   }
 
   /**
-   * Return the dispatch that is currently active from an array of planned dispatches using planned times
+   * Return the dispatch that is currently active using planned times
    * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param       {[JSON]}    plannedDispatches Array of dispatches
-   * @returns     {JSON}                        Selected dispatch or undefined
+   * @param       {Object[]}  plannedDispatches Array of dispatches
+   * @returns     {Object|undefined}            Selected dispatch or undefined
    */
   currentPlannedDispatch(atTimeMillis, plannedDispatches) {
-    const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone });
-    const selectedDispatches = plannedDispatches.filter((dispatch) =>
-      (DateTime.fromISO(dispatch.start, { zone: this.timeZone }) <= eventTime) &&
-      (DateTime.fromISO(dispatch.end, { zone: this.timeZone }) > eventTime)
-    );
-    return (selectedDispatches.length == 0) ? undefined : selectedDispatches[0];
-  }
+    if (!Array.isArray(plannedDispatches)) return undefined;
 
-  /**
-   * Advance a start time to the preceding 30 minute boundary (00 or 30 minutes past the hour)
-   * @param   {string}      time     String datetime to be advanced, in ISO format from dispatch data [NOT MILLIS]
-   * @returns {DateTime}             <time> advanced to the preceding 30 minute boundary
-   */
-  advanceTime(time) {
-    const dateTime = DateTime.fromISO(time, { zone: this.timeZone });
-    return this.retardDateTime(dateTime);
-  }
+    // .find() is perfect here: it returns the object if true, 
+    // or native 'undefined' if no match is found.
+    return plannedDispatches.find((dispatch) => {
+      const startMs = Date.parse(dispatch.start);
+      const endMs = Date.parse(dispatch.end);
 
-  /**
-   * Extend an end time to the following 30 minute boundary (00 or 30 minutes past the hour)
-   * @param   {string}        time    String datetime to be extend, in ISO format from dispatch data [NOT MILLISECONDS]
-   * @returns {DateTime}              <time> extended to the following 30 minute boundary
-   */
-  extendTime(time) {
-    //Advance the time by 30 minutes, then retard the result
-    const dateTime = DateTime.fromISO(time, { zone: this.timeZone }).plus({ minutes: 29 });
-    return this.retardDateTime(dateTime);
-  }
-
-  /**
-   * Retard a dateTime to the nearest preceding 30 minute boundary (00 or 30 minutes past the hour)
-   * @param   {DateTime}    dateTime  Datetime to be retarded
-   * @returns {DateTime}              Retarded datetime
-   */
-  retardDateTime(dateTime) {
-    const newMinute = (dateTime.minute < 30) ? 0 : 30;
-    const advancedTime = dateTime.set({ minute: newMinute, second: 0, millisecond: 0 });
-    return advancedTime;
+      return startMs <= atTimeMillis && endMs > atTimeMillis;
+    });
   }
 
   /**
