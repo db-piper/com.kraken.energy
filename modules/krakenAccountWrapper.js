@@ -411,6 +411,10 @@ module.exports = class krakenAccountWrapper {
    * @returns {object[]}                    array of extracted kraken device definitions
    */
   extractDeviceDefinitions(rawPairingData) {
+    if (!this.getLiveMeterId(rawPairingData)) {
+      return [];
+    }
+
     const account = rawPairingData?.data?.account;
 
     // Preferred TestData formulation

@@ -5,6 +5,10 @@ const PAIRING_QUERY = `query GetPairingData($accountNumber: String!) {
     billingOptions { currentBillingPeriodStartDate }
     electricityAgreements(active: true) {
       meterPoint {
+        meters(includeInactive: false) {
+          smartImportElectricityMeter { deviceId }
+          smartExportElectricityMeter { deviceId }
+        }
         agreements(includeInactive: false) {
           tariff {
             __typename
