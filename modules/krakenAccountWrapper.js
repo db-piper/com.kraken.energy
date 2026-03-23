@@ -3,7 +3,7 @@
 const { DateTime } = require('../bundles/luxon');
 const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, PeriodStartDay, DeviceSettingNames } = require('./constants');
 
 let TestData = null;
 try {
@@ -309,6 +309,36 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+   * Check if any time-based boundaries have been crossed since the last event
+   * @param   {number} nowMillis  - Current event time in milliseconds
+   * @returns {object}            - Flags indicating which boundaries were crossed
+   */
+  checkTimeBoundaries(nowMillis) {
+    const lastTimestamp = this._driver.homey.app.eventTime;
+    const periodChanges = {
+      chunk: true,
+      day: true,
+      tariffSlot: true,
+      invoicePeriod: true
+    };
+
+    if (lastTimestamp) {
+      const event = DateTime.fromMillis(nowMillis);
+      const lastEvent = DateTime.fromMillis(lastTimestamp);
+      const slotEndMillis = this._driver.homey.app.slotEndTime;
+      const slotEnd = slotEndMillis ? DateTime.fromMillis(slotEndMillis) : DateTime.fromMillis(0);
+      const periodStartDay = this._driver.homey.app.periodStartDay;
+
+      periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
+      periodChanges.day = event.day !== lastEvent.day;
+      periodChanges.tariffSlot = event >= slotEnd || periodChanges.day;
+      periodChanges.invoicePeriod = periodChanges.day && event.day === periodStartDay;
+    }
+
+    return periodChanges
+  }
+
+  /**
    * Extract simple device definitions from the devices array
    * @param   {object}              devices     devices data from Kraken
    * @returns {object | undefined}              extracted device definitions
@@ -570,17 +600,23 @@ module.exports = class krakenAccountWrapper {
   async getLiveMeterData(atTimeMillis, meterId, devices) {
     const deviceIds = this.getDeviceIds(devices);
     const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
+    //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Query: ${meterQuery}`);
 
     return await this.fetcher.getDataUsingGraphQL(
       meterQuery,
       this.accessParameters.apiKey,
       (queryResultData) => {
         // Coordinate the extraction
+        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Query Result Data: ${JSON.stringify(queryResultData)}`);
         const reading = this.extractLiveReading(queryResultData);
         const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceIds);
+        const deviceStates = this.extractDeviceStatuses(queryResultData, deviceIds);
+        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Reading: ${JSON.stringify(reading)}`);
+        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Dispatches: ${JSON.stringify(dispatches)}`);
+        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Device States: ${JSON.stringify(deviceStates)}`);
 
         // Return the clean assembly
-        return { reading, dispatches };   //Return from the closure
+        return { reading, dispatches, deviceStates };   //Return from the closure
       }
     );
   }
@@ -628,6 +664,27 @@ module.exports = class krakenAccountWrapper {
     return dispatchMap;
   }
 
+  /**
+   * Extract device statuses into a clean, UI-ready array
+   * @param   {object}    queryResultData   The raw GQL response
+   * @param   {string[]}  deviceIds         The IDs we are interested in
+   * @returns {object[]}                    Array of {id, status, statusTitle}
+   */
+  extractDeviceStatuses(queryResultData, deviceIds) {
+    const rawDevices = queryResultData?.devices || [];
+
+    return rawDevices
+      .filter(device => deviceIds.includes(device.id))
+      .map(device => {
+        const rawStatus = device.status?.currentState || 'UNKNOWN';
+        return {
+          id: device.id,
+          currentState: rawStatus,
+          // Perform the translation immediately
+          currentStateTitle: this._pairable_device_status_translations[rawStatus] || 'Unknown Status'
+        };
+      });
+  }
   /**
    * Return the dispatch with the earliest start time or undefined
    * @param       {[JSON]}    dispatchArray     Array of dispatches
@@ -718,6 +775,7 @@ module.exports = class krakenAccountWrapper {
 
     // 3. Call the Stateless Factory
     return Queries.getHighFrequencyData(
+      this.accountId,
       meterId,
       preparedDevices,
       startTime.toISO(),

@@ -84,9 +84,10 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	 * @param			{object}				importTariff			Import tariff object from Kraken
 	 * @param			{object}				exportTariff			Export tariff object from Kraken
 	 * @param			{object}				devices						Map of devices from Kraken
+	 * @param			{object}				deviceStates			Map of device current states from Kraken
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 
 		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 

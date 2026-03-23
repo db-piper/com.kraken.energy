@@ -4,7 +4,7 @@ const Homey = require('homey');
 const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('../../modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, PeriodStartDay, DeviceSettingNames } = require('../../modules/constants');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -55,7 +55,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log(`krakenDevice:onSettings settings were changed: ${JSON.stringify(newSettings)}`);
 		const sharedSettings = Object.fromEntries(
 			changedKeys
-				.filter(name => DriverSettingNames.includes(name))
+				.filter(name => DeviceSettingNames.includes(name))
 				.map(name => [name, newSettings[name]])
 		);
 		this.log(`krakenDevice:onSettings - shared settings: ${JSON.stringify(sharedSettings)}`);
@@ -65,6 +65,9 @@ module.exports = class krakenDevice extends Homey.Device {
 				await device.setSettings(sharedSettings);
 			}
 			await device.onSettingsChanged({ oldSettings, newSettings, changedKeys })
+		}
+		if (changedKeys.includes('periodStartDay')) {
+			this.homey.app.periodStartDay = newSettings.periodStartDay;
 		}
 	}
 
@@ -273,9 +276,10 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @param			{object}				importTariff			Import tariff object from Kraken
 	 * @param			{object}				exportTariff			Export tariff object from Kraken
 	 * @param			{object}				devices						Map of devices from Kraken
+	 * @param			{object}				deviceStates			Map of device current states from Kraken
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
+	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 		return false;
 	}
 

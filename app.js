@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, DriverSettingNames } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
 const Homey = require('homey');
 
 module.exports = class krakenApp extends Homey.App {
@@ -72,7 +72,7 @@ module.exports = class krakenApp extends Homey.App {
 
   /**
    * Set the most recently executed event time
-   * @param {number} milliseconds The event time in milliseconds since the epoch
+   * @param {number} milliseconds The event time in epoch milliseconds
    */
   set eventTime(milliseconds) {
     this.homey.settings.set(EventTime, milliseconds);
@@ -80,9 +80,17 @@ module.exports = class krakenApp extends Homey.App {
   }
 
   /**
+   * Return the most recently executed event time
+   * @returns {number}  Event time in epoch milliseconds
+   */
+  get eventTime() {
+    return this.homey.settings.get(EventTime);
+  }
+
+  /**
    * Calculate the interval in minutes (and decimals) between the current event and the last event
    * @param 	{number} eventMillis	Time of the current event in epoch milliseconds 
-   * @returns {number} 						Minutes between eventTime and the last event time				
+   * @returns {number} 					  	Minutes between eventTime and the last event time				
    */
   getEventIntervalMinutes(eventMillis) {
     let lastEventTime = this.homey.settings.get(EventTime);
@@ -96,5 +104,47 @@ module.exports = class krakenApp extends Homey.App {
     return interval;
   }
 
+  /**
+   * Set the slot end time of the slot just processed by an event
+   * @param {number} milliseconds The slot end time in epoch milliseconds
+   */
+  set slotEndTime(milliseconds) {
+    this.homey.log(`krakenApp.setSlotEndTime: milliseconds ${milliseconds} datetime ${(new Date(milliseconds)).toISOString()}`);
+    this.homey.settings.set(SlotEndTime, milliseconds);
+  }
 
-};
+  /**
+   * Return the slot end time of the slot processed by the most recent event
+   * @returns {number}  Slot end time in epoch milliseconds
+   */
+  get slotEndTime() {
+    return this.homey.settings.get(SlotEndTime);
+  }
+
+  /**
+   * Set the period start day
+   * @param {number} day The period start day
+   */
+  set periodStartDay(day) {
+    this.homey.settings.set(PeriodStartDay, day);
+  }
+
+  /**
+   * Return the period start day
+   * @returns {number}  The period start day number
+   */
+  get periodStartDay() {
+    const globalDay = this.homey.settings.get(PeriodStartDay);
+    if (globalDay !== undefined && globalDay !== null) {
+      return globalDay;
+    }
+    const driver = this.homey.drivers.getDriver('krakendevicedriver');
+    const devices = driver.getDevices();
+    if (devices && devices.length > 0) {
+      const scavengedDay = devices[0].getSetting(PeriodStartDay);
+      this.homey.settings.set(PeriodStartDay, scavengedDay);
+      return scavengedDay;
+    }
+  }
+
+}

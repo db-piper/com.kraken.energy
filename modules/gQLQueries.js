@@ -96,20 +96,37 @@ module.exports = {
 
   /**
    * Generates a complex dispatch and telemetry query
+   * @param   {string}                              accountNumber    The account number to be queried
    * @param   {string}                              meterId          The meter ID to be queried
    * @param   {Array<{label: string, id: string}>}  devices          Array of {label, id}
    * @param   {string}                              startTime        ISO string
    * @param   {string}                              endTime          ISO string
    * @returns {string}                                               Stringified JSON of the parameterized query 
    */
-  getHighFrequencyData: (meterId, devices, startTime, endTime) => {
-    const varDecls = ['$meterId: String!', '$startTime: DateTime', '$endTime: DateTime', '$grouping: TelemetryGrouping'];
-    const queryParts = [`
-      smartMeterTelemetry(deviceId: $meterId, start: $startTime, end: $endTime, grouping: $grouping) {
-        demand export consumption readAt
-      }`];
+  getHighFrequencyData: (accountNumber, meterId, devices, startTime, endTime) => {
+    const varDecls = [
+      '$accountNumber: String!',
+      '$meterId: String!',
+      '$startTime: DateTime',
+      '$endTime: DateTime',
+      '$grouping: TelemetryGrouping'
+    ];
+    const queryParts = [
+      `smartMeterTelemetry(deviceId: $meterId, start: $startTime, end: $endTime, grouping: $grouping) {
+        demand 
+        export 
+        consumption 
+        readAt
+      }`,
+      `devices(accountNumber: $accountNumber) {
+        id
+        status { 
+          currentState  
+        }
+      }`
+    ];
 
-    const variableValues = { meterId, startTime, endTime, grouping: 'ONE_MINUTE' };
+    const variableValues = { accountNumber, meterId, startTime, endTime, grouping: 'ONE_MINUTE' };
 
     devices.forEach((device, index) => {
       const varName = `deviceId${String(index).padStart(2, '0')}`;

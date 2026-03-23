@@ -44,12 +44,15 @@ module.exports = class managerEvent {
    */
   async executeEvent() {
     const atTimeMillis = DateTime.now().toMillis();
-    this.driver.log(`managerEvent.executeEvent: Fetching GQL data`);
+    const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis);
+    this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
 
     const { account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis);
 
     if (account) {
-      return await this.executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices);
+      const result = await this.executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices);
+      this.driver.homey.app.slotEndTime = Date.parse(importTariff.slotEnd);
+      return result;
     } else {
       throw new Error('Unable to access account data');
     }
@@ -134,7 +137,7 @@ module.exports = class managerEvent {
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, devices);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
-    let [{ reading, dispatches }, ...homeyDeviceReadyResults] = await Promise.all([
+    let [{ reading, dispatches, deviceStates }, ...homeyDeviceReadyResults] = await Promise.all([
       meterFetchPromise,
       ...homeyDeviceReadyPromises
     ]);
@@ -150,7 +153,7 @@ module.exports = class managerEvent {
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
-          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, account, importTariff, exportTariff, devices);
+          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, account, importTariff, exportTariff, devices, deviceStates);
           this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }
