@@ -203,7 +203,7 @@ module.exports = class energyAccount extends krakenDevice {
 	/**
 	 * Define the standard interface for processEvent.
 	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
-	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
+	 * @param     {object}        periodChanges     Indicates periods have changed (chunk, tariffslot, day and period)
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
 	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
 	 * @param			{object}				account						Account abstract from Kraken
@@ -213,16 +213,19 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @param			{object}				deviceStates			Map of device current states from Kraken
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
+	processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
+		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
 		const timeZone = this.wrapper.timeZone;
 		const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
 		let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
 		let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
-		const newPeriod = eventDateTime >= nextPeriodStartDate;
-		const newChunk = [0, 30].includes(eventDateTime.minute);
+		const newPeriod = periodChanges.invoicePeriod;
+		//const newPeriod = eventDateTime >= nextPeriodStartDate;
+		const newChunk = periodChanges.chunk;
+		//const newChunk = [0, 30].includes(eventDateTime.minute);
+		const newDay = periodChanges.day;
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);

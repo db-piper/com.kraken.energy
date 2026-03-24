@@ -154,7 +154,7 @@ module.exports = class productTariff extends krakenDevice {
 	/**
 	 * Process an event on a Product Tariff device
 	 * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
-	 * @param     {boolean}       newDay            Indicates that any newDay processing should occur
+	 * @param     {object}        periodChanges     Indicates periods have changed (chunk, tariffslot, day and period)
 	 * @param     {object - JSON} liveMeterReading  SmartMeterTelemetry {demand, export, consumption, readAt}
 	 * @param			{object[]}			plannedDispatches	Array of planned dispatches by device
 	 * @param			{object}				account						Account abstract from Kraken
@@ -164,9 +164,9 @@ module.exports = class productTariff extends krakenDevice {
 	 * @param			{object}				deviceStates			Map of device current states from Kraken
 	 * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
 	 */
-	processEvent(atTimeMillis, newDay, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
+	processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, newDay, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
+		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
 
 		const direction = this.isExport;
 		const isDispatchable = this.isDispatchable;
@@ -176,14 +176,14 @@ module.exports = class productTariff extends krakenDevice {
 		const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
 		const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
 		const firstTime = recordedSlotEnd === null;
-		const slotChange = firstTime ? true : (atTimeMillis >= Date.parse(recordedSlotEnd));																															//Boolean
+		const slotChange = periodChanges.tariffSlot;
+		//const slotChange = firstTime ? true : (atTimeMillis >= Date.parse(recordedSlotEnd));																															//Boolean
 		const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
 		const duration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));									//Decimal hours
 		const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
 		const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));						//Wh
 		const slotValueTaxed = firstTime ? 0 : this.readCapabilityValue(this._capIds.SLOT_ENERGY_VALUE);											//£
-		const minPrice = tariff.minimumPriceToday;
-		const maxPrice = tariff.maximumPriceToday;
+		const { min: minPrice, max: maxPrice } = this.homey.app.extremePrices;
 		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
 		const inDispatch = currentDispatch !== undefined;
 		const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";

@@ -2,7 +2,7 @@
 const homey = require("homey");
 const { DateTime } = require('../bundles/luxon');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, PeriodStartDay, DeviceSettingNames } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, ExtremePrices, PeriodStartDay, DeviceSettingNames } = require('./constants');
 
 module.exports = class dataFetcher {
   /**

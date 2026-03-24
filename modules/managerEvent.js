@@ -46,16 +46,33 @@ module.exports = class managerEvent {
     const atTimeMillis = DateTime.now().toMillis();
     const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis);
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
+    let result = false;
 
+    if (periodChanges.chunk) {
+      this.driver.log(`managerEvent.executeEvent: Chunk changed`);
+      //Heavy process goes here
+    } else {
+      //Light process
+      //should just be:
+      //result = await this.executeEventOnDevices(atTimeMillis, periodChanges);
+      //return result;
+    }
+
+    //Heavy process will move to if (periodChanges.chunk){}
     const { account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis);
-
     if (account) {
-      const result = await this.executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices);
       this.driver.homey.app.slotEndTime = Date.parse(importTariff.slotEnd);
-      return result;
+      this.driver.homey.app.extremePrices = { min: importTariff.minimumPriceToday, max: importTariff.maximumPriceToday };
+      result = await this.executeEventOnDevices(atTimeMillis, periodChanges, account, importTariff, exportTariff, devices);
+      this.driver.log(`managerEvent.executeEvent: Slot End Time: ${importTariff.slotEnd}`);
     } else {
       throw new Error('Unable to access account data');
     }
+    //END Heavy process
+    //END Heavy and Light processes
+    this.driver.homey.app.eventTime = atTimeMillis;
+    await this.logMemoryToInsights()
+    return result;
   }
 
   /**
@@ -126,13 +143,14 @@ module.exports = class managerEvent {
   /**
    * Loop over devices, executing the event
    * @param   {number}            atTimeMillis  event time in milliseconds since the epoch
+   * @param   {object}            periodChanges indicates changes in specific timing periods
    * @param   {object}            account       kraken account header data
    * @param   {object}            importTariff  kraken import tariff data
    * @param   {object}            exportTariff  kraken export tariff data
    * @param   {object}            devices       kraken device data
    * @returns {promise<boolean>}                True iff any device has been updated by the event
    */
-  async executeEventOnDevices(atTimeMillis, account, importTariff, exportTariff, devices) {
+  async executeEventOnDevices(atTimeMillis, periodChanges, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
     let updates = false;
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, devices);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
@@ -147,13 +165,13 @@ module.exports = class managerEvent {
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
-      const isNewDay = this.isNewDay(atTimeMillis);
+      //const isNewDay = this.isNewDay(atTimeMillis);
       const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
 
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
-          device.processEvent(atTimeMillis, isNewDay, reading, dispatches, account, importTariff, exportTariff, devices, deviceStates);
+          device.processEvent(atTimeMillis, periodChanges, reading, dispatches, account, importTariff, exportTariff, devices, deviceStates);
           this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }
@@ -172,10 +190,6 @@ module.exports = class managerEvent {
       // 'updates' will be true if any single promise in the lake returned true
       updates = results.includes(true);
       this.driver.log(`managerEvent.executeEventOnDevices: end commit capabilities`);
-
-      this.driver.homey.app.eventTime = atTimeMillis;
-
-      await this.logMemoryToInsights()
 
     } else {
       this.driver.log(`managerEvent.executeEventOnDevices: unable to retrieve live meter data`);

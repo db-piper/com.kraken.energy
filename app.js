@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, ExtremePrices, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
 const Homey = require('homey');
 
 module.exports = class krakenApp extends Homey.App {
@@ -119,6 +119,23 @@ module.exports = class krakenApp extends Homey.App {
    */
   get slotEndTime() {
     return this.homey.settings.get(SlotEndTime);
+  }
+
+  /**
+   * Set the minimum and maximum import tariff prices
+   * @param {object} prices Minimum and maximum import tariff prices
+   */
+  set extremePrices(prices) {
+    this.homey.settings.set(ExtremePrices, prices);
+    this.homey.log(`krakenApp.setExtremePrices: min ${prices.min} max ${prices.max}`);
+  }
+
+  /**
+   * Return the extreme prices
+   * @returns {object}  Minimum and maximum import tariff prices
+   */
+  get extremePrices() {
+    return this.homey.settings.get(ExtremePrices);
   }
 
   /**
