@@ -215,17 +215,15 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
+		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
+		const newPeriod = periodChanges.invoicePeriod;
+		const newChunk = periodChanges.chunk;
+		const newDay = periodChanges.day;
 		const timeZone = this.wrapper.timeZone;
 		const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
 		let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
 		let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
-		const newPeriod = periodChanges.invoicePeriod;
-		//const newPeriod = eventDateTime >= nextPeriodStartDate;
-		const newChunk = periodChanges.chunk;
-		//const newChunk = [0, 30].includes(eventDateTime.minute);
-		const newDay = periodChanges.day;
 		const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
@@ -234,7 +232,7 @@ module.exports = class energyAccount extends krakenDevice {
 		const inDispatch = currentDispatch !== undefined;
 
 		const minPrice = importTariff.minimumPriceToday;
-		const currentBalance = .01 * account.balance;
+		const currentBalance = (!!account) ? .01 * account.balance : this.readCapabilityValue(this._capIds.ACCOUNT_BALANCE);
 		const exportTariffPresent = exportTariff.present;
 		const importTariffPresent = importTariff.present;
 

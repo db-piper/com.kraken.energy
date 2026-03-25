@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, ExtremePrices, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
 const Homey = require('homey');
 
 module.exports = class krakenApp extends Homey.App {
@@ -105,37 +105,67 @@ module.exports = class krakenApp extends Homey.App {
   }
 
   /**
-   * Set the slot end time of the slot just processed by an event
-   * @param {number} milliseconds The slot end time in epoch milliseconds
+   * Set the import tariff
+   * @param {object} tariff The import tariff extract object
    */
-  set slotEndTime(milliseconds) {
-    this.homey.log(`krakenApp.setSlotEndTime: milliseconds ${milliseconds} datetime ${(new Date(milliseconds)).toISOString()}`);
-    this.homey.settings.set(SlotEndTime, milliseconds);
+  set importTariff(tariff) {
+    this.homey.settings.set(ImportTariff, tariff);
   }
 
   /**
-   * Return the slot end time of the slot processed by the most recent event
-   * @returns {number}  Slot end time in epoch milliseconds
+   * Return the import tariff
+   * @returns {object}  The import tariff extract object
    */
-  get slotEndTime() {
-    return this.homey.settings.get(SlotEndTime);
+  get importTariff() {
+    return this.homey.settings.get(ImportTariff);
   }
 
   /**
-   * Set the minimum and maximum import tariff prices
-   * @param {object} prices Minimum and maximum import tariff prices
+   * Set the export tariff
+   * @param {object} tariff The export tariff extract object
    */
-  set extremePrices(prices) {
-    this.homey.settings.set(ExtremePrices, prices);
-    this.homey.log(`krakenApp.setExtremePrices: min ${prices.min} max ${prices.max}`);
+  set exportTariff(tariff) {
+    this.homey.settings.set(ExportTariff, tariff);
   }
 
   /**
-   * Return the extreme prices
-   * @returns {object}  Minimum and maximum import tariff prices
+   * Return the export tariff
+   * @returns {object}  The export tariff extract object
    */
-  get extremePrices() {
-    return this.homey.settings.get(ExtremePrices);
+  get exportTariff() {
+    return this.homey.settings.get(ExportTariff);
+  }
+
+  /**
+   * Set the smart meter id
+   * @param {string} id The smart meter id
+   */
+  set liveMeterId(id) {
+    this.homey.settings.set(LiveMeterId, id);
+  }
+
+  /**
+   * Return the smart meter id
+   * @returns {string}  The smart meter id
+   */
+  get liveMeterId() {
+    return this.homey.settings.get(LiveMeterId);
+  }
+
+  /**
+   * Set the device ids
+   * @param {string[]} ids The device ids
+   */
+  set deviceIds(ids) {
+    this.homey.settings.set(DeviceIds, ids);
+  }
+
+  /**
+   * Return the device ids
+   * @returns {string[]}  The device ids
+   */
+  get deviceIds() {
+    return this.homey.settings.get(DeviceIds) || [];
   }
 
   /**

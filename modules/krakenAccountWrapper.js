@@ -3,7 +3,7 @@
 const { DateTime } = require('../bundles/luxon');
 const dataFetcher = require('./dataFetcher');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, ExtremePrices, PeriodStartDay, DeviceSettingNames } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./constants');
 
 let TestData = null;
 try {
@@ -310,11 +310,11 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Check if any time-based boundaries have been crossed since the last event
-   * @param   {number} nowMillis  - Current event time in milliseconds
-   * @returns {object}            - Flags indicating which boundaries were crossed
+   * @param   {number} nowMillis      Current event time in milliseconds
+   * @param   {number} lastTimestamp  Last event time in milliseconds
+   * @returns {object}                Flags indicating which boundaries were crossed
    */
-  checkTimeBoundaries(nowMillis) {
-    const lastTimestamp = this._driver.homey.app.eventTime;
+  checkTimeBoundaries(nowMillis, lastTimestamp) {
     const periodChanges = {
       chunk: true,
       day: true,
@@ -325,7 +325,7 @@ module.exports = class krakenAccountWrapper {
     if (lastTimestamp) {
       const event = DateTime.fromMillis(nowMillis);
       const lastEvent = DateTime.fromMillis(lastTimestamp);
-      const slotEndMillis = this._driver.homey.app.slotEndTime;
+      const slotEndMillis = Date.parse(this._driver.homey.app.importTariff.slotEnd);
       const slotEnd = slotEndMillis ? DateTime.fromMillis(slotEndMillis) : DateTime.fromMillis(0);
       const periodStartDay = this._driver.homey.app.periodStartDay;
 
@@ -341,11 +341,11 @@ module.exports = class krakenAccountWrapper {
   /**
    * Extract simple device definitions from the devices array
    * @param   {object}              devices     devices data from Kraken
-   * @returns {object | undefined}              extracted device definitions
+   * @returns {object[] | undefined}            array of extracted device definitions
    */
   extractDeviceData(devices) {
     if (!devices || !Array.isArray(devices)) return undefined;
-    const deviceExtracts = {};
+    const deviceExtracts = [];
     for (const device of devices) {
       const deviceExtract = {};
       deviceExtract.id = `${device.id}`;
@@ -460,6 +460,10 @@ module.exports = class krakenAccountWrapper {
       agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === true
     ) || false;
 
+    const hasImportTariff = account?.electricityAgreements?.some(agreement =>
+      agreement.meterPoint?.agreements?.[0]?.tariff?.isExport === false
+    ) || false;
+
     const billingDate = account?.billingOptions?.currentBillingPeriodStartDate;
     let periodStartDay = 1;
     if (billingDate) {
@@ -499,7 +503,8 @@ module.exports = class krakenAccountWrapper {
       settings: { periodStartDay },
       store: {
         octopusClass: "octopusAccount",
-        hasExport: hasExportTariff
+        hasExport: hasExportTariff,
+        hasImport: hasImportTariff
       },
       icon: "/account.svg"
     });
@@ -593,13 +598,12 @@ module.exports = class krakenAccountWrapper {
   /**
    * Return live meter data from the instantiated live meter device
    * @param   {number}          atTimeMillis  Datetime of the current event in milliseconds since the epoch
-   * @param   {string}          meterId       The meter ID of the device
-   * @param   {object}          devices       Map of device objects from Kraken
+   * @param   {string}          liveMeterId   The meter ID of the live meter device
+   * @param   {string[]}        deviceIds     Array of device ids
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
-  async getLiveMeterData(atTimeMillis, meterId, devices) {
-    const deviceIds = this.getDeviceIds(devices);
-    const meterQuery = this.buildDispatchQuery(meterId, deviceIds, atTimeMillis);
+  async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
+    const meterQuery = this.buildDispatchQuery(liveMeterId, deviceIds, atTimeMillis);
     //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Query: ${meterQuery}`);
 
     return await this.fetcher.getDataUsingGraphQL(
@@ -768,9 +772,11 @@ module.exports = class krakenAccountWrapper {
     const startTime = endTime.minus({ minutes: 1 });
 
     // 2. Prepare the device array for the factory
-    const preparedDevices = Object.keys(deviceIds).map(key => ({
-      label: this.hashDeviceId(deviceIds[key]),
-      id: deviceIds[key]
+    //const preparedDevices = Object.keys(deviceIds).map(key => ({
+    this._driver.log(`krakenAccountWrapper.buildDispatchQuery: deviceIds: ${JSON.stringify(deviceIds)}`)
+    const preparedDevices = deviceIds.map(deviceId => ({
+      label: this.hashDeviceId(deviceId),
+      id: deviceId
     }));
 
     // 3. Call the Stateless Factory

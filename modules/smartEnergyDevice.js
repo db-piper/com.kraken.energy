@@ -89,13 +89,14 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 	 */
 	processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
 
-		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices);
+		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
 		const newDay = periodChanges.day;
 		const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
 		const deviceId = this.getStoreValue("deviceId");
+		const deviceStateData = deviceStates.find((device) => device.id === deviceId);
+		const deviceStatus = deviceStateData ? deviceStateData.currentStateTitle : "Unknown";
 		const deviceKey = this.wrapper.hashDeviceId(deviceId);
-		const deviceData = devices[deviceKey];
 		const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
 		const futureDispatches = this.wrapper.futureDispatches(atTimeMillis, deviceDispatches);
 		const dispatchCount = futureDispatches.length;
@@ -131,8 +132,10 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 			countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
 		}
 
-		this.updateCapability(this._capIds.DEVICE_NAME, deviceData.name);
-		this.updateCapability(this._capIds.DEVICE_STATUS, deviceData.currentStateTitle);
+		if (!!devices) {
+			this.updateCapability(this._capIds.DEVICE_NAME, devices[deviceKey].name);
+		}
+		this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
 		this.updateCapability(this._capIds.PLANNED_DISPATCHES, dispatchCount);
 		this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
 		this.updateCapability(this._capIds.ALARM_POWER, inDispatch);

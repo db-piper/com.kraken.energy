@@ -6,8 +6,10 @@ module.exports = {
   TokenSetting: "kraken_token",
   TokenExpirySetting: "kraken_token_expiry",
   EventTime: "kraken_event_time",
-  SlotEndTime: "kraken_slot_end_time",
-  ExtremePrices: "kraken_extreme_prices",
+  ImportTariff: "kraken_import_tariff",
+  ExportTariff: "kraken_export_tariff",
+  LiveMeterId: "kraken_live_meter_id",
+  DeviceIds: "kraken_device_ids",
   PeriodStartDay: PeriodStartDay,
   DeviceSettingNames: [
     PeriodStartDay,

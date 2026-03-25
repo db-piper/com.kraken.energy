@@ -44,32 +44,36 @@ module.exports = class managerEvent {
    */
   async executeEvent() {
     const atTimeMillis = DateTime.now().toMillis();
-    const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis);
+    const lastEventTime = this.driver.homey.app.eventTime;
+    const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis, lastEventTime);
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
     let result = false;
+    let account, importTariff, exportTariff, devices, liveMeterId, deviceIds;
 
-    if (periodChanges.chunk) {
-      this.driver.log(`managerEvent.executeEvent: Chunk changed`);
-      //Heavy process goes here
+    //TODO: Including tariffSlot makes the app self-healing if the tariff gets out of sync with eventTime
+    if (periodChanges.chunk || periodChanges.tariffSlot || !this.driver.homey.app.importTariff) {
+      this.driver.log(`managerEvent.executeEvent: Chunk changed or first run`);
+      ({ account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
+      if (account) {
+        liveMeterId = account.liveMeterId;
+        this._driver.log(`managerEvent.executeEvent: devices: ${JSON.stringify(devices)}`)
+        deviceIds = devices.map(device => device.id);
+        this.driver.homey.app.importTariff = importTariff;
+        this.driver.homey.app.exportTariff = exportTariff;
+        this.driver.homey.app.liveMeterId = liveMeterId;
+        this.driver.homey.app.deviceIds = deviceIds;
+      } else {
+        throw new Error('Unable to access account data');
+      }
     } else {
-      //Light process
-      //should just be:
-      //result = await this.executeEventOnDevices(atTimeMillis, periodChanges);
-      //return result;
+      this.driver.log(`managerEvent.executeEvent: Chunk unchanged`);
+      importTariff = this.driver.homey.app.importTariff;
+      exportTariff = this.driver.homey.app.exportTariff;
+      liveMeterId = this.driver.homey.app.liveMeterId;
+      deviceIds = this.driver.homey.app.deviceIds;
     }
 
-    //Heavy process will move to if (periodChanges.chunk){}
-    const { account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis);
-    if (account) {
-      this.driver.homey.app.slotEndTime = Date.parse(importTariff.slotEnd);
-      this.driver.homey.app.extremePrices = { min: importTariff.minimumPriceToday, max: importTariff.maximumPriceToday };
-      result = await this.executeEventOnDevices(atTimeMillis, periodChanges, account, importTariff, exportTariff, devices);
-      this.driver.log(`managerEvent.executeEvent: Slot End Time: ${importTariff.slotEnd}`);
-    } else {
-      throw new Error('Unable to access account data');
-    }
-    //END Heavy process
-    //END Heavy and Light processes
+    result = await this.executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account, importTariff, exportTariff, devices);
     this.driver.homey.app.eventTime = atTimeMillis;
     await this.logMemoryToInsights()
     return result;
@@ -144,15 +148,18 @@ module.exports = class managerEvent {
    * Loop over devices, executing the event
    * @param   {number}            atTimeMillis  event time in milliseconds since the epoch
    * @param   {object}            periodChanges indicates changes in specific timing periods
+   * @param   {string[]}          deviceIds     array of device ids
+   * @param   {string}            liveMeterId   live meter id
    * @param   {object}            account       kraken account header data
    * @param   {object}            importTariff  kraken import tariff data
    * @param   {object}            exportTariff  kraken export tariff data
    * @param   {object}            devices       kraken device data
    * @returns {promise<boolean>}                True iff any device has been updated by the event
    */
-  async executeEventOnDevices(atTimeMillis, periodChanges, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
+  async executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
     let updates = false;
-    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, account.liveMeterId, devices);
+    this.driver.homey.log(`managerEvent.executeEventOnDevices: liveMeterId ${liveMeterId}`);
+    const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
     let [{ reading, dispatches, deviceStates }, ...homeyDeviceReadyResults] = await Promise.all([
@@ -166,8 +173,10 @@ module.exports = class managerEvent {
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       //const isNewDay = this.isNewDay(atTimeMillis);
+      //TODO: Use eventInterval instead of assuming one minute time interval
       const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
 
+      //TODO: Break the need for device ordering using a better algorithm for accumulating dispatch minutes across smart devices
       for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);

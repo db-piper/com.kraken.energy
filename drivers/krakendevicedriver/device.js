@@ -4,7 +4,7 @@ const Homey = require('homey');
 const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, SlotEndTime, ExtremePrices, PeriodStartDay, DeviceSettingNames } = require('../../modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('../../modules/constants');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -29,7 +29,6 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._storeValues = {};
 		await this.migrateSettings(this.getSettings());
 		await this.migrateStore();
-		this.log(`krakenDevice Device:onInit - DeviceSettings: ${JSON.stringify(this.getSettings())}`);
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Completed');
 		await super.onInit();
 	}
