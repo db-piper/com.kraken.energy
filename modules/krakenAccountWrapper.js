@@ -318,20 +318,24 @@ module.exports = class krakenAccountWrapper {
     const periodChanges = {
       chunk: true,
       day: true,
-      tariffSlot: true,
+      tariffSlotImport: true,
+      tariffSlotExport: true,
       invoicePeriod: true
     };
 
     if (lastTimestamp) {
       const event = DateTime.fromMillis(nowMillis);
       const lastEvent = DateTime.fromMillis(lastTimestamp);
-      const slotEndMillis = Date.parse(this._driver.homey.app.importTariff.slotEnd);
-      const slotEnd = slotEndMillis ? DateTime.fromMillis(slotEndMillis) : DateTime.fromMillis(0);
+      const importSlotEndMillis = Date.parse(this._driver.homey.app.importTariff.slotEnd);
+      const importSlotEnd = importSlotEndMillis ? DateTime.fromMillis(importSlotEndMillis) : DateTime.fromMillis(0);
+      const exportSlotEndMillis = Date.parse(this._driver.homey.app.exportTariff.slotEnd);
+      const exportSlotEnd = exportSlotEndMillis ? DateTime.fromMillis(exportSlotEndMillis) : DateTime.fromMillis(0);
       const periodStartDay = this._driver.homey.app.periodStartDay;
 
       periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
       periodChanges.day = event.day !== lastEvent.day;
-      periodChanges.tariffSlot = event >= slotEnd || periodChanges.day;
+      periodChanges.tariffSlotImport = event >= importSlotEnd || periodChanges.day;
+      periodChanges.tariffSlotExport = event >= exportSlotEnd || periodChanges.day;
       periodChanges.invoicePeriod = periodChanges.day && event.day === periodStartDay;
     }
 

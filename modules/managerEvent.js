@@ -51,7 +51,7 @@ module.exports = class managerEvent {
     let account, importTariff, exportTariff, devices, liveMeterId, deviceIds;
 
     //TODO: Including tariffSlot makes the app self-healing if the tariff gets out of sync with eventTime
-    if (periodChanges.chunk || periodChanges.tariffSlot || !this.driver.homey.app.importTariff) {
+    if (periodChanges.chunk || periodChanges.tariffSlotImport || periodChanges.tariffSlotExport || !this.driver.homey.app.importTariff) {
       this.driver.log(`managerEvent.executeEvent: Chunk changed or first run`);
       ({ account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
       if (account) {
