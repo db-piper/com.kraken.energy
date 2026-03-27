@@ -291,6 +291,7 @@ module.exports = class krakenAccountWrapper {
         const deviceData = (!TestData) ? queryResultData?.data?.devices : TestData.getMockDevices();
 
         // 2. Extract atomized data
+        //TODO: Refactor these calls to consistently pass fragments rather than the whole queryDataResult
         const account = this.extractAccountData(queryResultData);
         const importTariff = this.extractTariffData(atTimeMillis, false, queryResultData);
         const exportTariff = this.extractTariffData(atTimeMillis, true, queryResultData);
@@ -583,7 +584,6 @@ module.exports = class krakenAccountWrapper {
         .toMillis();
 
       const validRates = tariffDefinition.unitRates
-        // .filter(rate => DateTime.fromISO(rate.validFrom, { zone: this.timeZone }).toMillis() < boundaryMs)
         .filter(rate => Date.parse(rate.validFrom) < boundaryMs)
         .map(rate => rate.value);
 
@@ -608,22 +608,18 @@ module.exports = class krakenAccountWrapper {
    */
   async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
     const meterQuery = this.buildDispatchQuery(liveMeterId, deviceIds, atTimeMillis);
-    //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Query: ${meterQuery}`);
 
     return await this.fetcher.getDataUsingGraphQL(
       meterQuery,
       this.accessParameters.apiKey,
       (queryResultData) => {
-        // Coordinate the extraction
-        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Query Result Data: ${JSON.stringify(queryResultData)}`);
+
         const reading = this.extractLiveReading(queryResultData);
         const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceIds);
-        const deviceStates = this.extractDeviceStatuses(queryResultData, deviceIds);
-        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Reading: ${JSON.stringify(reading)}`);
-        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Dispatches: ${JSON.stringify(dispatches)}`);
-        //this._driver.log(`KrakenAccountWrapper:getLiveMeterData - Device States: ${JSON.stringify(deviceStates)}`);
-
-        // Return the clean assembly
+        const deviceData = (!TestData) ? queryResultData?.data?.devices || [] : TestData.getMockDevices();
+        this._driver.log(`krakenAccountWrapper:getLiveMeterData - Query result devices: ${JSON.stringify(deviceData)}`);
+        const deviceStates = this.extractDeviceStatuses(deviceData, deviceIds);
+        this._driver.log(`krakenAccountWrapper:getLiveMeterData - device states: ${JSON.stringify(deviceStates)}`);
         return { reading, dispatches, deviceStates };   //Return from the closure
       }
     );
@@ -674,12 +670,12 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Extract device statuses into a clean, UI-ready array
-   * @param   {object}    queryResultData   The raw GQL response
-   * @param   {string[]}  deviceIds         The IDs we are interested in
-   * @returns {object[]}                    Array of {id, status, statusTitle}
+   * @param   {object[]}  rawDevices   Devices array from query result data
+   * @param   {string[]}  deviceIds    The IDs we are interested in
+   * @returns {object[]}               Array of {id, status, statusTitle}
    */
-  extractDeviceStatuses(queryResultData, deviceIds) {
-    const rawDevices = queryResultData?.devices || [];
+  extractDeviceStatuses(rawDevices, deviceIds) {
+    //const rawDevices = queryResultData?.devices || [];
 
     return rawDevices
       .filter(device => deviceIds.includes(device.id))
@@ -688,11 +684,11 @@ module.exports = class krakenAccountWrapper {
         return {
           id: device.id,
           currentState: rawStatus,
-          // Perform the translation immediately
           currentStateTitle: this._pairable_device_status_translations[rawStatus] || 'Unknown Status'
         };
       });
   }
+
   /**
    * Return the dispatch with the earliest start time or undefined
    * @param       {[JSON]}    dispatchArray     Array of dispatches
