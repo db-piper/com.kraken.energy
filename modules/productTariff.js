@@ -13,6 +13,13 @@ module.exports = class productTariff extends krakenDevice {
     this.log('productTariff Device:onInit - productTariff Initialization Started');
     await super.onInit();
 
+    if (this.getCapabilities().length === 0) {
+      await this.setSettings({
+        energy_exclude: true,
+        energy_cumulative_include: false
+      });
+    }
+
     //TODO: this.isDispatchable and this.isHalfHourly are set at device creation but are not updated
     //TODO: if the user changes the tariff to one with different characteristics.  Capabilities will
     //TODO: need to be added or removed accordingly.

@@ -194,4 +194,28 @@ module.exports = class krakenApp extends Homey.App {
     }
   }
 
+  /**
+   * Set the full event flag
+   * @param {boolean} onOff  True if the full event should be executed, false otherwise
+   */
+  set fullEvent(onOff) {
+    this._fullEvent = onOff;
+  }
+
+  /**
+   * Get the full event flag
+   * @returns {boolean}  True if the full event should be executed, false otherwise
+   */
+  get fullEvent() {
+    return this._fullEvent;
+  }
+
+  /**
+   * Get the full event flag
+   * @returns {boolean}  True if the full event should be executed, false otherwise
+   */
+  get fullEvent() {
+    return this._fullEvent;
+  }
+
 }

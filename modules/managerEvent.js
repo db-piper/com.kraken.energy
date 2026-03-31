@@ -46,22 +46,23 @@ module.exports = class managerEvent {
     const atTimeMillis = DateTime.now().toMillis();
     const lastEventTime = this.driver.homey.app.eventTime;
     const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis, lastEventTime);
+    const fullEvent = this.driver.homey.app.fullEvent;
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
     let result = false;
     let account, importTariff, exportTariff, devices, liveMeterId, deviceIds;
 
-    //TODO: Including tariffSlot makes the app self-healing if the tariff gets out of sync with eventTime
-    if (periodChanges.chunk || periodChanges.tariffSlotImport || periodChanges.tariffSlotExport || !this.driver.homey.app.importTariff) {
+    if (periodChanges.chunk || periodChanges.tariffSlotImport || periodChanges.tariffSlotExport || !this.driver.homey.app.importTariff || fullEvent) {
       this.driver.log(`managerEvent.executeEvent: Chunk changed or first run`);
       ({ account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
       if (account) {
         liveMeterId = account.liveMeterId;
-        this._driver.log(`managerEvent.executeEvent: devices: ${JSON.stringify(devices)}`)
-        deviceIds = devices.map(device => device.id);
+        deviceIds = Object.values(devices).map(device => device.id);
+        this._driver.log(`managerEvent.executeEvent: deviceIds: ${JSON.stringify(deviceIds)}`);
         this.driver.homey.app.importTariff = importTariff;
         this.driver.homey.app.exportTariff = exportTariff;
         this.driver.homey.app.liveMeterId = liveMeterId;
         this.driver.homey.app.deviceIds = deviceIds;
+        this.driver.homey.app.fullEvent = false;
       } else {
         throw new Error('Unable to access account data');
       }
@@ -71,6 +72,7 @@ module.exports = class managerEvent {
       exportTariff = this.driver.homey.app.exportTariff;
       liveMeterId = this.driver.homey.app.liveMeterId;
       deviceIds = this.driver.homey.app.deviceIds;
+      this._driver.log(`managerEvent.executeEvent: deviceIds: ${JSON.stringify(deviceIds)}`);
     }
 
     result = await this.executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account, importTariff, exportTariff, devices);
@@ -166,8 +168,8 @@ module.exports = class managerEvent {
       meterFetchPromise,
       ...homeyDeviceReadyPromises
     ]);
-
-    const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(devices));
+    this.driver.homey.log(`managerEvent.executeEventOnDevices: deviceIds: ${JSON.stringify(deviceIds)}`);
+    const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(deviceIds));
     await Promise.all(availableDevicePromises);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {

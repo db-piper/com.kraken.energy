@@ -18,6 +18,13 @@ module.exports = class energyAccount extends krakenDevice {
 			await this.applyCapabilities();
 		}
 
+    if (this.getCapabilities().length === 0) {
+      await this.setSettings({
+        energy_exclude: false,
+        energy_cumulative_include: true
+      });
+    }
+
 		const hasExport = this.hasExport;
 
 		this.defineCapability(this._capIds.PERIOD_START_TEXT, { "title": { "en": "This Period Start" } });
@@ -26,8 +33,8 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability(this._capIds.PERIOD_DURATION, { "title": { "en": "Period Duration" } });
 		this.defineCapability(this._capIds.ACCOUNT_BALANCE, { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
 		this.defineCapability(this._capIds.PROJECTED_BILL, { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
-		this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3 });
-		this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3 }, [], hasExport);
+		this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units"]);
+		this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units"], hasExport);
 		this.defineCapability(this._capIds.PERIOD_IMPORT_ENERGY, { "title": { "en": "Period Import" }, "decimals": 3 });
 		this.defineCapability(this._capIds.PERIOD_EXPORT_ENERGY, { "title": { "en": "Period Export" }, "decimals": 3 }, [], hasExport);
 		this.defineCapability(this._capIds.PERIOD_IMPORT_VALUE, { "title": { "en": "Import Cost" }, "decimals": 2, "units": { "en": "£" } });
@@ -49,9 +56,20 @@ module.exports = class energyAccount extends krakenDevice {
 		this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
 		this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units']);
 		this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units'], hasExport);
+    this.defineCapability(this._capIds.NET_POWER, { "title": { "en": "Net Power" }, "units":{"en": "W"}, "uiComponent": null, "decimals": 0 });
 
 		await this.applyCapabilities();
 		await this.applyStoreValues();
+
+    await this.setEnergy({
+      cumulativeImportedCapability: this.getCapabilityName(this._capIds.IMPORT_READING),
+      cumulativeExportedCapability: this.getCapabilityName(this._capIds.EXPORT_READING),
+      cumulative: true
+    })
+
+    // this.log('--- Energy Verification ---');
+    // this.log('Energy Object:', JSON.stringify(this.getEnergy(), null, 2));
+    // this.log('Import Capability Options:', JSON.stringify(this.getCapabilityOptions(this.getCapabilityName(this._capIds.IMPORT_READING)), null, 2));
 
 		await this.updatePeriodDay(this.getSettings().periodStartDay);
 		this.log('energyAccount Device:onInit - energyAccount Initialization Completed');
@@ -383,6 +401,7 @@ module.exports = class energyAccount extends krakenDevice {
 		this.updateCapability(this._capIds.OBSERVED_DAYS, observedDays);
 		this.updateCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, importPrice);
 		this.updateCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, exportPrice);
+		this.updateCapability(this._capIds.NET_POWER, powerImport - powerExport);
 
 		return updates;
 	}

@@ -15,10 +15,11 @@ module.exports = class krakenDevice extends Homey.Device {
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Started');
 		const className = this.getStoreValue('octopusClass');
 		this._capabilityIds = Capabilities.registryForDriver(className);
+    const device=this;
 		this._capIds = new Proxy(this._capabilityIds, {
 			get(target, prop) {
 				if (prop in target) return prop; // Returns the key name as the value
-				throw new Error(`[krakenDevice:Proxy] Capability ID "${String(prop)}" is not in the registry for ${className}`);
+				throw new Error(`[krakenDevice:Proxy] Capability ID "${prop}" is not in the registry for ${className}`);
 			}
 		});
 		const idCount = Object.keys(this._capabilityIds).length;
@@ -29,6 +30,7 @@ module.exports = class krakenDevice extends Homey.Device {
 		this._storeValues = {};
 		await this.migrateSettings(this.getSettings());
 		await this.migrateStore();
+    await this.triggerFullEvent();
 		this.log('krakenDevice:onInit - generic krakenDevice Initialization Completed');
 		await super.onInit();
 	}
@@ -145,6 +147,13 @@ module.exports = class krakenDevice extends Homey.Device {
 	async migrateStore() {
 		this.log(`krakenDevice Device: migrateStore - migrating store values for device ${this.getName()}.`);
 	}
+
+  /**
+   * Trigger a full event to be executed at the next heartbeat
+   */
+  triggerFullEvent(){
+    this.homey.app.fullEvent = true;
+  }
 
 	/**
 	 * Manufacture an instance of krakenAccountWrapper

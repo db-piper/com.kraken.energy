@@ -60,6 +60,7 @@ const ENERGY_ACCOUNT = {
   OBSERVED_DAYS: "item_count.observed_days",
   PRIOR_IMPORT_PRICE_PAID: "measure_monetary.prior_import_price_paid",
   PRIOR_EXPORT_PRICE_PAID: "measure_monetary.prior_export_price_paid",
+  NET_POWER: "measure_power",
 };
 
 const SMART_ENERGY_DEVICE = {

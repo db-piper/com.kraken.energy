@@ -346,11 +346,11 @@ module.exports = class krakenAccountWrapper {
   /**
    * Extract simple device definitions from the devices array
    * @param   {object}              devices     devices data from Kraken
-   * @returns {object[] | undefined}            array of extracted device definitions
+   * @returns {object | undefined}              set of extracted device definitions
    */
   extractDeviceData(devices) {
     if (!devices || !Array.isArray(devices)) return undefined;
-    const deviceExtracts = [];
+    const deviceExtracts = {};
     for (const device of devices) {
       const deviceExtract = {};
       deviceExtract.id = `${device.id}`;
@@ -616,7 +616,7 @@ module.exports = class krakenAccountWrapper {
 
         const reading = this.extractLiveReading(queryResultData);
         const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceIds);
-        const deviceData = (!TestData) ? queryResultData?.data?.devices || [] : TestData.getMockDevices();
+        const deviceData = (!TestData) ? queryResultData?.data?.devices || [] : TestData.getMockDeviceStatuses();
         this._driver.log(`krakenAccountWrapper:getLiveMeterData - Query result devices: ${JSON.stringify(deviceData)}`);
         const deviceStates = this.extractDeviceStatuses(deviceData, deviceIds);
         this._driver.log(`krakenAccountWrapper:getLiveMeterData - device states: ${JSON.stringify(deviceStates)}`);
