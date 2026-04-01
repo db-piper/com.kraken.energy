@@ -11,7 +11,6 @@ module.exports = class managerEvent {
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
     this._driver = driver;
-    this._period = 60000;  //FREQ - needs to be the setting from any device setting.
     this._targetSecond = 15;
   }
 
@@ -89,14 +88,6 @@ module.exports = class managerEvent {
     return this._targetSecond
   }
 
-  /** 
-   * Return the target interval in minutes for the event
-   * @returns {number}  Target interval in minutes for the event
-   */
-  get targetIntervalMinutes() {
-    return this._period / 60000; //FREQ
-  }
-
   /**
    * Retrieve the device definitions from the octopus account data
    * @returns {Promise<object - JSON>}   Structure containing the device definitions for Homey
@@ -168,10 +159,11 @@ module.exports = class managerEvent {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       //const isNewDay = this.isNewDay(atTimeMillis);
       //TODO: Use eventInterval instead of assuming one minute time interval
-      const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
+      //const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
 
       //TODO: Break the need for device ordering using a better algorithm for accumulating dispatch minutes across smart devices
-      for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
+      //for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
+      for (const device of this.driver.getDevices()) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
           device.processEvent(atTimeMillis, periodChanges, reading, dispatches, account, importTariff, exportTariff, devices, deviceStates);

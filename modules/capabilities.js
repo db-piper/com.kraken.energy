@@ -26,6 +26,7 @@ const PRODUCT_TARIFF = {
   DISPATCH_PRICING_INDICATOR: "data_presence.dispatch_pricing",
   UNIT_PRICE_TARIFF: "measure_monetary.unit_price_tariff",
   DISPATCH_LIMIT_PERCENT: "percent.dispatch_limit",
+  TOTAL_DISPATCHED_MINUTES: "item_count.total_dispatched_minutes",
   SLOT_START_DATETIME: "date_time.full_slot_start",
   SLOT_END_DATETIME: "date_time.full_slot_end",
 };

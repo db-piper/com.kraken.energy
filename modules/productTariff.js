@@ -47,6 +47,7 @@ module.exports = class productTariff extends krakenDevice {
     this.defineCapability(this._capIds.NEXT_SLOT_END_TIME, { "title": { "en": 'Next Slot End' } }, [], isHalfHourly);
     this.defineCapability(this._capIds.DISPATCH_PRICING_INDICATOR, { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
     this.defineCapability(this._capIds.UNIT_PRICE_TARIFF, { "title": { "en": '£/kWh Tariff' }, "decimals": 4, "units": { "en": "£", } }, [], isDispatchable);
+    this.defineCapability(this._capIds.TOTAL_DISPATCHED_MINUTES, { "title": { "en": "Total Dispatched Minutes" }, "decimals": 0, "units": { "en": "mn" } }, ['title', 'decimals'], isDispatchable);
     this.defineCapability(this._capIds.DISPATCH_LIMIT_PERCENT, { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
     this.defineCapability(this._capIds.SLOT_START_DATETIME, { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
     this.defineCapability(this._capIds.SLOT_END_DATETIME, { "title": { "en": "SlotEndH" }, "uiComponent": null }, []);
@@ -159,6 +160,29 @@ module.exports = class productTariff extends krakenDevice {
   }
 
   /**
+   * PURE CALCULATION: Increments dispatch minutes with a mandatory reset flag.
+   * @param   {number}  currentTotal  The existing capability value.
+   * @param   {boolean} isNewDay      Flag indicating the first tick of a new calendar day.
+   * @param   {number}  interval      The variable minutes from getEventIntervalMinutes.
+   * @param   {object}  dispatchMap   The raw Kraken dispatches.
+   * @param   {number}  eventMillis   The 'Now' of the poll for the isActive check.
+   * @returns {number}                The new total for today.
+   */
+  calculateDispatchTotal(currentTotal, isNewDay, interval, dispatchMap, eventMillis) {
+    let baseTotal = isNewDay ? 0 : currentTotal;
+    let activeCount = 0;
+    for (const id in dispatchMap) {
+      const isActive = (dispatchMap[id] || []).some(dispatch => {
+        const start = Date.parse(dispatch.start);
+        const end = Date.parse(dispatch.end);
+        return eventMillis > start && eventMillis <= end;
+      });
+      if (isActive) activeCount++;
+    }
+    return baseTotal + (activeCount * interval);
+  }
+
+  /**
    * Process an event on a Product Tariff device
    * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
    * @param     {object}        periodChanges     Indicates periods have changed (chunk, tariffslot, day and period)
@@ -187,6 +211,7 @@ module.exports = class productTariff extends krakenDevice {
     const priorPricePaid = this.readCapabilityValue(this._capIds.UNIT_PRICE_PAID);
     const recordedSlotEnd = this.readCapabilityValue(this._capIds.SLOT_END_DATETIME);
     const recordedSlotStart = this.readCapabilityValue(this._capIds.SLOT_START_DATETIME);
+    const priorDispatchedMinutes = this.readCapabilityValue(this._capIds.TOTAL_DISPATCHED_MINUTES);
 
     const firstTime = recordedSlotEnd === null;
     const slotEnergy = firstTime ? 0 : (1000 * this.readCapabilityValue(this._capIds.SLOT_ENERGY_CONSUMPTION));						//Wh
@@ -200,7 +225,8 @@ module.exports = class productTariff extends krakenDevice {
     const inDispatch = currentDispatch !== undefined;
     const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
     const dispatchPrice = discountDispatch ? minPrice : maxPrice;
-    const percentDispatchLimit = 100 * this.getTotalDispatchMinutes() / this.getSettings().dispatchMinutesLimit;
+    const totalDispatchedMinutes = this.calculateDispatchTotal(priorDispatchedMinutes, periodChanges.day, eventInterval, plannedDispatches, atTimeMillis);
+    const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
     const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : unitRate);							//£	
     const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
     const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£
@@ -217,6 +243,7 @@ module.exports = class productTariff extends krakenDevice {
     this.updateCapability(this._capIds.AVERAGE_POWER, slotPower);
     this.updateCapability(this._capIds.SLOT_QUARTILE, slotQuartile);
     this.updateCapability(this._capIds.DISPATCH_PRICING_INDICATOR, inDispatch);
+    this.updateCapability(this._capIds.TOTAL_DISPATCHED_MINUTES, totalDispatchedMinutes);
     this.updateCapability(this._capIds.DISPATCH_LIMIT_PERCENT, percentDispatchLimit);
     this.updateCapability(this._capIds.PRODUCT_CODE, tariff.productCode);
     this.updateCapability(this._capIds.TARIFF_CODE, tariff.tariffCode);

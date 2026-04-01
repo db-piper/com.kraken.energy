@@ -174,6 +174,14 @@ module.exports = class krakenDriver extends Homey.Driver {
   }
 
   /**
+   * Return the target interval in minutes
+   * @returns {number}  The target interval in minutes
+   */
+  get targetIntervalMinutes(){
+    return this.getDevices().length > 0 ? Number(this.getDevices()[0].getSetting('krakenPollingInterval')) : 1;
+  }
+
+  /**
    * Ensures the heartbeat is active and synchronized to the :15s mark of every minute.
    * Uses Luxon for precise time-of-minute anchoring to prevent execution drift.
    */
@@ -187,7 +195,7 @@ module.exports = class krakenDriver extends Homey.Driver {
       const scheduleNext = () => {
         const now = this.eventer.DateTime.now();
         const offset = this.eventer.targetSecond;
-        const intervalMinutes = this.eventer.targetIntervalMinutes;
+        const intervalMinutes = this.targetIntervalMinutes;
         this.log(`krakenDriver.startEventPoller: offset: ${offset}, intervalMinutes: ${intervalMinutes}`);
 
         // Target the offset second of the current minute
@@ -231,19 +239,19 @@ module.exports = class krakenDriver extends Homey.Driver {
       this.log('krakenDriver.stopEventPoller: Poller stopped.');
     }
   }
-  /**
-   * Returns devices sorted by a custom priority list
-   * @param   {string[]}        orderedKeys Class names of the devices in the priority order
-   * @returns {Homey.Device[]}              Array of devices sorted by the priority list
-   */
-  getDevicesOrderedBy(orderedKeys) {
-    const rankMap = Object.fromEntries(orderedKeys.map((key, i) => [key, i]));
+  // /**
+  //  * Returns devices sorted by a custom priority list
+  //  * @param   {string[]}        orderedKeys Class names of the devices in the priority order
+  //  * @returns {Homey.Device[]}              Array of devices sorted by the priority list
+  //  */
+  // getDevicesOrderedBy(orderedKeys) {
+  //   const rankMap = Object.fromEntries(orderedKeys.map((key, i) => [key, i]));
 
-    return [...this.getDevices()].sort((a, b) => {
-      const rankA = rankMap[a.getStoreValue("octopusClass")] ?? Infinity;
-      const rankB = rankMap[b.getStoreValue("octopusClass")] ?? Infinity;
-      return rankA - rankB;
-    });
-  }
+  //   return [...this.getDevices()].sort((a, b) => {
+  //     const rankA = rankMap[a.getStoreValue("octopusClass")] ?? Infinity;
+  //     const rankB = rankMap[b.getStoreValue("octopusClass")] ?? Infinity;
+  //     return rankA - rankB;
+  //   });
+  // }
 
 };

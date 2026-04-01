@@ -180,22 +180,22 @@ module.exports = class krakenDevice extends Homey.Device {
 		return currentDispatch;
 	}
 
-	/**
-	 * Calculate the total dispatch minutes for all smart devices
-	 * @returns {number} 								Total dispatch minutes for all smart devices
-	 */
-	getTotalDispatchMinutes() {
-		//TODO: This creates a sequence dependency between Homey devices and order of update
-		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add eventInterval}} don't rely on "foreign" homey devices
-		//TODO: FREQ 
-		let totalDispatchMinutes = 0;
-		for (const device of this.driver.getDevices()) {
-			if (device.getStoreValue("octopusClass") == "smartDevice") {
-				totalDispatchMinutes += device.readCapabilityValue(device._capIds.DISPATCH_MINUTES);
-			}
-		}
-		return totalDispatchMinutes;
-	}
+	// /**
+	//  * Calculate the total dispatch minutes for all smart devices
+	//  * @returns {number} 								Total dispatch minutes for all smart devices
+	//  */
+	// getTotalDispatchMinutes() {
+	// 	//TODO: This creates a sequence dependency between Homey devices and order of update
+	// 	//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add eventInterval}} don't rely on "foreign" homey devices
+	// 	//TODO: FREQ 
+	// 	let totalDispatchMinutes = 0;
+	// 	for (const device of this.driver.getDevices()) {
+	// 		if (device.getStoreValue("octopusClass") == "smartDevice") {
+	// 			totalDispatchMinutes += device.readCapabilityValue(device._capIds.DISPATCH_MINUTES);
+	// 		}
+	// 	}
+	// 	return totalDispatchMinutes;
+	// }
 
 	/**
 	 * Check if the device has a capability with the given ID
