@@ -99,6 +99,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
+    const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
     const newDay = periodChanges.day;
     const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
     const deviceId = this.getStoreValue("deviceId");
@@ -129,7 +130,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
       endTime = endDateTime.toFormat("dd/LL T");
       countDownStart = endDateTime;
       duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
-      dispatchMinutes = dispatchMinutes + 1;   //FREQ: change to increment by polling interval in minutes
+      dispatchMinutes = dispatchMinutes + eventInterval;   //FREQ: change to increment by polling interval in minutes
       dispatchType = currentDispatch.type;
     }
 

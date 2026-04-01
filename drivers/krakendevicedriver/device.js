@@ -186,7 +186,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 */
 	getTotalDispatchMinutes() {
 		//TODO: This creates a sequence dependency between Homey devices and order of update
-		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add minute}} don't rely on "foreign" homey devices
+		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add eventInterval}} don't rely on "foreign" homey devices
 		//TODO: FREQ 
 		let totalDispatchMinutes = 0;
 		for (const device of this.driver.getDevices()) {
