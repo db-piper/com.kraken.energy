@@ -231,7 +231,8 @@ module.exports = class energyAccount extends krakenDevice {
 
 		let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
-		const newPeriod = periodChanges.invoicePeriod;
+    const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    const newPeriod = periodChanges.invoicePeriod;
 		const newChunk = periodChanges.chunk;
 		const newDay = periodChanges.day;
 		const timeZone = this.wrapper.timeZone;
@@ -251,21 +252,21 @@ module.exports = class energyAccount extends krakenDevice {
 		const importTariffPresent = importTariff.present;
 
 		const periodStandingCharge = firstTime ? 0 : this.readCapabilityValue(this._capIds.PERIOD_STANDING_CHARGE);
-		const currentExport = 1000 * this.readCapabilityValue(this._capIds.EXPORT_READING);								//watts
-		const periodCurrentExport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_EXPORT_ENERGY);		//watts
+		const currentExport = 1000 * this.readCapabilityValue(this._capIds.EXPORT_READING);								//watt hours
+		const periodCurrentExport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_EXPORT_ENERGY);		//watt hours
 		const periodCurrentExportValue = this.readCapabilityValue(this._capIds.PERIOD_EXPORT_VALUE);			//pounds
-		const dayCurrentExport = 1000 * this.readCapabilityValue(this._capIds.DAY_EXPORT_ENERGY);					//watts
+		const dayCurrentExport = 1000 * this.readCapabilityValue(this._capIds.DAY_EXPORT_ENERGY);					//watt hours
 		const dayCurrentExportValue = this.readCapabilityValue(this._capIds.DAY_EXPORT_VALUE);						//pounds
-		const chunkCurrentExport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_EXPORT_ENERGY);			//watts
+		const chunkCurrentExport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_EXPORT_ENERGY);			//watt hours
 		const chunkCurrentExportValue = this.readCapabilityValue(this._capIds.CHUNK_EXPORT_VALUE);				//pounds
 		const priorExportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_EXPORT_PRICE_PAID);			//pounds
 
-		const currentImport = 1000 * this.readCapabilityValue(this._capIds.IMPORT_READING);								//watts
-		const periodCurrentImport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_IMPORT_ENERGY);		//watts
+		const currentImport = 1000 * this.readCapabilityValue(this._capIds.IMPORT_READING);								//watt hours
+		const periodCurrentImport = 1000 * this.readCapabilityValue(this._capIds.PERIOD_IMPORT_ENERGY);		//watt hours
 		const periodCurrentImportValue = this.readCapabilityValue(this._capIds.PERIOD_IMPORT_VALUE);			//pounds
-		const dayCurrentImport = 1000 * this.readCapabilityValue(this._capIds.DAY_IMPORT_ENERGY);					//watts
+		const dayCurrentImport = 1000 * this.readCapabilityValue(this._capIds.DAY_IMPORT_ENERGY);					//watt hours
 		const dayCurrentImportValue = this.readCapabilityValue(this._capIds.DAY_IMPORT_VALUE);						//pounds
-		const chunkCurrentImport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_IMPORT_ENERGY);			//watts
+		const chunkCurrentImport = 1000 * this.readCapabilityValue(this._capIds.CHUNK_IMPORT_ENERGY);			//watt hours
 		const chunkCurrentImportValue = this.readCapabilityValue(this._capIds.CHUNK_IMPORT_VALUE);				//pounds
 		const priorImportPricePaid = this.readCapabilityValue(this._capIds.PRIOR_IMPORT_PRICE_PAID);			//pounds
 
@@ -314,33 +315,33 @@ module.exports = class energyAccount extends krakenDevice {
 		if (!firstTime) {
 			if (exportTariffPresent) {
 				exportPrice = .01 * exportTariff.unitRate;																									//pounds
-				deltaExport = liveMeterReading.export - currentExport;																			//watts
+				deltaExport = liveMeterReading.export - currentExport;																			//watt hours
 				//The prior price received is used to calculate the value of the energy exported in the previous tick
 				deltaExportValue = (deltaExport / 1000) * priorExportPricePaid;															//pounds
-				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watts
+				periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watt hours
 				periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);		//pounds
-				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watts
+				dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watt hours
 				dayUpdatedExportValue = deltaExportValue + (newDay ? 0 : dayCurrentExportValue);						//pounds
 				dayExportStandingCharge = exportTariff.standingCharge;																			//pence
-				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);											//watts
+				chunkUpdatedExport = deltaExport + (newChunk ? 0 : chunkCurrentExport);											//watt hours
 				chunkUpdatedExportValue = deltaExportValue + (newChunk ? 0 : chunkCurrentExportValue);			//pounds
-				powerExport = deltaExport * 60;				//FREQ: 60 / pollinginterval													//watts
+				powerExport = deltaExport * 60 / eventInterval;			                                        //watts
 			}
 
 			if (importTariffPresent) {
 				//TODO: Add boost pricing here.
 				importPrice = .01 * (dispatchPricing ? minPrice : importTariff.unitRate);										//pounds	
-				deltaImport = liveMeterReading.consumption - currentImport;																	//watts
+				deltaImport = liveMeterReading.consumption - currentImport;																	//watt hours
 				//The prior price paid is used to calculate the value of the energy consumed in the previous tick
 				deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
-				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);									//watts
+				periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);									//watt hours
 				periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);		//pounds
-				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watts
+				dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watt hours
 				dayUpdatedImportValue = deltaImportValue + (newDay ? 0 : dayCurrentImportValue);						//pounds
 				dayImportStandingCharge = importTariff.standingCharge;																			//pence
-				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);											//watts
+				chunkUpdatedImport = deltaImport + (newChunk ? 0 : chunkCurrentImport);											//watt hours
 				chunkUpdatedImportValue = deltaImportValue + (newChunk ? 0 : chunkCurrentImportValue);			//pounds
-				powerImport = deltaImport * 60;				//FREQ: 60 / pollinginterval 													//watts
+				powerImport = deltaImport * 60 / eventInterval;                                             //watts
 			}
 
 			if (newDay) {

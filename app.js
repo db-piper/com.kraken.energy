@@ -101,7 +101,7 @@ module.exports = class krakenApp extends Homey.App {
     }
     const interval = (eventMillis - lastEventTime) / 60000;
     this.homey.log(`krakenApp.getEventIntervalMinutes: interval ${interval} minutes.`);
-    return interval;
+    return (interval >= 0.5) ? interval : 1;
   }
 
   /**

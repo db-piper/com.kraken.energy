@@ -178,7 +178,6 @@ module.exports = class productTariff extends krakenDevice {
     const isDispatchable = this.isDispatchable;
     const direction = this.isExport;
     const tariff = direction ? exportTariff : importTariff;
-    //const tariffSlotChange = direction ? periodChanges.tariffSlotExport : periodChanges.tariffSlotImport;
     const propertyName = direction ? "export" : "consumption";
     const minPrice = tariff.minimumPriceToday;
     const maxPrice = tariff.maximumPriceToday;
@@ -195,7 +194,7 @@ module.exports = class productTariff extends krakenDevice {
     const slotChange = firstTime || (direction ? periodChanges.tariffSlotExport : periodChanges.tariffSlotImport);
 
     const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
-    const duration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));									//Decimal hours
+    const slotDuration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
     const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
     const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
     const inDispatch = currentDispatch !== undefined;
@@ -206,9 +205,8 @@ module.exports = class productTariff extends krakenDevice {
     const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
     const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£
     const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
-    this.homey.log(`productTariff.processEvent: updatedSlotEnergy: ${updatedSlotEnergy} deltaEnergy ${deltaEnergy} slotChange ${slotChange} slotEnergy ${slotEnergy}`);
     const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);		//£
-    const slotPower = (duration > 0) ? 1000 * updatedSlotEnergy / duration : 0;									//W
+    const slotPower = (slotDuration > 0) ? 1000 * updatedSlotEnergy / slotDuration : 0;									//W
     const dispatchQuartile = discountDispatch ? 0 : 3;
     const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariffSlotQuartile;
 
