@@ -185,7 +185,7 @@ module.exports = class krakenDevice extends Homey.Device {
 	 * @returns {number} 								Total dispatch minutes for all smart devices
 	 */
 	getTotalDispatchMinutes() {
-		//TODO: This created dependency between Homey devices and order of update
+		//TODO: This creates a sequence dependency between Homey devices and order of update
 		//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add minute}} don't rely on "foreign" homey devices
 		//TODO: FREQ 
 		let totalDispatchMinutes = 0;

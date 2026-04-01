@@ -20,11 +20,7 @@ module.exports = class krakenDriver extends Homey.Driver {
       try {
         this.log(`krakenDriver.onInit: Account ID: ${this.homey.app.accountId}`);
         const success = await this.sessionLoginHandler(this.homey.app.accountId, this.homey.app.apiKey);
-        this.log(`krakenDriver.onInit: Login successful: ${success}`);
-        if (success) {
-          this.log(`krakenDriver.onInit: About to start event poller`);
-          this.startEventPoller();
-        }
+        this.log(`krakenDriver.onInit: Login successful: ${success} event processing should start`);
       } catch (error) {
         this.log(`krakenDriver.onInit: Failed to initialise: ${error}`);
       }
@@ -190,13 +186,16 @@ module.exports = class krakenDriver extends Homey.Driver {
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
         const now = this.eventer.DateTime.now();
+        const offset = this.eventer.targetSecond;
+        const intervalMinutes = this.eventer.targetIntervalMinutes;
+        this.log(`krakenDriver.startEventPoller: offset: ${offset}, intervalMinutes: ${intervalMinutes}`);
 
-        // Target the 15-second mark of the current minute
-        let nextRun = now.set({ second: 15, millisecond: 0 });
+        // Target the offset second of the current minute
+        let nextRun = now.set({ second: offset, millisecond: 0 });
 
-        // If we are already past :15s, move target to the next minute
+        // If we are already past the offset second, move target to the next minute
         if (nextRun <= now) {
-          nextRun = nextRun.plus({ minutes: 1 });
+          nextRun = nextRun.plus({ minutes: intervalMinutes });
         }
 
         const delay = nextRun.diff(now).milliseconds;

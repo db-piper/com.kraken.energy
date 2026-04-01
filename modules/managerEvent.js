@@ -11,32 +11,8 @@ module.exports = class managerEvent {
   constructor(driver) {
     driver.homey.log(`managerEvent.constructor: Instantiating`);
     this._driver = driver;
-    this._period = 60000;  //FREQ
+    this._period = 60000;  //FREQ - needs to be the setting from any device setting.
     this._targetSecond = 15;
-  }
-
-  /**
-   * Start the Metronome.
-   * @param {object} homey - Homey instance
-   * @param {number} period - Milliseconds
-   * @param {function} task - The function to run (Driver.onHeartbeat)
-   * @param {function} onIdChanged - Callback for the Interval ID handover
-   */
-  setInterval(homey, period, task, onIdChanged) {
-    this._period = period;
-    const delay = (this._targetSecond - new Date().getSeconds() + 60) % 60 || 60;
-
-    return homey.setTimeout(async () => {
-      await task(); // Run immediately at target second
-
-      const intervalId = homey.setInterval(async () => {
-        await task();
-      }, period);
-
-      if (typeof onIdChanged === 'function') {
-        onIdChanged(intervalId);
-      }
-    }, delay * 1000);
   }
 
   /**
@@ -103,6 +79,22 @@ module.exports = class managerEvent {
    */
   get wrapper() {
     return this.driver.wrapper;
+  }
+
+  /**
+   * Return the target second for the event
+   * @returns {number}  Target second for the event
+   */
+  get targetSecond() {
+    return this._targetSecond
+  }
+
+  /** 
+   * Return the target interval in minutes for the event
+   * @returns {number}  Target interval in minutes for the event
+   */
+  get targetIntervalMinutes() {
+    return this._period / 60000; //FREQ
   }
 
   /**
