@@ -127,5 +127,8 @@
   },
   "1.2.4": {
     "en": "Further stabilisation of memory use and reduction in CPU; Prevent device pariing if no Octopus Home Mini is found for the Octopus Account."
+  },
+  "1.2.5": {
+    "en": "Heavy and light queries to reduce network traffic; caching of heavy query results; implementation of energy settings so that Octopus Account works correctly as the god of the Grid in the Energy Tab."
   }
 }
