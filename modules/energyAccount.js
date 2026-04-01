@@ -65,11 +65,7 @@ module.exports = class energyAccount extends krakenDevice {
       cumulativeImportedCapability: this.getCapabilityName(this._capIds.IMPORT_READING),
       cumulativeExportedCapability: this.getCapabilityName(this._capIds.EXPORT_READING),
       cumulative: true
-    })
-
-    // this.log('--- Energy Verification ---');
-    // this.log('Energy Object:', JSON.stringify(this.getEnergy(), null, 2));
-    // this.log('Import Capability Options:', JSON.stringify(this.getCapabilityOptions(this.getCapabilityName(this._capIds.IMPORT_READING)), null, 2));
+    });
 
 		await this.updatePeriodDay(this.getSettings().periodStartDay);
 		this.log('energyAccount Device:onInit - energyAccount Initialization Completed');
