@@ -148,6 +148,22 @@ module.exports = class energyAccount extends krakenDevice {
 		return hasExport;
 	}
 
+  /**
+   * Set the total number of minutes dispatched today
+   * @param {number}  minutes The total number of minutes dispatched today
+   */
+  set dispatchMinutes(minutes) {
+    this._dispatchMinutes = minutes;
+  }
+
+  /**
+   * Get the total number of minutes dispatched today
+   * @returns {number}  The total number of minutes dispatched today
+   */
+  get dispatchMinutes() {
+    return this._dispatchMinutes ?? 0;
+  }
+
 	/**
 	 * Update capability values that depend on the period day to be consistent
 	 * @param   {integer}   startDay    The day number of the period start (1-31)
@@ -298,8 +314,9 @@ module.exports = class energyAccount extends krakenDevice {
 		let importPrice = 0;
 		let exportPrice = 0;
 
-		const totalDispatchMinutes = this.getTotalDispatchMinutes();
-		const dispatchPricing = inDispatch && (totalDispatchMinutes < this.getSettings().dispatchMinutesLimit);
+    //TODO: Get rid of this call
+		//const totalDispatchMinutes = this.getTotalDispatchMinutes();
+		const dispatchPricing = inDispatch && (this.dispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
 		let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
 		observedDays += newDay ? 1 : 0;

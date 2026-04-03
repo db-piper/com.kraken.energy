@@ -76,7 +76,6 @@ module.exports = class krakenApp extends Homey.App {
    */
   set eventTime(milliseconds) {
     this.homey.settings.set(EventTime, milliseconds);
-    this.homey.log(`krakenApp.setEventTime: eventTime ${milliseconds}`);
   }
 
   /**
@@ -94,7 +93,6 @@ module.exports = class krakenApp extends Homey.App {
    */
   getEventIntervalMinutes(eventMillis) {
     let lastEventTime = this.homey.settings.get(EventTime);
-    this.homey.log(`krakenApp.getEventIntervalMinutes: lastEventTime ${lastEventTime}`);
     if (!lastEventTime) {
       lastEventTime = eventMillis - 60000;
       this.eventTime = lastEventTime;

@@ -199,6 +199,7 @@ module.exports = class productTariff extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
+    const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
     const isDispatchable = this.isDispatchable;
     const direction = this.isExport;
     const tariff = direction ? exportTariff : importTariff;
@@ -222,11 +223,13 @@ module.exports = class productTariff extends krakenDevice {
     const slotDuration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
     const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
     const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
-    const inDispatch = currentDispatch !== undefined;
+    const inDispatch = isDispatchable && currentDispatch !== undefined;
     const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
     const dispatchPrice = discountDispatch ? minPrice : maxPrice;
+    //TODO: calculateDispatchTotal must take into account the state of the smart device (see KAW._dispatchable_device_status)
     const totalDispatchedMinutes = this.calculateDispatchTotal(priorDispatchedMinutes, periodChanges.day, eventInterval, plannedDispatches, atTimeMillis);
     const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
+    this.driver.announceDispatchMinuteTotal(totalDispatchedMinutes);
     const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : unitRate);							//£	
     const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
     const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£

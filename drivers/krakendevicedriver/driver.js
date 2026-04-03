@@ -118,6 +118,29 @@ module.exports = class krakenDriver extends Homey.Driver {
   }
 
   /**
+   * Update the max RSS peak if it's greater than the current max
+   * @param {number} rss The RSS value to update 
+   */
+  set maxPssPeak(rss) {
+    this._maxPssPeak = Math.max(this._maxPssPeak, rss);
+  }
+
+  /**
+   * Return the max RSS peak
+   */
+  get maxPssPeak() {
+    return this._maxPssPeak;
+  }
+
+  /**
+   * Return the target interval in minutes
+   * @returns {number}  The target interval in minutes
+   */
+  get targetIntervalMinutes(){
+    return this.getDevices().length > 0 ? Number(this.getDevices()[0].getSetting('krakenPollingInterval')) : 1;
+  }
+
+  /**
    * The Heartbeat: The actual task performed every minute.
    */
   async onHeartbeat() {
@@ -133,21 +156,6 @@ module.exports = class krakenDriver extends Homey.Driver {
       this._wrapper = null;
     }
     this.log(`krakenDriver.onHeartbeat: Tick done at ${new Date().toISOString()}`);
-  }
-
-  /**
-   * Update the max RSS peak if it's greater than the current max
-   * @param {number} rss The RSS value to update 
-   */
-  set maxPssPeak(rss) {
-    this._maxPssPeak = Math.max(this._maxPssPeak, rss);
-  }
-
-  /**
-   * Return the max RSS peak
-   */
-  get maxPssPeak() {
-    return this._maxPssPeak;
   }
 
   /**
@@ -171,14 +179,6 @@ module.exports = class krakenDriver extends Homey.Driver {
       }
     }
     return success;
-  }
-
-  /**
-   * Return the target interval in minutes
-   * @returns {number}  The target interval in minutes
-   */
-  get targetIntervalMinutes(){
-    return this.getDevices().length > 0 ? Number(this.getDevices()[0].getSetting('krakenPollingInterval')) : 1;
   }
 
   /**
@@ -211,10 +211,9 @@ module.exports = class krakenDriver extends Homey.Driver {
         // Recursive timeout ensures drift is corrected every minute
         this._pollerTimeout = this.homey.setTimeout(async () => {
           try {
-            this.log(`krakenDriver.onHeartbeat: Tick start at ${this.eventer.DateTime.now().toISO()}`);
             await this.onHeartbeat();
           } catch (err) {
-            this.error('krakenDriver.onHeartbeat: Error during execution', err);
+            this.error('krakenDriver.startEventPoller.setTimeout: Error during heartbeat execution', err);
           } finally {
             this._pollerTimeout = null;
             scheduleNext(); // Re-calculate the next :15s gap
@@ -239,19 +238,17 @@ module.exports = class krakenDriver extends Homey.Driver {
       this.log('krakenDriver.stopEventPoller: Poller stopped.');
     }
   }
-  // /**
-  //  * Returns devices sorted by a custom priority list
-  //  * @param   {string[]}        orderedKeys Class names of the devices in the priority order
-  //  * @returns {Homey.Device[]}              Array of devices sorted by the priority list
-  //  */
-  // getDevicesOrderedBy(orderedKeys) {
-  //   const rankMap = Object.fromEntries(orderedKeys.map((key, i) => [key, i]));
 
-  //   return [...this.getDevices()].sort((a, b) => {
-  //     const rankA = rankMap[a.getStoreValue("octopusClass")] ?? Infinity;
-  //     const rankB = rankMap[b.getStoreValue("octopusClass")] ?? Infinity;
-  //     return rankA - rankB;
-  //   });
-  // }
+  /**
+   * Announce to all devices that the dispatch minute count has changed
+   * @param {number}  minutes The total number of minutes dispatched today
+   */
+  announceDispatchMinuteTotal(minutes) {
+    this.log(`krakenDriver.announceDispatchMinuteTotal: Announcing: ${minutes}`);
+    const devices = this.getDevices();
+    devices.forEach(device => {
+      device.dispatchMinutes = minutes;
+    });
+  }
 
 };

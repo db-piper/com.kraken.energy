@@ -20,20 +20,33 @@ module.exports = {
       }
     }
   ],
-  getMockDeviceStatuses: () => [
-    {
-      "id": "00000000-0009-4000-8020-00000007b8d2",
-      "status": {
-        "currentState": "SMART_CONTROL_CAPABLE",
+  getMockDeviceStatuses: () => {
+    const devices = [
+      {
+        "id": "00000000-0009-4000-8020-00000007b8d2",
+        "status": { "currentState": "SMART_CONTROL_CAPABLE" }
+      },
+      {
+        "id": "00000000-000a-4000-8020-0d0000040af2",
+        "status": { "currentState": "SMART_CONTROL_NOT_AVAILABLE" }
       }
-    },
-    {
-      "id": "00000000-000a-4000-8020-0d0000040af2",
-      "status": {
-        "currentState": "SMART_CONTROL_NOT_AVAILABLE",
+    ];
+
+    return devices.map(device => {
+      // Only target the specific device ending in 7b8d2
+      if (device.id.endsWith('7b8d2')) {
+        const isAvailable = Math.random() < 0.7; // 70% chance for true
+        return {
+          ...device,
+          status: {
+            ...device.status,
+            currentState: isAvailable ? "SMART_CONTROL_CAPABLE" : "SMART_CONTROL_NOT_AVAILABLE"
+          }
+        };
       }
-    }
-  ],
+      return device;
+    });
+  },
   getMockDispatches: (DateTime, timeZone) => {
     // Recreate the "today" logic here so the controller doesn't have to
     const today = DateTime.now().setZone(timeZone).set({ second: 0, millisecond: 0 });

@@ -26,8 +26,8 @@ module.exports = class krakenAccountWrapper {
     this._driver = driver;
     this._pairable_device_status_translations = {
       SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
-      SMART_CONTROL_CAPABLE: `Device Capable`,
-      SMART_CONTROL_IN_PROGRESS: `Device Available`,
+      SMART_CONTROL_CAPABLE: `Nothing Planned`,
+      SMART_CONTROL_IN_PROGRESS: `Being Controlled`,
       BOOSTING: `Device Boosting`,
       SMART_CONTROL_OFF: `Smart Control Off`,
       LOST_CONNECTION: `Device Connection Lost`
@@ -125,18 +125,6 @@ module.exports = class krakenAccountWrapper {
     }
 
     return meterId;
-  }
-
-  /**
-   * Get the IDs of the smart devices on the account
-   * @param   {object | undefined} devices      Map of devices registered on the account
-   * @returns {string[]}                        Array of smart device IDs
-   */
-  getDeviceIds(devices) {
-    const deviceIds = Object.values(devices)
-      .filter(device => this._dispatchable_device_status.includes(device.currentState))
-      .map(device => device.id);
-    return deviceIds;
   }
 
   /**
@@ -615,11 +603,9 @@ module.exports = class krakenAccountWrapper {
       (queryResultData) => {
 
         const reading = this.extractLiveReading(queryResultData);
-        const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceIds);
         const deviceData = (!TestData) ? queryResultData?.data?.devices || [] : TestData.getMockDeviceStatuses();
-        this._driver.log(`krakenAccountWrapper:getLiveMeterData - Query result devices: ${JSON.stringify(deviceData)}`);
         const deviceStates = this.extractDeviceStatuses(deviceData, deviceIds);
-        this._driver.log(`krakenAccountWrapper:getLiveMeterData - device states: ${JSON.stringify(deviceStates)}`);
+        const dispatches = this.extractAllDeviceDispatches(queryResultData, deviceStates, this._dispatchable_device_status);
         return { reading, dispatches, deviceStates };   //Return from the closure
       }
     );
@@ -643,28 +629,39 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Iterates through devices and extracts atomized dispatch arrays
+   * Iterates through devices and extracts atomized dispatch arrays, 
+   * filtered by the current operational state of the Homey devices.
+   * @param {object}   rawPayload        - The raw Kraken API response.
+   * @param {object[]} deviceStates      - Array of {deviceId, deviceState, title}.
+   * @param {string[]} validDeviceStates - Array of allowed states (e.g., ['CONNECTED', 'CHARGING']).
+   * @returns {object}                   - Keyed map of valid dispatches.
    */
-  extractAllDeviceDispatches(rawPayload, deviceIds) {
+  extractAllDeviceDispatches(rawPayload, deviceStates, validDeviceStates) {
     const dispatchMap = {};
+    for (const { id, currentState, currentStateTitle } of deviceStates) {
+      // 1. Filter Check: Is this device in a state allowed to receive dispatch minutes?
+      if (!validDeviceStates.includes(currentState)) {
+        continue;
+      }
 
-    for (const deviceId of deviceIds) {
-      const deviceKey = this.hashDeviceId(deviceId);
+      const deviceKey = this.hashDeviceId(id);
 
-      // Selection logic using your preferred formulation
+      // 2. Selection logic
       const source = (!TestData)
         ? rawPayload?.data?.[deviceKey]
         : TestData.getMockDispatches(DateTime, this.timeZone)?.[deviceKey];
 
       if (Array.isArray(source)) {
+        // 3. Transform and Map
         dispatchMap[deviceKey] = source.map(dispatch => ({
-          start: `${dispatch.start}`,                // ISO DateTime string
-          end: `${dispatch.end}`,                    // ISO DateTime string
-          energyAdded: Number(dispatch.energyAdded), // Number kWh
-          type: `${dispatch.type || ''}`             // String SMART/BOOST
+          start: `${dispatch.start}`,
+          end: `${dispatch.end}`,
+          energyAdded: Number(dispatch.energyAdded),
+          type: `${dispatch.type || ''}`
         }));
       }
     }
+
     return dispatchMap;
   }
 
@@ -773,7 +770,6 @@ module.exports = class krakenAccountWrapper {
 
     // 2. Prepare the device array for the factory
     //const preparedDevices = Object.keys(deviceIds).map(key => ({
-    this._driver.log(`krakenAccountWrapper.buildDispatchQuery: deviceIds: ${JSON.stringify(deviceIds)}`)
     const preparedDevices = deviceIds.map(deviceId => ({
       label: this.hashDeviceId(deviceId),
       id: deviceId

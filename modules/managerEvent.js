@@ -32,7 +32,6 @@ module.exports = class managerEvent {
       if (account) {
         liveMeterId = account.liveMeterId;
         deviceIds = Object.values(devices).map(device => device.id);
-        this._driver.log(`managerEvent.executeEvent: deviceIds: ${JSON.stringify(deviceIds)}`);
         this.driver.homey.app.importTariff = importTariff;
         this.driver.homey.app.exportTariff = exportTariff;
         this.driver.homey.app.liveMeterId = liveMeterId;
@@ -47,7 +46,6 @@ module.exports = class managerEvent {
       exportTariff = this.driver.homey.app.exportTariff;
       liveMeterId = this.driver.homey.app.liveMeterId;
       deviceIds = this.driver.homey.app.deviceIds;
-      this._driver.log(`managerEvent.executeEvent: deviceIds: ${JSON.stringify(deviceIds)}`);
     }
 
     result = await this.executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account, importTariff, exportTariff, devices);
@@ -151,18 +149,14 @@ module.exports = class managerEvent {
       meterFetchPromise,
       ...homeyDeviceReadyPromises
     ]);
-    this.driver.homey.log(`managerEvent.executeEventOnDevices: deviceIds: ${JSON.stringify(deviceIds)}`);
     const availableDevicePromises = this.driver.getDevices().map(device => device.setDeviceAvailability(deviceIds));
     await Promise.all(availableDevicePromises);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
       const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
       //const isNewDay = this.isNewDay(atTimeMillis);
-      //TODO: Use eventInterval instead of assuming one minute time interval
       //const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
 
-      //TODO: Break the need for device ordering using a better algorithm for accumulating dispatch minutes across smart devices
-      //for (const device of this.driver.getDevicesOrderedBy(deviceOrder)) {
       for (const device of this.driver.getDevices()) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);

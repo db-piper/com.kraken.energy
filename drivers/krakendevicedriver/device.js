@@ -163,6 +163,14 @@ module.exports = class krakenDevice extends Homey.Device {
 		return this.driver.wrapper;
 	}
 
+  /**
+   * Super class implementation that does nothing
+   * @param {number}  minutes The total number of minutes dispatched today
+   */
+  set dispatchMinutes(minutes) {
+    this.log(`krakenDevice:dispatchMinutes - setting dispatch minutes for device ${this.getName()} to ${minutes}`);
+  }
+
 	/**
 	 * Get the current dispatch for a given time from the array of planned dispatches for all devices
 	 * @param 	{number} atTimeMillis 			String representation of the event time
