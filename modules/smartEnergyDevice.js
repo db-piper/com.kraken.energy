@@ -108,10 +108,10 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     const deviceKey = this.wrapper.hashDeviceId(deviceId);
     const deviceDispatches = ((deviceKey in plannedDispatches) && (plannedDispatches[deviceKey] !== null)) ? plannedDispatches[deviceKey] : [];
     const futureDispatches = this.wrapper.futureDispatches(atTimeMillis, deviceDispatches);
-    const dispatchCount = futureDispatches.length;
-    const currentDispatch = this.wrapper.currentPlannedDispatch(atTimeMillis, deviceDispatches)   //dispatch or undefined
-    const nextDispatch = this.wrapper.earliestDispatch(futureDispatches)               						//dispatch or undefined
-    const inDispatch = currentDispatch !== undefined;                                             //receiving reduced price domestic energy
+    const futureDispatchCount = futureDispatches.length;
+    const currentDispatches = this.wrapper.getPlannedDispatches(atTimeMillis, deviceDispatches);    //array 0 or more dispatches
+    const nextDispatch = this.wrapper.earliestDispatch(futureDispatches);               						//dispatch or undefined
+    const inDispatch = currentDispatches.length > 0;                                                //receiving reduced price domestic energy
 
     let startTime = null;
     let endTime = null;
@@ -124,17 +124,17 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     let nextDispatchType = null;
 
     if (inDispatch) {
-      const startDateTime = DateTime.fromISO(currentDispatch.start, { zone: this.wrapper.timeZone });
+      const startDateTime = DateTime.fromISO(currentDispatches[0].start, { zone: this.wrapper.timeZone });
       startTime = startDateTime.toFormat("dd/LL T");
-      const endDateTime = DateTime.fromISO(currentDispatch.end, { zone: this.wrapper.timeZone })
+      const endDateTime = DateTime.fromISO(currentDispatches[0].end, { zone: this.wrapper.timeZone })
       endTime = endDateTime.toFormat("dd/LL T");
       countDownStart = endDateTime;
       duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
       dispatchMinutes = dispatchMinutes + eventInterval;   //FREQ: change to increment by polling interval in minutes
-      dispatchType = currentDispatch.type;
+      dispatchType = currentDispatches[0].type;
     }
 
-    if (dispatchCount > 0) {
+    if (futureDispatchCount > 0) {
       const nextStartDateTime = DateTime.fromISO(nextDispatch.start, { zone: this.wrapper.timeZone });
       nextDispatchType = nextDispatch.type;
       nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
@@ -145,7 +145,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
       this.updateCapability(this._capIds.DEVICE_NAME, devices[deviceKey].name);
     }
     this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
-    this.updateCapability(this._capIds.PLANNED_DISPATCHES, dispatchCount);
+    this.updateCapability(this._capIds.PLANNED_DISPATCHES, futureDispatchCount);
     this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
     this.updateCapability(this._capIds.ALARM_POWER, inDispatch);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_START, startTime);

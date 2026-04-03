@@ -172,38 +172,16 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
 	/**
-	 * Get the current dispatch for a given time from the array of planned dispatches for all devices
-	 * @param 	{number} atTimeMillis 			String representation of the event time
-	 * @param 	{object} plannedDispatches 	JSON object containing planned dispatches for all devices
-	 * @returns {object} 										Current dispatch or undefined if no dispatch currently active
+	 * Get the current extended dispatches for a given time from the array of planned dispatches for all devices
+	 * @param 	{number}    atTimeMillis 			  String representation of the event time
+	 * @param 	{object[]}  plannedDispatches 	JSON object containing planned dispatches for all devices
+	 * @returns {object[]} 										  Current dispatch or undefined if no dispatch currently active
 	 */
-	getCurrentDispatch(atTimeMillis, plannedDispatches) {
-		let dispatches = [];
-		for (const deviceHash of Object.keys(plannedDispatches)) {
-			for (const dispatch of plannedDispatches[deviceHash]) {
-				dispatches.push(dispatch);
-			}
-		}
-		const currentDispatch = this.wrapper.currentExtendedDispatch(atTimeMillis, dispatches);
-		return currentDispatch;
+	getAnyPricingDispatches(atTimeMillis, plannedDispatches) {
+    const dispatches = Object.values(plannedDispatches).flat();
+		const currentDispatches = this.wrapper.getPricingDispatches(atTimeMillis, dispatches);
+		return currentDispatches;
 	}
-
-	// /**
-	//  * Calculate the total dispatch minutes for all smart devices
-	//  * @returns {number} 								Total dispatch minutes for all smart devices
-	//  */
-	// getTotalDispatchMinutes() {
-	// 	//TODO: This creates a sequence dependency between Homey devices and order of update
-	// 	//TODO: Write an algorithm that is {each smartDevice {is in dispatch: add eventInterval}} don't rely on "foreign" homey devices
-	// 	//TODO: FREQ 
-	// 	let totalDispatchMinutes = 0;
-	// 	for (const device of this.driver.getDevices()) {
-	// 		if (device.getStoreValue("octopusClass") == "smartDevice") {
-	// 			totalDispatchMinutes += device.readCapabilityValue(device._capIds.DISPATCH_MINUTES);
-	// 		}
-	// 	}
-	// 	return totalDispatchMinutes;
-	// }
 
 	/**
 	 * Check if the device has a capability with the given ID

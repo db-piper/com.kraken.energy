@@ -163,14 +163,6 @@ module.exports = class dataFetcher {
       rawjson = null;
       response = null;
       fetchParams = null;
-
-      // if (typeof global.gc === 'function') {
-      //   this.homey.log('dataFetcher.runGraphQlQuery: manual GC trigger');
-      //   global.gc();
-      // } else {
-      //   // If this logs, we know the "Lazy PSS" isn't solvable via manual GC
-      //   this.homey.log('dataFetcher.runGraphQlQuery: global.gc is not available');
-      // }
     }
   }
 
@@ -194,6 +186,38 @@ module.exports = class dataFetcher {
     }
     return params;
   }
+
+  /**
+   * Build the live data query using the live meter Id and intelligent device Ids
+   * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini)
+   * @param   {string[]}    deviceIds     Array of intelligent device Ids
+   * @param   {number}      atTimeMillis  The time at which to get the data in milliseconds since the epoch
+   * @returns {object}                    JSON result of Graph QL query
+   */
+  buildDispatchQuery(meterId, deviceIds, atTimeMillis) {
+    // 1. Logic-Heavy calculation (State/Context)
+    //const endTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('minute');
+    //const startTime = endTime.minus({ minutes: 1 });
+    const minute = 60000;
+    const endMs = Math.floor(atTimeMillis / minute) * minute;
+    const startMs = endMs - minute;
+    // 2. Prepare the device array for the factory
+    //const preparedDevices = Object.keys(deviceIds).map(key => ({
+    const preparedDevices = deviceIds.map(deviceId => ({
+      label: this.hashDeviceId(deviceId),
+      id: deviceId
+    }));
+
+    // 3. Call the Stateless Factory
+    return Queries.getHighFrequencyData(
+      this.accountId,
+      meterId,
+      preparedDevices,
+      new Date(startMs).toISOString(),
+      new Date(endMs).toISOString()
+    );
+  }
+
 
   /**
    * Get a new API token and expiry data

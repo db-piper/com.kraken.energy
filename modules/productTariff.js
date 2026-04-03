@@ -159,28 +159,6 @@ module.exports = class productTariff extends krakenDevice {
     return pricePaid < tariffPrice;
   }
 
-  /**
-   * PURE CALCULATION: Increments dispatch minutes with a mandatory reset flag.
-   * @param   {number}  currentTotal  The existing capability value.
-   * @param   {boolean} isNewDay      Flag indicating the first tick of a new calendar day.
-   * @param   {number}  interval      The variable minutes from getEventIntervalMinutes.
-   * @param   {object}  dispatchMap   The raw Kraken dispatches.
-   * @param   {number}  eventMillis   The 'Now' of the poll for the isActive check.
-   * @returns {number}                The new total for today.
-   */
-  calculateDispatchTotal(currentTotal, isNewDay, interval, dispatchMap, eventMillis) {
-    let baseTotal = isNewDay ? 0 : currentTotal;
-    let activeCount = 0;
-    for (const id in dispatchMap) {
-      const isActive = (dispatchMap[id] || []).some(dispatch => {
-        const start = Date.parse(dispatch.start);
-        const end = Date.parse(dispatch.end);
-        return eventMillis > start && eventMillis <= end;
-      });
-      if (isActive) activeCount++;
-    }
-    return baseTotal + (activeCount * interval);
-  }
 
   /**
    * Process an event on a Product Tariff device
@@ -222,12 +200,12 @@ module.exports = class productTariff extends krakenDevice {
     const newEnergyReading = +liveMeterReading[propertyName];																															//Wh as integer
     const slotDuration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
     const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
-    const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches);
-    const inDispatch = isDispatchable && currentDispatch !== undefined;
-    const discountDispatch = inDispatch && currentDispatch.type !== "BOOST";
+    const currentPriceDispatches = this.wrapper.getPricingDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
+    const currentEnergyDispatches = this.wrapper.getPlannedDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
+    const inDispatch = isDispatchable && currentPriceDispatches.length > 0;
+    const discountDispatch = inDispatch && currentPriceDispatches.every(dispatch => dispatch.type !== "BOOST");
     const dispatchPrice = discountDispatch ? minPrice : maxPrice;
-    //TODO: calculateDispatchTotal must take into account the state of the smart device (see KAW._dispatchable_device_status)
-    const totalDispatchedMinutes = this.calculateDispatchTotal(priorDispatchedMinutes, periodChanges.day, eventInterval, plannedDispatches, atTimeMillis);
+    const totalDispatchedMinutes = priorDispatchedMinutes + (discountDispatch ? (currentEnergyDispatches.length * eventInterval) : 0);
     const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
     this.driver.announceDispatchMinuteTotal(totalDispatchedMinutes);
     const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : unitRate);							//£	

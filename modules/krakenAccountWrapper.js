@@ -595,7 +595,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
   async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
-    const meterQuery = this.buildDispatchQuery(liveMeterId, deviceIds, atTimeMillis);
+    const meterQuery = this.fetcher.buildDispatchQuery(liveMeterId, deviceIds, atTimeMillis);
 
     return await this.fetcher.getDataUsingGraphQL(
       meterQuery,
@@ -688,8 +688,8 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return the dispatch with the earliest start time or undefined
-   * @param       {[JSON]}    dispatchArray     Array of dispatches
-   * @returns     {JSON}                        Selected dispatch or undefined
+   * @param       {[JSON]}            dispatchArray     Array of dispatches
+   * @returns     {JSON | undefined}                    Selected dispatch or undefined
    */
   earliestDispatch(dispatchArray) {
     if (!Array.isArray(dispatchArray) || dispatchArray.length === 0) {
@@ -716,73 +716,43 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
-   * Return the dispatch that is currently active from an array of planned dispatches, using extended times
-   * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param       {[JSON]}    plannedDispatches Array of dispatches
-   * @returns     {JSON}                        Selected dispatch or undefined
+   * Core Engine: Filters dispatches based on a provided window-transformation strategy
    */
-  currentExtendedDispatch(atTimeMillis, plannedDispatches) {
-    const halfHourMs = 1800000;
-
-    // .find() returns the first match it hits, then STOPS iterating.
-    // If no match is found, it returns undefined automatically.
-    return plannedDispatches.find((dispatch) => {
-      const startMs = Date.parse(dispatch.start);
-      const endMs = Date.parse(dispatch.end);
-
-      const advancedStart = Math.floor(startMs / halfHourMs) * halfHourMs;
-      const extendedEnd = Math.floor((endMs + 1799999) / halfHourMs) * halfHourMs;
-
-      return (advancedStart <= atTimeMillis) && (extendedEnd > atTimeMillis);
+  getDispatchesInWindow(atTimeMillis, plannedDispatches, windowStrategy) {
+    return plannedDispatches.filter((dispatch) => {
+      const { start, end } = windowStrategy(
+        Date.parse(dispatch.start),
+        Date.parse(dispatch.end)
+      );
+      return atTimeMillis >= start && atTimeMillis < end;
     });
   }
 
   /**
-   * Return the dispatch that is currently active using planned times
-   * @param       {number}    atTimeMillis      Time to check against in epoch milliseconds
-   * @param       {Object[]}  plannedDispatches Array of dispatches
-   * @returns     {Object|undefined}            Selected dispatch or undefined
+   * Get dispatches whose extended times include the specified time (single device, flattened array from multiple devices)
+   * @param       {number}    atTimeMillis        The time to find dispatches for
+   * @param       {Object[]}  plannedDispatches   Array of dispatches
+   * @returns     {Object[]}                      Selected dispatches whose extended times include the chunk time
    */
-  currentPlannedDispatch(atTimeMillis, plannedDispatches) {
-    if (!Array.isArray(plannedDispatches)) return undefined;
-
-    // .find() is perfect here: it returns the object if true, 
-    // or native 'undefined' if no match is found.
-    return plannedDispatches.find((dispatch) => {
-      const startMs = Date.parse(dispatch.start);
-      const endMs = Date.parse(dispatch.end);
-
-      return startMs <= atTimeMillis && endMs > atTimeMillis;
-    });
-  }
-
-  /**
-   * Build the live data query using the live meter Id and intelligent device Ids
-   * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini)
-   * @param   {string[]}    deviceIds     Array of intelligent device Ids
-   * @param   {number}      atTimeMillis  The time at which to get the data in milliseconds since the epoch
-   * @returns {object}                    JSON result of Graph QL query
-   */
-  buildDispatchQuery(meterId, deviceIds, atTimeMillis) {
-    // 1. Logic-Heavy calculation (State/Context)
-    const endTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('minute');
-    const startTime = endTime.minus({ minutes: 1 });
-
-    // 2. Prepare the device array for the factory
-    //const preparedDevices = Object.keys(deviceIds).map(key => ({
-    const preparedDevices = deviceIds.map(deviceId => ({
-      label: this.hashDeviceId(deviceId),
-      id: deviceId
+  getPricingDispatches(atTimeMillis, plannedDispatches) {
+    const halfHour = 1800000;
+    return this.getDispatchesInWindow(atTimeMillis, plannedDispatches, (start, end) => ({
+      start: Math.floor(start / halfHour) * halfHour,
+      end: Math.floor((end + 1799999) / halfHour) * halfHour
     }));
+  }
 
-    // 3. Call the Stateless Factory
-    return Queries.getHighFrequencyData(
-      this.accountId,
-      meterId,
-      preparedDevices,
-      startTime.toISO(),
-      endTime.toISO()
-    );
+  /**
+   * Get dispatches whose planned times include the specified time (single device, flattened array from multiple devices)
+   * @param       {number}    atTimeMillis        The time to find dispatches for
+   * @param       {Object[]}  plannedDispatches   Array of dispatches
+   * @returns     {Object[]}                      Selected dispatches whose planned times include the specified time
+   */
+  getPlannedDispatches(atTimeMillis, plannedDispatches) {
+    return this.getDispatchesInWindow(atTimeMillis, plannedDispatches, (start, end) => ({
+      start: start,
+      end: end
+    }));
   }
 
   /**

@@ -81,7 +81,6 @@ module.exports = class energyAccount extends krakenDevice {
 
 	/**
 	 * onRenamed is called when the user updates the device's name.
-	 * This method can be used this to synchronise the name to the device.
 	 * @param {string} name The new name
 	 */
 	async onRenamed(name) {
@@ -259,8 +258,8 @@ module.exports = class energyAccount extends krakenDevice {
 		const billingPeriodStartDay = this.getSettings().periodStartDay;
 		const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
 
-		const currentDispatch = this.getCurrentDispatch(atTimeMillis, plannedDispatches)
-		const inDispatch = currentDispatch !== undefined;
+		const currentDispatches = this.getAnyPricingDispatches(atTimeMillis, plannedDispatches)
+		const inExtendedDispatch = currentDispatches.length > 0;
 
 		const minPrice = importTariff.minimumPriceToday;
 		const currentBalance = (!!account) ? .01 * account.balance : this.readCapabilityValue(this._capIds.ACCOUNT_BALANCE);
@@ -314,16 +313,12 @@ module.exports = class energyAccount extends krakenDevice {
 		let importPrice = 0;
 		let exportPrice = 0;
 
-    //TODO: Get rid of this call
-		//const totalDispatchMinutes = this.getTotalDispatchMinutes();
-		const dispatchPricing = inDispatch && (this.dispatchMinutes < this.getSettings().dispatchMinutesLimit);
+		const dispatchPricing = inExtendedDispatch && (this.dispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
 		let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
 		observedDays += newDay ? 1 : 0;
-		this.homey.log(`energyAccount.processEvent: observedDays: ${observedDays}`);
 
 		if (newPeriod) {
-			this.homey.log(`energyAccount.processEvent: New period detected ${nextPeriodStartDate}`);
 			currentPeriodStartDate = nextPeriodStartDate;
 			nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
 			observedDays = 0;
