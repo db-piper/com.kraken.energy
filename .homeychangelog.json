@@ -130,5 +130,8 @@
   },
   "1.2.5": {
     "en": "Heavy and light queries to reduce network traffic; caching of heavy query results; implementation of energy settings so that Octopus Account works correctly as the god of the Grid in the Energy Tab."
+  },
+  "1.2.6": {
+    "en": "Resolve the problem where smart dispatches were still processed even if device status changed to be UNAVAILABLE between full data refresh (heavy) transactions"
   }
 }
