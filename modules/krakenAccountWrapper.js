@@ -595,7 +595,7 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
   async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
-    const meterQuery = this.fetcher.buildDispatchQuery(liveMeterId, deviceIds, atTimeMillis);
+    const meterQuery = this.fetcher.buildDispatchQuery(this.accountId, liveMeterId, deviceIds, atTimeMillis);
 
     return await this.fetcher.getDataUsingGraphQL(
       meterQuery,

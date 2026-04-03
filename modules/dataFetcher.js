@@ -189,12 +189,13 @@ module.exports = class dataFetcher {
 
   /**
    * Build the live data query using the live meter Id and intelligent device Ids
+   * @param   {string}      accountId     The id of the account
    * @param   {string}      meterId       The id of the live meter (e.g. Octopus Home Mini)
    * @param   {string[]}    deviceIds     Array of intelligent device Ids
    * @param   {number}      atTimeMillis  The time at which to get the data in milliseconds since the epoch
    * @returns {object}                    JSON result of Graph QL query
    */
-  buildDispatchQuery(meterId, deviceIds, atTimeMillis) {
+  buildDispatchQuery(accountId, meterId, deviceIds, atTimeMillis) {
     // 1. Logic-Heavy calculation (State/Context)
     //const endTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('minute');
     //const startTime = endTime.minus({ minutes: 1 });
@@ -210,7 +211,7 @@ module.exports = class dataFetcher {
 
     // 3. Call the Stateless Factory
     return Queries.getHighFrequencyData(
-      this.accountId,
+      accountId,
       meterId,
       preparedDevices,
       new Date(startMs).toISOString(),
