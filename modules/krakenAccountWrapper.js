@@ -171,12 +171,12 @@ module.exports = class krakenAccountWrapper {
     };
 
     if (lastTimestamp) {
-      const event = DateTime.fromMillis(nowMillis);
-      const lastEvent = DateTime.fromMillis(lastTimestamp);
+      const event = DateTime.fromMillis(nowMillis, { zone: this.timeZone });
+      const lastEvent = DateTime.fromMillis(lastTimestamp, { zone: this.timeZone });
       const importSlotEndMillis = Date.parse(this._driver.homey.app.importTariff.slotEnd);
-      const importSlotEnd = importSlotEndMillis ? DateTime.fromMillis(importSlotEndMillis) : DateTime.fromMillis(0);
+      const importSlotEnd = importSlotEndMillis ? DateTime.fromMillis(importSlotEndMillis, { zone: this.timeZone }) : DateTime.fromMillis(0, { zone: this.timeZone });
       const exportSlotEndMillis = Date.parse(this._driver.homey.app.exportTariff.slotEnd);
-      const exportSlotEnd = exportSlotEndMillis ? DateTime.fromMillis(exportSlotEndMillis) : DateTime.fromMillis(0);
+      const exportSlotEnd = exportSlotEndMillis ? DateTime.fromMillis(exportSlotEndMillis, { zone: this.timeZone }) : DateTime.fromMillis(0, { zone: this.timeZone });
       const periodStartDay = this._driver.homey.app.periodStartDay;
 
       periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
