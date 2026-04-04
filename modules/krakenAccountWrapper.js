@@ -2,7 +2,7 @@
 
 const { DateTime } = require('../bundles/luxon');
 const dataFetcher = require('./dataFetcher');
-const dataExtractor = require('./dataExtractor');
+const DataExtractor = require('./dataExtractor');
 const Queries = require('./gQLQueries');
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./constants');
 
@@ -71,12 +71,12 @@ module.exports = class krakenAccountWrapper {
     return this._fetcher;
   }
 
-  get extractor() {
-    if (!this._extractor) {
-      this._extractor = new dataExtractor();
-    }
-    return this._extractor;
-  }
+  // get extractor() {
+  //   if (!this._extractor) {
+  //     this._extractor = new dataExtractor();
+  //   }
+  //   return this._extractor;
+  // }
 
   /**
    * Return the timezone of the homey device
@@ -138,10 +138,10 @@ module.exports = class krakenAccountWrapper {
 
         // 2. Extract atomized data
         //TODO: Refactor these calls to consistently pass fragments rather than the whole queryDataResult
-        const account = this.extractor.extractAccountData(queryResultData);
-        const importTariff = this.extractor.extractTariffData(atTimeMillis, false, queryResultData);
-        const exportTariff = this.extractor.extractTariffData(atTimeMillis, true, queryResultData);
-        const devices = this.extractor.extractDeviceData(deviceData);
+        const account = DataExtractor.extractAccountData(queryResultData);
+        const importTariff = DataExtractor.extractTariffData(atTimeMillis, false, queryResultData, this.timeZone);
+        const exportTariff = DataExtractor.extractTariffData(atTimeMillis, true, queryResultData, this.timeZone);
+        const devices = DataExtractor.extractDeviceData(deviceData);
 
         // 3. Assemble final object
         return { account, importTariff, exportTariff, devices };  //RETURN from closure function
@@ -197,7 +197,7 @@ module.exports = class krakenAccountWrapper {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
     const definitions = await this.getPairingData(this.accountId, (rawParingData) => {
-      return this.extractor.extractDeviceDefinitions(rawParingData, this._pairable_device_status_translations);
+      return DataExtractor.extractDeviceDefinitions(rawParingData, this._pairable_device_status_translations, this.accountId);
     })
 
     if (!definitions) {
@@ -222,10 +222,10 @@ module.exports = class krakenAccountWrapper {
       this.accessParameters.apiKey,
       (queryResultData) => {
 
-        const reading = this.extractor.extractLiveReading(queryResultData);
+        const reading = DataExtractor.extractLiveReading(queryResultData);
         const deviceData = (!TestData) ? queryResultData?.data?.devices || [] : TestData.getMockDeviceStatuses();
-        const deviceStates = this.extractor.extractDeviceStatuses(deviceData, deviceIds);
-        const dispatches = this.extractor.extractAllDeviceDispatches(queryResultData, deviceStates);
+        const deviceStates = DataExtractor.extractDeviceStatuses(deviceData, deviceIds);
+        const dispatches = DataExtractor.extractAllDeviceDispatches(queryResultData, deviceStates, this.timeZone);
         return { reading, dispatches, deviceStates };   //Return from the closure
       }
     );
@@ -307,7 +307,7 @@ module.exports = class krakenAccountWrapper {
    */
   hashDeviceId(deviceId) {
     //return `d${deviceId.replaceAll("-", "_")}`;
-    return this.extractor.hashDeviceId(deviceId);
+    return DataExtractor.hashDeviceId(deviceId);
   }
 
 }
