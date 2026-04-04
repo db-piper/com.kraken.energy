@@ -193,7 +193,7 @@ module.exports = class krakenDriver extends Homey.Driver {
 
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
-        const now = this.eventer.DateTime.now();
+        const now = this.eventer.DateTime.now().setZone(this.wrapper.timeZone);
         const offset = this.eventer.targetSecond;
         const intervalMinutes = this.targetIntervalMinutes;
         this.log(`krakenDriver.startEventPoller: offset: ${offset}, intervalMinutes: ${intervalMinutes}`);

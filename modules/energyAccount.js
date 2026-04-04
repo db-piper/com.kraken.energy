@@ -170,7 +170,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 */
 	async updatePeriodDay(startDay) {
 		this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
-		const atTimeMillis = DateTime.now().toMillis();
+		const atTimeMillis = DateTime.now().setZone(this.wrapper.timeZone).toMillis();
 		const periodDay = this.computePeriodDay(atTimeMillis, Number(startDay));
 		const periodStartDate = this.computePeriodStartDate(atTimeMillis, startDay);
 		const nextStartDate = periodStartDate.plus({ months: 1 });
@@ -194,7 +194,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {integer}                     The 1-based index into the period of the date
 	 */
 	computePeriodDay(atTimeMillis, periodStartDay) {
-		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
+		const eventDateTime = DateTime.fromMillis(atTimeMillis, {zone: this.wrapper.timeZone}).startOf('day');
 		const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
 		const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
 		return periodDay;
@@ -207,7 +207,7 @@ module.exports = class energyAccount extends krakenDevice {
 	 * @returns {DateTime}                    The start date of the period
 	 */
 	computePeriodStartDate(atTimeMillis, periodStartDay) {
-		const eventDateTime = DateTime.fromMillis(atTimeMillis).startOf('day');
+		const eventDateTime = DateTime.fromMillis(atTimeMillis, {zone: this.wrapper.timeZone}).startOf('day');
 		const currentDay = eventDateTime.day;
 		const periodStartDate = (currentDay < periodStartDay) ?
 			eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :

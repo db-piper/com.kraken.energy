@@ -197,13 +197,10 @@ module.exports = class dataFetcher {
    */
   buildDispatchQuery(accountId, meterId, deviceIds, atTimeMillis) {
     // 1. Logic-Heavy calculation (State/Context)
-    //const endTime = DateTime.fromMillis(atTimeMillis, { zone: this.timeZone }).startOf('minute');
-    //const startTime = endTime.minus({ minutes: 1 });
     const minute = 60000;
     const endMs = Math.floor(atTimeMillis / minute) * minute;
     const startMs = endMs - minute;
     // 2. Prepare the device array for the factory
-    //const preparedDevices = Object.keys(deviceIds).map(key => ({
     const preparedDevices = deviceIds.map(deviceId => ({
       label: this.hashDeviceId(deviceId),
       id: deviceId

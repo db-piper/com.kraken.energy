@@ -18,7 +18,7 @@ module.exports = class managerEvent {
    * Execute a timed event.
    */
   async executeEvent() {
-    const atTimeMillis = DateTime.now().toMillis();
+    const atTimeMillis = DateTime.now().setZone(this.wrapper.timeZone).toMillis();
     const lastEventTime = this.driver.homey.app.eventTime;
     const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis, lastEventTime);
     const fullEvent = this.driver.homey.app.fullEvent;
@@ -111,20 +111,6 @@ module.exports = class managerEvent {
    */
   async setValidAccount(account, token) {
     return await this.wrapper.setValidAccount(account, token);
-  }
-
-  /**
-   * Indicate that, given the event interval specified, the event is the first of the day
-   * @param     {number}  atTimeMillis  event time in milliseconds since the epoch
-   * @returns   {boolean}               true iff less than interval milliseconds have passed since midnight
-   */
-  isNewDay(atTimeMillis) {
-    const timeZone = this.driver.homey.clock.getTimezone();
-    const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
-    const midnight = eventDateTime.startOf('day');
-    const elapsed = eventDateTime.diff(midnight, 'milliseconds');
-    const isNewDay = elapsed.toMillis() < this._period;
-    return isNewDay
   }
 
   /**

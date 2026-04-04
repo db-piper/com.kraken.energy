@@ -90,7 +90,6 @@ function getPrices(atTimeMillis, tariff, timeZone) {
 
       // Optimized single-pass loop to find Min/Max for Today
       for (const rate of tariff.unitRates) {
-        //const rateEndMs = DateTime.fromISO(rate.validTo, { zone: timeZone }).toMillis();
         const rateEndMs = Date.parse(rate.validTo);
 
         // Match original filter: only consider rates ending before or at start of tomorrow
@@ -318,7 +317,7 @@ module.exports = class dataExtractor {
    * @param   {string}    accountId           The account ID
    * @returns {object[]}                      array of extracted kraken device definitions
    */
-  static extractDeviceDefinitions(rawPairingData, accountId) {
+  static extractDeviceDefinitions(rawPairingData, accountId, timeZone) {
     if (!getLiveMeterId(rawPairingData)) {
       return [];
     }
@@ -345,7 +344,7 @@ module.exports = class dataExtractor {
     const billingDate = account?.billingOptions?.currentBillingPeriodStartDate;
     let periodStartDay = 1;
     if (billingDate) {
-      periodStartDay = DateTime.fromISO(`${billingDate}`).minus({ days: 1 }).day;
+      periodStartDay = DateTime.fromISO(`${billingDate}`).setZone(timeZone).minus({ days: 1 }).day;
     }
 
     const definitions = [];

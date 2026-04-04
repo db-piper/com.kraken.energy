@@ -197,7 +197,7 @@ module.exports = class krakenAccountWrapper {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
     const definitions = await this.getPairingData(this.accountId, (rawParingData) => {
-      return DataExtractor.extractDeviceDefinitions(rawParingData, this._pairable_device_status_translations, this.accountId);
+      return DataExtractor.extractDeviceDefinitions(rawParingData,  this.accountId, this.timeZone);
     })
 
     if (!definitions) {
