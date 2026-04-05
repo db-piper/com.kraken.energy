@@ -111,7 +111,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     const futureDispatchCount = futureDispatches.length;
     const currentDispatches = this.wrapper.getPlannedDispatches(atTimeMillis, deviceDispatches);    //array 0 or more dispatches
     const nextDispatch = this.wrapper.earliestDispatch(futureDispatches);               						//dispatch or undefined
-    const inDispatch = currentDispatches.length > 0;                                                //receiving reduced price domestic energy
+    const inDispatch = currentDispatches.length > 0;                                                //dispatch of some sort
 
     let startTime = null;
     let endTime = null;
@@ -130,8 +130,10 @@ module.exports = class smartEnergyDevice extends krakenDevice {
       endTime = endDateTime.toFormat("dd/LL T");
       countDownStart = endDateTime;
       duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
-      dispatchMinutes = dispatchMinutes + eventInterval;   //FREQ: change to increment by polling interval in minutes
       dispatchType = currentDispatches[0].type;
+      if (dispatchType === "SMART") {
+        dispatchMinutes = dispatchMinutes + eventInterval;
+      }
     }
 
     if (futureDispatchCount > 0) {

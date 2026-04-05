@@ -178,7 +178,7 @@ module.exports = class productTariff extends krakenDevice {
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
     const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
-    const isDispatchable = this.isDispatchable;
+    const isDispatchable = deviceStates.length > 0 && !this.isExport;
     const direction = this.isExport;
     const tariff = direction ? exportTariff : importTariff;
     const propertyName = direction ? "export" : "consumption";
@@ -204,16 +204,19 @@ module.exports = class productTariff extends krakenDevice {
     const currentEnergyDispatches = this.wrapper.getPlannedDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
     const inDispatch = isDispatchable && currentPriceDispatches.length > 0;
     const discountDispatch = inDispatch && currentPriceDispatches.every(dispatch => dispatch.type !== "BOOST");
-    const dispatchPrice = discountDispatch ? minPrice : maxPrice;
     const totalDispatchedMinutes = priorDispatchedMinutes + (discountDispatch ? (currentEnergyDispatches.length * eventInterval) : 0);
     const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
+    //Price is set high if we have run out of dispatch minutes
+    const dispatchPrice = (discountDispatch && percentDispatchLimit < 100) ? minPrice : maxPrice;
+    this.log(`productTariff.processEvent: priorDispatchedMinutes: ${priorDispatchedMinutes}, currentEnergyDispatches#: ${currentEnergyDispatches.length}, eventInterval: ${eventInterval}`);
+    this.log(`productTariff.processEvent: totalDispatchedMinutes: ${totalDispatchedMinutes}, percentDispatchLimit: ${percentDispatchLimit}`);
     this.driver.announceDispatchMinuteTotal(totalDispatchedMinutes);
-    const unitPriceTaxed = .01 * ((isDispatchable && inDispatch && percentDispatchLimit < 100) ? dispatchPrice : unitRate);							//£	
+    const unitPriceTaxed = .01 * ((isDispatchable && inDispatch) ? dispatchPrice : unitRate);		//£	
     const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
     const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£
     const updatedSlotEnergy = (deltaEnergy + (slotChange ? 0 : slotEnergy)) / 1000;							//kWh 
     const updatedSlotValueTaxed = deltaEnergyValueTaxed + (slotChange ? 0 : slotValueTaxed);		//£
-    const slotPower = (slotDuration > 0) ? 1000 * updatedSlotEnergy / slotDuration : 0;									//W
+    const slotPower = (slotDuration > 0) ? 1000 * updatedSlotEnergy / slotDuration : 0;					//W
     const dispatchQuartile = discountDispatch ? 0 : 3;
     const slotQuartile = (inDispatch && isDispatchable && percentDispatchLimit < 100) ? dispatchQuartile : tariffSlotQuartile;
 
