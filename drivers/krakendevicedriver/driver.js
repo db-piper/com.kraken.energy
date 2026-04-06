@@ -152,11 +152,9 @@ module.exports = class krakenDriver extends Homey.Driver {
         await this.eventer.executeEvent()
         success = true;
       } else {
-        this.log(`kraken Driver.onHeartbeat: No devices found, resetting the app state`);
+        this.log(`kraken Driver.onHeartbeat: No devices found, resetting the app state and stopping event loop.`);
         this.stopEventPoller();
-        this.log(`krakenDriver.onHeartbeat: Event poller stopped`);
         this.homey.app.resetState();
-        this.log(`krakenDriver.onHeartbeat: App state reset`)
       }
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
