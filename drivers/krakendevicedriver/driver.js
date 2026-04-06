@@ -136,17 +136,28 @@ module.exports = class krakenDriver extends Homey.Driver {
    * Return the target interval in minutes
    * @returns {number}  The target interval in minutes
    */
-  get targetIntervalMinutes(){
+  get targetIntervalMinutes() {
     return this.getDevices().length > 0 ? Number(this.getDevices()[0].getSetting('krakenPollingInterval')) : 1;
   }
 
   /**
    * The Heartbeat: The actual task performed every minute.
+   * @returns {Promise<boolean>}   The current event completed without a detected error
    */
   async onHeartbeat() {
     this.log(`krakenDriver.onHeartbeat: Tick start at ${new Date().toISOString()}`);
+    let success = false;
     try {
-      await this.eventer.executeEvent();
+      if (this.getDevices().length > 0) {
+        await this.eventer.executeEvent()
+        success = true;
+      } else {
+        this.log(`kraken Driver.onHeartbeat: No devices found, resetting the app state`);
+        this.stopEventPoller();
+        this.log(`krakenDriver.onHeartbeat: Event poller stopped`);
+        this.homey.app.resetState();
+        this.log(`krakenDriver.onHeartbeat: App state reset`)
+      }
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.stack}`);
@@ -156,6 +167,7 @@ module.exports = class krakenDriver extends Homey.Driver {
       this._wrapper = null;
     }
     this.log(`krakenDriver.onHeartbeat: Tick done at ${new Date().toISOString()}`);
+    return success;
   }
 
   /**
@@ -174,8 +186,8 @@ module.exports = class krakenDriver extends Homey.Driver {
       this.log(`krakenDriver.sessionLoginHandler: app.setValidAccount returned success: ${success}`);
       if (success) {
         this.startEventPoller();
-      } else {
-        throw new Error(this.homey.__('errors.invalid_account_id'));
+        // } else {
+        //   throw new Error(this.homey.__('errors.invalid_account_id'));
       }
     }
     return success;
@@ -187,36 +199,58 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   startEventPoller() {
     if (this._pollerTimeout) {
-      this.log('krakenDriver.startEventPoller: Heartbeat already active.');
-      return;
+      this.log('krakenDriver.startEventPoller: Resetting existing heartbeat.');
+      this.homey.clearTimeout(this._pollerTimeout);
+      this._pollerTimeout = null;
     }
+
+    let failureCount = 0;
+    const maxFailures = 5;
 
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
         const now = this.eventer.DateTime.now().setZone(this.wrapper.timeZone);
         const offset = this.eventer.targetSecond;
-        const intervalMinutes = this.targetIntervalMinutes;
-        this.log(`krakenDriver.startEventPoller: offset: ${offset}, intervalMinutes: ${intervalMinutes}`);
+        const interval = this.targetIntervalMinutes;
 
-        // Target the offset second of the current minute
-        let nextRun = now.set({ second: offset, millisecond: 0 });
+        // 1. Find the next "Grid Line" for the chosen interval
+        let nextMinute = Math.ceil(now.minute / interval) * interval;
 
-        // If we are already past the offset second, move target to the next minute
-        if (nextRun <= now) {
-          nextRun = nextRun.plus({ minutes: intervalMinutes });
+        // 2. Set the target time
+        let nextRun = now.set({ minute: nextMinute, second: offset, millisecond: 0 });
+
+        // 3. THE "MISS THE BUS" GUARD
+        // If we finished the last job at :16 and the target was :15, 
+        // or if Math.ceil gave us the 'current' minute which is already gone.
+        if (now >= nextRun) {
+          nextMinute += interval;
+
+          if (nextMinute >= 60) {
+            nextRun = now.plus({ hours: 1 }).set({ minute: 0, second: offset, millisecond: 0 });
+          } else {
+            nextRun = now.set({ minute: nextMinute, second: offset, millisecond: 0 });
+          }
         }
 
+        // 4. Calculate the "Elastic" Delay
         const delay = nextRun.diff(now).milliseconds;
 
+        this.log(`krakenDriver.startEventPoller: Next heartbeat: ${nextRun.toFormat('HH:mm:ss')} (Wait: ${delay}ms)`);
         // Recursive timeout ensures drift is corrected every minute
         this._pollerTimeout = this.homey.setTimeout(async () => {
           try {
             await this.onHeartbeat();
+            failureCount = 0;
           } catch (err) {
             this.error('krakenDriver.startEventPoller.setTimeout: Error during heartbeat execution', err);
+            failureCount++;
           } finally {
             this._pollerTimeout = null;
-            scheduleNext(); // Re-calculate the next :15s gap
+            if (this.getDevices().length > 0 && failureCount < maxFailures) {
+              scheduleNext(); // Re-calculate the next :15s gap
+            } else {
+              this.stopEventPoller();
+            }
           }
         }, delay);
       };

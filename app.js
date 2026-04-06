@@ -20,6 +20,7 @@ module.exports = class krakenApp extends Homey.App {
    * onUninit is called when the app is terminating.
    */
   async onUninit() {
+    this.resetState();
     this.homey.log('krakenApp.onUninit: App has been terminated');
   }
 
@@ -100,6 +101,18 @@ module.exports = class krakenApp extends Homey.App {
     const interval = (eventMillis - lastEventTime) / 60000;
     this.homey.log(`krakenApp.getEventIntervalMinutes: interval ${interval} minutes.`);
     return (interval >= 0.5) ? interval : 1;
+  }
+
+  resetState() {
+    const settings = this.homey.settings;
+    settings.unset(ImportTariff);
+    settings.unset(ExportTariff);
+    settings.unset(LiveMeterId);
+    settings.unset(DeviceIds);
+    settings.unset(PeriodStartDay);
+    settings.unset(EventTime);
+    settings.unset(TokenSetting);
+    settings.unset(TokenExpirySetting);
   }
 
   /**

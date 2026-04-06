@@ -102,7 +102,9 @@ module.exports = class krakenAccountWrapper {
    * @returns {Promise<boolean>}
    */
   async setValidAccount(account, token) {
-    return await this.fetcher.setValidAccount(account, token);
+    const result = await this.fetcher.setValidAccount(account, token);
+    this._driver.homey.log(`krakenAccountWrapper.setValidAccount: result ${result}`);
+    return result
   }
 
   /**
@@ -165,28 +167,37 @@ module.exports = class krakenAccountWrapper {
     const periodChanges = {
       chunk: true,
       day: true,
-      tariffSlotImport: true,
-      tariffSlotExport: true,
+      tariffSlotImport: false,
+      tariffSlotExport: false,
       invoicePeriod: true
     };
 
     if (lastTimestamp) {
       const event = DateTime.fromMillis(nowMillis, { zone: this.timeZone });
       const lastEvent = DateTime.fromMillis(lastTimestamp, { zone: this.timeZone });
-      const importSlotEndMillis = Date.parse(this._driver.homey.app.importTariff.slotEnd);
-      const importSlotEnd = importSlotEndMillis ? DateTime.fromMillis(importSlotEndMillis, { zone: this.timeZone }) : DateTime.fromMillis(0, { zone: this.timeZone });
-      const exportSlotEndMillis = Date.parse(this._driver.homey.app.exportTariff.slotEnd);
-      const exportSlotEnd = exportSlotEndMillis ? DateTime.fromMillis(exportSlotEndMillis, { zone: this.timeZone }) : DateTime.fromMillis(0, { zone: this.timeZone });
-      const periodStartDay = this._driver.homey.app.periodStartDay;
 
       periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
       periodChanges.day = event.day !== lastEvent.day;
-      periodChanges.tariffSlotImport = event >= importSlotEnd || periodChanges.day;
-      periodChanges.tariffSlotExport = event >= exportSlotEnd || periodChanges.day;
+
+      const importTariff = this._driver.homey.app.importTariff;
+      if (importTariff.present) {
+        const importSlotEndMillis = Date.parse(importTariff.slotEnd) || 0;
+        const importSlotEnd = DateTime.fromMillis(importSlotEndMillis, { zone: this.timeZone });
+        periodChanges.tariffSlotImport = event >= importSlotEnd || periodChanges.day;
+      }
+
+      const exportTariff = this._driver.homey.app.exportTariff;
+      if (exportTariff.present) {
+        const exportSlotEndMillis = Date.parse(exportTariff.slotEnd) || 0;
+        const exportSlotEnd = DateTime.fromMillis(exportSlotEndMillis, { zone: this.timeZone });
+        periodChanges.tariffSlotExport = event >= exportSlotEnd || periodChanges.day;
+      }
+
+      const periodStartDay = this._driver.homey.app.periodStartDay;
       periodChanges.invoicePeriod = periodChanges.day && event.day === periodStartDay;
     }
 
-    return periodChanges
+    return periodChanges;
   }
 
   /**
