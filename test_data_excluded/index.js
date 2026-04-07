@@ -53,57 +53,50 @@ module.exports = {
     const today = DateTime.now().setZone(timeZone).set({ second: 0, millisecond: 0 });
     return {
       d00000000_0009_4000_8020_00000007b8d2: [
-        {
-          //PQ event at 11:30 and 12:00  COSY at normal price - both 11:30 PQ:0 and 12:00 PQ:2 events  14m   14m   TICK (pre-change)
+        { //PQ event at 11:30 and 12:00  COSY at normal price - both 11:30 PQ:0 and 12:00 PQ:2 events  14m   14m   TICK (pre-change)
           start: today.set({ hour: 11, minute: 36 }).toISO(),
           end: today.set({ hour: 11, minute: 50 }).toISO(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
-        {
-          //PQ event at 12:30 and 13:00 - 12:30 event PQ:0 but no event at 13:00 because COSY starts   14m   28m   TICK (post-change)
+        { //PQ event at 12:30 and 13:00 - 12:30 event PQ:0 but no event at 13:00 because COSY starts   14m   28m   TICK (post-change)
           start: today.set({ hour: 12, minute: 36 }).toISO(),
           end: today.set({ hour: 12, minute: 50 }).toISO(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
-        {
-          //PQ event at 13:30 - but COSY pricing! - no events COSY throughout PQ:0                     14m   42m   TICK (post-change)
+        { //PQ event at 13:30 - but COSY pricing! - no events COSY throughout PQ:0                     14m   42m   TICK (post-change)
           start: today.set({ hour: 13, minute: 36 }).toISO(),
           end: today.set({ hour: 13, minute: 50 }).toISO(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
-        {
-          //Contigous EXTENDED dispatches - no events COSY throughout PQ:0                             10m   52m   TICK (Announcing)
+        { //Contigous EXTENDED dispatches - no events COSY throughout PQ:0                             10m   52m   TICK (Announcing)
           start: today.set({ hour: 14, minute: 10 }).toISO(),
           end: today.set({ hour: 14, minute: 20 }).toISO(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
-        {
-          //PQ event at 15:00 and 15:30 - 15:00 PQ:3 - 15:30 PQ:0                                      BOOST - no change
+        { //PQ event at 15:00 and 15:30 - 15:00 PQ:3 - 15:30 PQ:0                                      BOOST - no change TICK
           start: today.set({ hour: 15, minute: 10 }).toISO(),
           end: today.set({ hour: 15, minute: 25 }).toISO(),
           energyAddedKwh: -3.417,
           type: "BOOST"
         },
-        { //PQ event at 16:00 and 16:30 - but COSY pricing at 16:00 PQ:0 - 16:30 PQ:3                  15m   67m
+        { //PQ event at 16:00 and 16:30 - but COSY pricing at 16:00 PQ:0 - 16:30 PQ:3                  15m   67m   TICK
           start: today.set({ hour: 16, minute: 10 }).toISO(),
           end: today.set({ hour: 16, minute: 25 }).toISO(),
           energyAddedKwh: -3.417,
           type: "SMART"
         },
-        {
-          //PQ event at 17:00 - none at 17:30 (contiguous with next) - 17:00 PQ:0, 17:30 None          15m   82m
+        { //PQ event at 17:00 - none at 17:30 (contiguous with next) - 17:00 PQ:0, 17:30 None          15m   82m   TICK
           start: today.set({ hour: 17, minute: 10 }).toISO(),
           end: today.set({ hour: 17, minute: 25 }).toISO(),
           energyAddedKwh: -5.333,
           type: "SMART"
         },
-        {
-          //PQ event none at 17:30 (contiguous) - 18:00 PQ:3 - 17:30 None 18:00 PQ:3                   20m   102m
-          start: today.set({ hour: 17, minute: 30 }).toISO(),
+        { //PQ event none at 17:30 (contiguous) - 18:00 PQ:3 - 17:30 None 18:00 PQ:3                   20m   102m  Ended at 101m
+          start: today.set({ hour: 17, minute: 30 }).toISO(),  
           end: today.set({ hour: 17, minute: 50 }).toISO(),
           energyAddedKwh: -5.333,
           type: "SMART"

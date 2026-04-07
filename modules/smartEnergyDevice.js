@@ -125,13 +125,15 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     }
 
     let preciseTotal = this.getStoreValue('precise_dispatch_minutes') || 0;
-    const previousInteger = Math.floor(preciseTotal);
+    //const previousInteger = Math.floor(preciseTotal);
+    const previousInteger = Math.round(preciseTotal);
 
     preciseTotal += deltaMinutes;
     this.setStoreValue('precise_dispatch_minutes', preciseTotal)
       .catch(err => this.error('Failed to persist precise minutes:', err));
 
-    const currentInteger = Math.floor(preciseTotal);
+    //const currentInteger = Math.floor(preciseTotal);
+    const currentInteger = Math.round(preciseTotal);
     return currentInteger - previousInteger;
   };
 
