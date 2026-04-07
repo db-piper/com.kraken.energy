@@ -265,13 +265,8 @@ module.exports = class dataFetcher {
   async verifyAccountId(queryString, token) {
     this.homey.log(`dataFetcher.verifyAccountId: starting`);
     const result = await this.runGraphQlQuery(queryString, token);
-    this.homey.log(`dataFetcher.verifyAccountId: result: ${JSON.stringify(result)}`);
+    //this.homey.log(`dataFetcher.verifyAccountId: result: ${JSON.stringify(result)}`);
     return result.data.account !== null;
-    // let isValid = false;
-    // if (result.data.account !== null) {
-    //   isValid = true;
-    // }
-    // return isValid;
   }
 
 }

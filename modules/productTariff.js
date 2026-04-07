@@ -6,12 +6,16 @@ const { DateTime } = require('../bundles/luxon');
 
 module.exports = class productTariff extends krakenDevice {
 
+  #deltaMinutes = 0;
+
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('productTariff Device:onInit - productTariff Initialization Started');
     await super.onInit();
+
+    this.#deltaMinutes = 0;
 
     if (this.getCapabilities().length === 0) {
       await this.setSettings({
@@ -159,6 +163,22 @@ module.exports = class productTariff extends krakenDevice {
     return pricePaid < tariffPrice;
   }
 
+  /**
+   * Receive announcement of dispatch minutes increment
+   * @param {number}  minutes The total number of minutes dispatched today
+   */
+  set dispatchMinutesIncrement(minutes) {
+    if (!this.isExport) {
+      this.#deltaMinutes += minutes;
+      this.log(`productTariff.dispatchMinutesIncrement: Adding ${minutes} dispatch minutes giving ${this.#deltaMinutes}.`);
+      // const priorDispatchedMinutes = this.readCapabilityValue(this._capIds.TOTAL_DISPATCHED_MINUTES);
+      // const totalDispatchedMinutes = priorDispatchedMinutes + minutes;
+      // const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
+      // //Let the next event handle the commit of the values - may create a lag
+      // this.updateCapabilityValue(this._capIds.TOTAL_DISPATCHED_MINUTES, totalDispatchedMinutes);
+      // this.updateCapabilityValue(this._capIds.DISPATCH_LIMIT_PERCENT, percentDispatchLimit);
+    }
+  }
 
   /**
    * Process an event on a Product Tariff device
@@ -177,7 +197,7 @@ module.exports = class productTariff extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
-    const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    //const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
     const isDispatchable = deviceStates.length > 0 && !this.isExport;
     const direction = this.isExport;
     const tariff = direction ? exportTariff : importTariff;
@@ -201,16 +221,13 @@ module.exports = class productTariff extends krakenDevice {
     const slotDuration = firstTime ? 0 : ((atTimeMillis - Date.parse(recordedSlotStart)) / (60 * 60 * 1000));							//Decimal hours
     const lastEnergyReading = firstTime ? newEnergyReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING);	//Wh
     const currentPriceDispatches = this.wrapper.getPricingDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
-    const currentEnergyDispatches = this.wrapper.getPlannedDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
     const inDispatch = isDispatchable && currentPriceDispatches.length > 0;
     const discountDispatch = inDispatch && currentPriceDispatches.every(dispatch => dispatch.type !== "BOOST");
-    const totalDispatchedMinutes = priorDispatchedMinutes + (discountDispatch ? (currentEnergyDispatches.length * eventInterval) : 0);
+    const totalDispatchedMinutes = (!periodChanges.day ? priorDispatchedMinutes : 0) + this.#deltaMinutes;
+    this.#deltaMinutes = 0;
     const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
     //Price is set high if we have run out of dispatch minutes
     const dispatchPrice = (discountDispatch && percentDispatchLimit < 100) ? minPrice : maxPrice;
-    this.log(`productTariff.processEvent: priorDispatchedMinutes: ${priorDispatchedMinutes}, currentEnergyDispatches#: ${currentEnergyDispatches.length}, eventInterval: ${eventInterval}`);
-    this.log(`productTariff.processEvent: totalDispatchedMinutes: ${totalDispatchedMinutes}, percentDispatchLimit: ${percentDispatchLimit}`);
-    this.driver.announceDispatchMinuteTotal(totalDispatchedMinutes);
     const unitPriceTaxed = .01 * ((isDispatchable && inDispatch) ? dispatchPrice : unitRate);		//£	
     const deltaEnergy = newEnergyReading - lastEnergyReading;																		//Wh
     const deltaEnergyValueTaxed = priorPricePaid * (deltaEnergy / 1000);												//£

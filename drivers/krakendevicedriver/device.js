@@ -164,11 +164,17 @@ module.exports = class krakenDevice extends Homey.Device {
 	}
 
   /**
-   * Super class implementation that does nothing
+   * Super class abstract implementation
    * @param {number}  minutes The total number of minutes dispatched today
    */
   set dispatchMinutes(minutes) {
-    this.log(`krakenDevice:dispatchMinutes - setting dispatch minutes for device ${this.getName()} to ${minutes}`);
+  }
+
+  /**
+   * Super class abstract implementation
+   * @param {number}  minutes The total number of minutes dispatched today
+   */
+  set dispatchMinutesIncrement(minutes) {
   }
 
 	/**

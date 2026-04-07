@@ -71,7 +71,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
    */
   async setDeviceAvailability(deviceIds) {
     let available = super.setDeviceAvailability(deviceIds);
-    this.log(`smartEnergyDevice:setDeviceAvailability - deviceIds: ${JSON.stringify(deviceIds)}`);
+    //this.log(`smartEnergyDevice:setDeviceAvailability - deviceIds: ${JSON.stringify(deviceIds)}`);
     const deviceId = this.getStoreValue("deviceId");
     //const deviceData = deviceIds?.[this.wrapper.hashDeviceId(deviceId)];
     if (!deviceIds.includes(deviceId)) {
@@ -80,6 +80,60 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     }
     return available;
   }
+
+  /**
+   * Calculates total overlapping minutes between a heartbeat slice and multiple dispatch windows.
+   * @param {number} sliceStart - Start of the heartbeat window (ms)
+   * @param {number} sliceEnd - End of the heartbeat window (ms)
+   * @param {Array} dispatches - Array of {start, end} strings/numbers
+   * @returns {number} - Total active minutes (fractional)
+   */
+  calculateActiveMinutes(sliceStart, sliceEnd, dispatches) {
+    let totalMillis = 0;
+
+    dispatches.forEach(dispatch => {
+      if (dispatch.type === "SMART") {
+        const dStart = Date.parse(dispatch.start);
+        const dEnd = Date.parse(dispatch.end);
+
+        const overlapStart = Math.max(sliceStart, dStart);
+        const overlapEnd = Math.min(sliceEnd, dEnd);
+
+        if (overlapEnd > overlapStart) {
+          totalMillis += (overlapEnd - overlapStart);
+        }
+      }
+    });
+
+    return totalMillis / 60000;
+  };
+
+  /**
+   * Processes new minutes and returns the integer delta to be announced.
+   * @param {number}  deltaMinutes  The new fractional minutes earned
+   * @param {boolean} reset         Reset the persistent value to zero   
+   * @returns {Promise<number>}     Whole minutes to add to the UI/Account
+   */
+  getMinutesToAnnounce(deltaMinutes, reset) {
+    if (reset) {
+      this._preciseTotalCache = 0;
+      // We fire-and-forget the store reset
+      this.setStoreValue('precise_dispatch_minutes', 0).catch(this.error);
+
+      // If there's no delta (first beat of the day), we just return 0
+      if (deltaMinutes <= 0) return 0;
+    }
+
+    let preciseTotal = this.getStoreValue('precise_dispatch_minutes') || 0;
+    const previousInteger = Math.floor(preciseTotal);
+
+    preciseTotal += deltaMinutes;
+    this.setStoreValue('precise_dispatch_minutes', preciseTotal)
+      .catch(err => this.error('Failed to persist precise minutes:', err));
+
+    const currentInteger = Math.floor(preciseTotal);
+    return currentInteger - previousInteger;
+  };
 
 
   /**
@@ -99,7 +153,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
-    const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    //const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    const lastEvent = this.homey.app.eventTime;
     const newDay = periodChanges.day;
     const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
     const deviceId = this.getStoreValue("deviceId");
@@ -119,9 +174,18 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     let nextDispatchStart = null;
     let countDownStart = eventTime;
     let countDown = null;
-    let dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
     let dispatchType = null;
     let nextDispatchType = null;
+
+    const earnedMinutes = this.calculateActiveMinutes(lastEvent, atTimeMillis, deviceDispatches);
+    const announceCount = this.getMinutesToAnnounce(earnedMinutes, newDay);
+    const dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
+
+    let updatedDispatchMinutes = dispatchMinutes;
+    if (announceCount > 0) {
+      updatedDispatchMinutes += announceCount;
+      this.driver.accounceDispatchMinuteIncrement(announceCount);
+    }
 
     if (inDispatch) {
       const startDateTime = DateTime.fromISO(currentDispatches[0].start, { zone: this.wrapper.timeZone });
@@ -129,11 +193,12 @@ module.exports = class smartEnergyDevice extends krakenDevice {
       const endDateTime = DateTime.fromISO(currentDispatches[0].end, { zone: this.wrapper.timeZone })
       endTime = endDateTime.toFormat("dd/LL T");
       countDownStart = endDateTime;
-      duration = endDateTime.diff(eventTime, ['hours', 'minutes']).toFormat("hh:mm");
+      const diff = endDateTime.diff(eventTime, ['hours', 'minutes', 'seconds']);
+      const roundedDiff = diff.shiftTo('hours', 'minutes').plus({
+        minutes: diff.seconds >= 30 ? 1 : 0
+      });
+      duration = roundedDiff.toFormat("hh:mm");
       dispatchType = currentDispatches[0].type;
-      if (dispatchType === "SMART") {
-        dispatchMinutes = dispatchMinutes + eventInterval;
-      }
     }
 
     if (futureDispatchCount > 0) {
@@ -157,7 +222,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     this.updateCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, countDown);
     this.updateCapability(this._capIds.NEXT_DISPATCH_START, nextDispatchStart);
     this.updateCapability(this._capIds.NEXT_DISPATCH_TYPE, nextDispatchType);
-    this.updateCapability(this._capIds.DISPATCH_MINUTES, dispatchMinutes);
+    this.updateCapability(this._capIds.DISPATCH_MINUTES, updatedDispatchMinutes);
 
     return updates;
   }
