@@ -23,16 +23,19 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     this.defineCapability(this._capIds.DEVICE_NAME, { "title": { "en": "Device Name" } });
     this.defineCapability(this._capIds.DEVICE_STATUS, { "title": { "en": "Current Status" } });
     this.defineCapability(this._capIds.PLANNED_DISPATCHES, { "title": { "en": "Future Dispatches" } });			//Integer
+    this.defineCapability(this._capIds.PLANNED_ENERGY_TOTAL, { "title": { "en": "Total Energy" }, "decimals": 3 });			//Integer
+    this.defineCapability(this._capIds.PLAN_END_TIME, { "title": { "en": "Plan End Time" } });			      //DD/mm HH:MM [dd/LL T]
     this.defineCapability(this._capIds.IN_DISPATCH, { "title": { "en": "Dispatching Now" } });						//Boolean
-    this.defineCapability(this._capIds.ALARM_POWER, { "title": { "en": "In Dispatch" }, "uiComponent": null });				//Boolean
-    this.defineCapability(this._capIds.CURRENT_DISPATCH_START, { "title": { "en": "Planned Start" } });			//DD/mm HH:MM [dd/LL T]
-    this.defineCapability(this._capIds.CURRENT_DISPATCH_END, { "title": { "en": "Planned Finish" } });				//DD/mm HH:MM [dd/LL T]
-    this.defineCapability(this._capIds.REMAINING_DISPATCH_DURATION, { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
     this.defineCapability(this._capIds.CURRENT_DISPATCH_TYPE, { "title": { "en": "Dispatch Type" } });			//String
+    this.defineCapability(this._capIds.CURRENT_DISPATCH_ENERGY, { "title": { "en": "Dispatch Energy" }, "decimals": 3 });			//Integer
+    this.defineCapability(this._capIds.ALARM_POWER, { "title": { "en": "In Dispatch" }, "uiComponent": null });				//Boolean
+    this.defineCapability(this._capIds.CURRENT_DISPATCH_START, { "title": { "en": "Planned Start" } });		//DD/mm HH:MM [dd/LL T]
+    this.defineCapability(this._capIds.CURRENT_DISPATCH_END, { "title": { "en": "Planned Finish" } });		//DD/mm HH:MM [dd/LL T]
+    this.defineCapability(this._capIds.REMAINING_DISPATCH_DURATION, { "title": { "en": "Remaining Duration" } });			//HH:MM (duration.toFormat(hh:mm))
     this.defineCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, { "title": { "en": "Next Dispatch Countdown" } });	//HH:MM
-    this.defineCapability(this._capIds.NEXT_DISPATCH_TYPE, { "title": { "en": "Next Dispatch Type" } });			//String
     this.defineCapability(this._capIds.NEXT_DISPATCH_START, { "title": { "en": "Next Planned Start" } });		//DD/mm HH:MM [dd/LL T]
-    this.defineCapability(this._capIds.DISPATCH_MINUTES, { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" } });				//Integer	
+    this.defineCapability(this._capIds.NEXT_DISPATCH_TYPE, { "title": { "en": "Next Dispatch Type" } });			//String
+    this.defineCapability(this._capIds.DISPATCH_MINUTES, { "title": { "en": "Dispatched Minutes Today" }, "units": { "en": "mn" }, "insights": true }, ['insights']);				//Integer	
 
     await this.applyCapabilities();
     await this.applyStoreValues();
@@ -82,60 +85,51 @@ module.exports = class smartEnergyDevice extends krakenDevice {
   }
 
   /**
-   * Calculates total overlapping minutes between a heartbeat slice and multiple dispatch windows.
-   * @param {number} sliceStart - Start of the heartbeat window (ms)
-   * @param {number} sliceEnd - End of the heartbeat window (ms)
-   * @param {Array} dispatches - Array of {start, end} strings/numbers
-   * @returns {number} - Total active minutes (fractional)
+   * Return the cache defining the active dispatch if there is a current dispatch of type SMART
+   * @param   {object[]}  currentDispatch     Array of planned dispatches for this device
+   * @returns {object}                        Cache defining the active dispatch
    */
-  calculateActiveMinutes(sliceStart, sliceEnd, dispatches) {
-    let totalMillis = 0;
-
-    dispatches.forEach(dispatch => {
-      if (dispatch.type === "SMART") {
-        const dStart = Date.parse(dispatch.start);
-        const dEnd = Date.parse(dispatch.end);
-
-        const overlapStart = Math.max(sliceStart, dStart);
-        const overlapEnd = Math.min(sliceEnd, dEnd);
-
-        if (overlapEnd > overlapStart) {
-          totalMillis += (overlapEnd - overlapStart);
-        }
+  getActiveDispatchCache(currentDispatch) {
+    let cache = this.getStoreValue('active_dispatch_cache');
+    if (currentDispatch.length > 0 && currentDispatch[0].type === 'SMART') {
+      const dispatch = currentDispatch[0];
+      const start = Math.floor(Date.parse(dispatch.start) / 60000);
+      const end = Math.floor(Date.parse(dispatch.end) / 60000);
+      if (!cache || cache.start !== start) {
+        cache = { start, end, announced: 0 };
+      } else {
+        cache.end = end;
       }
-    });
-
-    return totalMillis / 60000;
-  };
+      this.setStoreValue('active_dispatch_cache', cache)
+    }
+    return cache;
+  }
 
   /**
-   * Processes new minutes and returns the integer delta to be announced.
-   * @param {number}  deltaMinutes  The new fractional minutes earned
-   * @param {boolean} reset         Reset the persistent value to zero   
-   * @returns {Promise<number>}     Whole minutes to add to the UI/Account
+   * Calculate the incremental number of dispatch minutes to be announced
+   * @param   {number}    atTimeMillis        Current event time in epoch milliseconds
+   * @param   {object[]}  dispatches          Array of planned dispatches for this device
+   * @returns {number}                        Number of minutes to add to the dispatch minutes
    */
-  getMinutesToAnnounce(deltaMinutes, reset) {
-    if (reset) {
-      this._preciseTotalCache = 0;
-      // We fire-and-forget the store reset
-      this.setStoreValue('precise_dispatch_minutes', 0).catch(this.error);
-
-      // If there's no delta (first beat of the day), we just return 0
-      if (deltaMinutes <= 0) return 0;
+  calculateDispatchIncrement( dispatches) {
+    const currentDispatch = this.wrapper.getPlannedDispatches(atTimeMillis, dispatches);
+    const currentMinute = Math.floor(atTimeMillis / 60000);
+    let increment = 0;
+    const cache = this.getActiveDispatchCache(atTimeMillis, currentDispatch);
+    if (cache) {
+      const dispatchTime = Math.min(currentMinute, cache.end);
+      const dispatchElapsed = Math.max(0, dispatchTime - cache.start);
+      increment = Math.max(0, dispatchElapsed - cache.announced);
+      if (increment > 0) {
+        cache.announced += increment;
+        this.setStoreValue('active_dispatch_cache', cache)
+      }
+      if (currentDispatch.length === 0 && currentMinute >= cache.end) {
+        this.setStoreValue('active_dispatch_cache', null);
+      }
     }
-
-    let preciseTotal = this.getStoreValue('precise_dispatch_minutes') || 0;
-    //const previousInteger = Math.floor(preciseTotal);
-    const previousInteger = Math.round(preciseTotal);
-
-    preciseTotal += deltaMinutes;
-    this.setStoreValue('precise_dispatch_minutes', preciseTotal)
-      .catch(err => this.error('Failed to persist precise minutes:', err));
-
-    //const currentInteger = Math.floor(preciseTotal);
-    const currentInteger = Math.round(preciseTotal);
-    return currentInteger - previousInteger;
-  };
+    return increment;
+  }
 
 
   /**
@@ -155,8 +149,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
-    //const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
-    const lastEvent = this.homey.app.eventTime;
+    //const lastEvent = this.homey.app.eventTime;
     const newDay = periodChanges.day;
     const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
     const deviceId = this.getStoreValue("deviceId");
@@ -177,16 +170,21 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     let countDownStart = eventTime;
     let countDown = null;
     let dispatchType = null;
+    let dispatchEnergy = null;
+    let planEnergy = null;
+    let planEndTime = null;
     let nextDispatchType = null;
 
-    const earnedMinutes = this.calculateActiveMinutes(lastEvent, atTimeMillis, deviceDispatches);
-    const announceCount = this.getMinutesToAnnounce(earnedMinutes, newDay);
-    const dispatchMinutes = newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES);
-
-    let updatedDispatchMinutes = dispatchMinutes;
+    const announceCount = this.calculateDispatchIncrement(atTimeMillis, deviceDispatches);
+    const updatedDispatchMinutes = announceCount + (newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES));
     if (announceCount > 0) {
-      updatedDispatchMinutes += announceCount;
       this.driver.accounceDispatchMinuteIncrement(announceCount);
+    }
+
+    if (deviceDispatches.length > 0) {
+      planEnergy = deviceDispatches.reduce((total, dispatch) => total + dispatch.energyAddedKwh, 0);
+      const planEndTimeValue = Math.max(...deviceDispatches.map(dispatch => new Date(dispatch.end)));
+      planEndTime = DateTime.fromMillis(planEndTimeValue, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
     }
 
     if (inDispatch) {
@@ -194,6 +192,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
       startTime = startDateTime.toFormat("dd/LL T");
       const endDateTime = DateTime.fromISO(currentDispatches[0].end, { zone: this.wrapper.timeZone })
       endTime = endDateTime.toFormat("dd/LL T");
+      dispatchEnergy = currentDispatches[0].energyAddedKwh;
       countDownStart = endDateTime;
       const diff = endDateTime.diff(eventTime, ['hours', 'minutes', 'seconds']);
       const roundedDiff = diff.shiftTo('hours', 'minutes').plus({
@@ -215,11 +214,14 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     }
     this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
     this.updateCapability(this._capIds.PLANNED_DISPATCHES, futureDispatchCount);
+    this.updateCapability(this._capIds.PLANNED_ENERGY_TOTAL, planEnergy);
+    this.updateCapability(this._capIds.PLAN_END_TIME, planEndTime);
     this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
+    this.updateCapability(this._capIds.CURRENT_DISPATCH_TYPE, dispatchType);
+    this.updateCapability(this._capIds.CURRENT_DISPATCH_ENERGY, dispatchEnergy);
     this.updateCapability(this._capIds.ALARM_POWER, inDispatch);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_START, startTime);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_END, endTime);
-    this.updateCapability(this._capIds.CURRENT_DISPATCH_TYPE, dispatchType);
     this.updateCapability(this._capIds.REMAINING_DISPATCH_DURATION, duration);
     this.updateCapability(this._capIds.NEXT_DISPATCH_COUNTDOWN, countDown);
     this.updateCapability(this._capIds.NEXT_DISPATCH_START, nextDispatchStart);
