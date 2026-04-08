@@ -448,7 +448,7 @@ module.exports = class dataExtractor {
         dispatchMap[deviceKey] = source.map(dispatch => ({
           start: `${dispatch.start}`,
           end: `${dispatch.end}`,
-          energyAdded: Number(dispatch.energyAdded),
+          energyAddedKwh: Number(dispatch.energyAddedKwh),
           type: `${dispatch.type || ''}`
         }));
       }

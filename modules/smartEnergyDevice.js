@@ -111,11 +111,11 @@ module.exports = class smartEnergyDevice extends krakenDevice {
    * @param   {object[]}  dispatches          Array of planned dispatches for this device
    * @returns {number}                        Number of minutes to add to the dispatch minutes
    */
-  calculateDispatchIncrement( dispatches) {
+  calculateDispatchIncrement(atTimeMillis, dispatches) {
     const currentDispatch = this.wrapper.getPlannedDispatches(atTimeMillis, dispatches);
     const currentMinute = Math.floor(atTimeMillis / 60000);
     let increment = 0;
-    const cache = this.getActiveDispatchCache(atTimeMillis, currentDispatch);
+    const cache = this.getActiveDispatchCache(currentDispatch);
     if (cache) {
       const dispatchTime = Math.min(currentMinute, cache.end);
       const dispatchElapsed = Math.max(0, dispatchTime - cache.start);
