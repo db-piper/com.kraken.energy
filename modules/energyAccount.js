@@ -148,6 +148,22 @@ module.exports = class energyAccount extends krakenDevice {
 	}
 
   /**
+   * Set the incremental number of minutes dispatched since the last event
+   * @param {number}    minutes The incremental number of minutes dispatched since the last event
+   */
+  set dispatchMinutesIncrement(minutes) {
+    this._deltaDispatchMinutes = minutes;
+  }
+
+  /**
+   * Get the incremental number of minutes dispatched since the last event
+   * @returns {number}  The incremental number of minutes dispatched since the last event
+   */
+  get dispatchMinutesIncrement() {
+    return this._deltaDispatchMinutes ?? 0;
+  }
+
+  /**
    * Set the total number of minutes dispatched today
    * @param {number}  minutes The total number of minutes dispatched today
    */
@@ -313,6 +329,7 @@ module.exports = class energyAccount extends krakenDevice {
 		let importPrice = 0;
 		let exportPrice = 0;
 
+    this.dispatchMinutes = newDay ? 0 : this.dispatchMinutes + this.dispatchMinutesIncrement;
 		const dispatchPricing = inExtendedDispatch && (this.dispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
 		let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
