@@ -51,7 +51,7 @@ module.exports = class productTariff extends krakenDevice {
     this.defineCapability(this._capIds.NEXT_SLOT_END_TIME, { "title": { "en": 'Next Slot End' } }, [], isHalfHourly);
     this.defineCapability(this._capIds.DISPATCH_PRICING_INDICATOR, { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
     this.defineCapability(this._capIds.UNIT_PRICE_TARIFF, { "title": { "en": '£/kWh Tariff' }, "decimals": 4, "units": { "en": "£", } }, [], isDispatchable);
-    this.defineCapability(this._capIds.TOTAL_DISPATCHED_MINUTES, { "title": { "en": "Total Dispatched Minutes" }, "decimals": 0, "units": { "en": "mn" } }, ['title', 'decimals'], isDispatchable);
+    this.defineCapability(this._capIds.TOTAL_DISPATCHED_MINUTES, { "title": { "en": "Total Dispatched Minutes" }, "decimals": 0, "units": { "en": "mn" } }, ['title', 'decimals', 'units'], isDispatchable);
     this.defineCapability(this._capIds.DISPATCH_LIMIT_PERCENT, { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
     this.defineCapability(this._capIds.SLOT_START_DATETIME, { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
     this.defineCapability(this._capIds.SLOT_END_DATETIME, { "title": { "en": "SlotEndH" }, "uiComponent": null }, []);
@@ -171,12 +171,6 @@ module.exports = class productTariff extends krakenDevice {
     if (!this.isExport) {
       this.#deltaMinutes += minutes;
       this.log(`productTariff.dispatchMinutesIncrement: Adding ${minutes} dispatch minutes giving ${this.#deltaMinutes}.`);
-      // const priorDispatchedMinutes = this.readCapabilityValue(this._capIds.TOTAL_DISPATCHED_MINUTES);
-      // const totalDispatchedMinutes = priorDispatchedMinutes + minutes;
-      // const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
-      // //Let the next event handle the commit of the values - may create a lag
-      // this.updateCapabilityValue(this._capIds.TOTAL_DISPATCHED_MINUTES, totalDispatchedMinutes);
-      // this.updateCapabilityValue(this._capIds.DISPATCH_LIMIT_PERCENT, percentDispatchLimit);
     }
   }
 
