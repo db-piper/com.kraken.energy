@@ -133,5 +133,8 @@
   },
   "1.2.6": {
     "en": "Resolve the problem where smart dispatches were still processed even if device status changed to be UNAVAILABLE between full data refresh (heavy) transactions"
+  },
+  "1.2.7": {
+    "en": "Corrections to date-time calculations; handle multiple smart energy devices in dispatch processing; improve counting of dispatch minutes to accurately set dispatch pricing"
   }
 }
