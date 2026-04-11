@@ -136,5 +136,8 @@
   },
   "1.2.7": {
     "en": "Corrections to date-time calculations; handle multiple smart energy devices in dispatch processing; improve counting of dispatch minutes to accurately set dispatch pricing"
+  },
+  "1.2.8": {
+    "en": "Resolve problems with upgrade path from 1.2.4 causing event failures and stopping devices from updating "
   }
 }
