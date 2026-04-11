@@ -238,7 +238,7 @@ module.exports = class krakenDriver extends Homey.Driver {
         // 4. Calculate the "Elastic" Delay
         const delay = nextRun.diff(now).milliseconds;
 
-        this.log(`krakenDriver.startEventPoller: Next heartbeat: ${nextRun.toFormat('HH:mm:ss')} (Wait: ${delay}ms)`);
+        this.log(`krakenDriver.startEventPoller: Next: ${nextRun.toJSDate().toISOString()} (Wait: ${delay / 1000}s)`);
         // Recursive timeout ensures drift is corrected every minute
         this._pollerTimeout = this.homey.setTimeout(async () => {
           try {
