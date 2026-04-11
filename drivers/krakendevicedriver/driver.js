@@ -176,7 +176,12 @@ module.exports = class krakenDriver extends Homey.Driver {
    */
   async sessionLoginHandler(account, apiKey) {
     this.log("krakenDriver.sessionLoginHandler: Testing Access To Account GQL");
-    const token = await this.eventer.getApiToken(apiKey);
+    //TODO:
+    const token = await this.eventer.getApiToken(apiKey);  //Get a kraken token from the api key - should be full validation
+    //Full validation - apikey can be used to generate a GQL token && GQL token can be used to query the account
+    //If both are true - persist apikey, account number, GQL token and Expiry Date.
+    //Currently the second part is attempted by setValidAccount, below. The problem is that getApiToken persists 
+    //settings assuming that it is doing the whole job.
     let success = false;
     if (token) {
       this.log(`krakenDriver.sessionLoginHandler: Token acquired calling app.setValidAccount`);

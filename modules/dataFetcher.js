@@ -88,6 +88,9 @@ module.exports = class dataFetcher {
   async getDataUsingGraphQL(queryString, apiKey, transformFunction = null) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getApiToken(apiKey);
+    // TODO: 
+    // THIS usage of getApiToken is get a current GQL token, renewing it necessary. 
+    // The API key and Account are assumed to be a valid matching pair.
     if (validToken) {
       try {
         let result = await this.runGraphQlQuery(queryString, validToken, transformFunction);
@@ -265,7 +268,6 @@ module.exports = class dataFetcher {
   async verifyAccountId(queryString, token) {
     this.homey.log(`dataFetcher.verifyAccountId: starting`);
     const result = await this.runGraphQlQuery(queryString, token);
-    //this.homey.log(`dataFetcher.verifyAccountId: result: ${JSON.stringify(result)}`);
     return result.data.account !== null;
   }
 

@@ -113,6 +113,8 @@ module.exports = class krakenApp extends Homey.App {
     settings.unset(EventTime);
     settings.unset(TokenSetting);
     settings.unset(TokenExpirySetting);
+    settings.unset(ApiKeySetting);
+    settings.unset(AccountIdSetting);
   }
 
   /**

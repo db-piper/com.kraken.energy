@@ -23,7 +23,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     this.defineCapability(this._capIds.DEVICE_NAME, { "title": { "en": "Device Name" } });
     this.defineCapability(this._capIds.DEVICE_STATUS, { "title": { "en": "Current Status" } });
     this.defineCapability(this._capIds.PLANNED_DISPATCHES, { "title": { "en": "Future Dispatches" } });			//Integer
-    this.defineCapability(this._capIds.PLANNED_ENERGY_TOTAL, { "title": { "en": "Total Energy" }, "decimals": 3 });			//Integer
+    this.defineCapability(this._capIds.PLANNED_ENERGY_TOTAL, { "title": { "en": "Remaining Energy" }, "decimals": 3 }, ['title', 'decimals']);			//Integer
     this.defineCapability(this._capIds.PLAN_END_TIME, { "title": { "en": "Plan End Time" } });			      //DD/mm HH:MM [dd/LL T]
     this.defineCapability(this._capIds.IN_DISPATCH, { "title": { "en": "Dispatching Now" } });						//Boolean
     this.defineCapability(this._capIds.CURRENT_DISPATCH_TYPE, { "title": { "en": "Dispatch Type" } });			//String
@@ -214,11 +214,11 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     }
     this.updateCapability(this._capIds.DEVICE_STATUS, deviceStatus);
     this.updateCapability(this._capIds.PLANNED_DISPATCHES, futureDispatchCount);
-    this.updateCapability(this._capIds.PLANNED_ENERGY_TOTAL, planEnergy);
+    this.updateCapability(this._capIds.PLANNED_ENERGY_TOTAL, -planEnergy);  //Show the energy as positive
     this.updateCapability(this._capIds.PLAN_END_TIME, planEndTime);
     this.updateCapability(this._capIds.IN_DISPATCH, inDispatch);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_TYPE, dispatchType);
-    this.updateCapability(this._capIds.CURRENT_DISPATCH_ENERGY, dispatchEnergy);
+    this.updateCapability(this._capIds.CURRENT_DISPATCH_ENERGY, -dispatchEnergy);  //Show the energy as positive
     this.updateCapability(this._capIds.ALARM_POWER, inDispatch);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_START, startTime);
     this.updateCapability(this._capIds.CURRENT_DISPATCH_END, endTime);

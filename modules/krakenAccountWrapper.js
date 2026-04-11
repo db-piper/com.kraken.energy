@@ -180,14 +180,14 @@ module.exports = class krakenAccountWrapper {
       periodChanges.day = event.day !== lastEvent.day;
 
       const importTariff = this._driver.homey.app.importTariff;
-      if (importTariff.present) {
+      if (importTariff && importTariff.present) {
         const importSlotEndMillis = Date.parse(importTariff.slotEnd) || 0;
         const importSlotEnd = DateTime.fromMillis(importSlotEndMillis, { zone: this.timeZone });
         periodChanges.tariffSlotImport = event >= importSlotEnd || periodChanges.day;
       }
 
       const exportTariff = this._driver.homey.app.exportTariff;
-      if (exportTariff.present) {
+      if (exportTariff && exportTariff.present) {
         const exportSlotEndMillis = Date.parse(exportTariff.slotEnd) || 0;
         const exportSlotEnd = DateTime.fromMillis(exportSlotEndMillis, { zone: this.timeZone });
         periodChanges.tariffSlotExport = event >= exportSlotEnd || periodChanges.day;
