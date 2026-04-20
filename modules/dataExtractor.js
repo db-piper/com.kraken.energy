@@ -31,13 +31,16 @@ function getLiveMeterId(accountData) {
   const account = accountData?.data?.account;
   const agreements = account?.electricityAgreements || [];
 
-  const meter = agreements[0]?.meterPoint?.meters?.[0];
+  const meter = agreements[0]?.meterPoint?.meters?.find(meter =>
+    meter.smartImportElectricityMeter?.deviceId ||
+    meter.smartExportElectricityMeter?.deviceId
+  );
 
   if (meter) {
     meterId = meter.smartImportElectricityMeter?.deviceId
       || meter.smartExportElectricityMeter?.deviceId;
   }
-
+  
   return meterId;
 }
 
