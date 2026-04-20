@@ -139,5 +139,8 @@
   },
   "1.2.8": {
     "en": "Resolve problems with upgrade path from 1.2.4 causing event failures and stopping devices from updating "
+  },
+  "1.2.9": {
+    "en": "Improve code that obtains the OHM device id from account data to resolve problems pairing devices on some accounts"
   }
 }
