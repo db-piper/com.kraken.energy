@@ -164,7 +164,7 @@ module.exports = class krakenAccountWrapper {
    * @param   {number} lastTimestamp  Last event time in milliseconds
    * @returns {object}                Flags indicating which boundaries were crossed
    */
-checkTimeBoundaries(nowMillis, lastTimestamp) {
+  checkTimeBoundaries(nowMillis, lastTimestamp) {
     const periodChanges = {
       chunk: true,
       day: true,
@@ -178,7 +178,7 @@ checkTimeBoundaries(nowMillis, lastTimestamp) {
       const lastEvent = dayjs(lastTimestamp).tz(this.timeZone);
 
       periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
-      
+
       // Use .date() for calendar day of month (1-31)
       periodChanges.day = event.date() !== lastEvent.date();
 
@@ -211,7 +211,7 @@ checkTimeBoundaries(nowMillis, lastTimestamp) {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
     const definitions = await this.getPairingData(this.accountId, (rawParingData) => {
-      return DataExtractor.extractDeviceDefinitions(rawParingData,  this.accountId, this.timeZone);
+      return DataExtractor.extractDeviceDefinitions(rawParingData, this.accountId, this.timeZone);
     })
 
     if (!definitions) {
@@ -223,12 +223,12 @@ checkTimeBoundaries(nowMillis, lastTimestamp) {
 
   /**
    * Return live meter data from the instantiated live meter device
-   * @param   {number}          nowMillis     Current event time in epoch milliseconds
+   * @param   {number}          atTimeMillis  Current event time in epoch milliseconds
    * @param   {string}          liveMeterId   The meter ID of the live meter device
    * @param   {string[]}        deviceIds     Array of device ids
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
-  async getLiveMeterData(nowMillis, liveMeterId, deviceIds) {
+  async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
     const preparedDevices = deviceIds.map(deviceId => ({
       label: this.hashDeviceId(deviceId),
       id: deviceId

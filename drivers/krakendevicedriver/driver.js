@@ -214,6 +214,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
         //const now = this.eventer.DateTime.now().setZone(this.wrapper.timeZone);
+        this.log(`krakenDriver.startEventPoller: Using timezone ${this.wrapper.timeZone}`)
         const now = dayjs().tz(this.wrapper.timeZone);
         const offset = this.eventer.targetSecond;
         const interval = this.targetIntervalMinutes;
@@ -228,7 +229,7 @@ module.exports = class krakenDriver extends Homey.Driver {
         // 3. THE "MISS THE BUS" GUARD
         // If we finished the last job at :16 and the target was :15, 
         // or if Math.ceil gave us the 'current' minute which is already gone.
-        if (now >= nextRun) {
+        if (now.valueOf() >= nextRun.valueOf()) {
           nextMinute += interval;
 
           if (nextMinute >= 60) {
@@ -239,7 +240,8 @@ module.exports = class krakenDriver extends Homey.Driver {
         }
 
         // 4. Calculate the "Elastic" Delay
-        const delay = nextRun.diff(now).milliseconds;
+        //const delay = nextRun.diff(now).milliseconds;
+        const delay = nextRun.diff(now);
 
         this.log(`krakenDriver.startEventPoller: Next: ${nextRun.toISOString()} (Wait: ${delay / 1000}s)`);
         // Recursive timeout ensures drift is corrected every minute

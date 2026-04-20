@@ -42,7 +42,7 @@ function getLiveMeterId(accountData) {
     meterId = meter.smartImportElectricityMeter?.deviceId
       || meter.smartExportElectricityMeter?.deviceId;
   }
-  
+
   return meterId;
 }
 
@@ -134,8 +134,9 @@ function getPrices(atTimeMillis, tariff, timeZone) {
       unitRate: tariff.unitRate,
       preVatStandingCharge: tariff.preVatStandingCharge,
       standingCharge: tariff.standingCharge,
-      nextSlotStart: startTime.plus({ days: 1 }).toISO(),
-      thisSlotStart: startTime.toISO(),
+      //nextSlotStart: startTime.plus({ days: 1 }).toISO(),
+      nextSlotStart: startTime.add(1, 'day').toISOString(),
+      thisSlotStart: startTime.toISOString(),
       isHalfHourly: false,
       quartile: null
     };
@@ -172,9 +173,9 @@ function minimumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
 
   if (Array.isArray(tariffDefinition.unitRates)) {
     //const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
-      //.plus({ days: 1 })
-      //.startOf('day')
-      //.toMillis();
+    //.plus({ days: 1 })
+    //.startOf('day')
+    //.toMillis();
 
     const boundaryMs = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').startOf('day').valueOf();
     const validRates = tariffDefinition.unitRates
@@ -207,9 +208,9 @@ function maximumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
 
   if (Array.isArray(tariffDefinition.unitRates)) {
     //const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
-      //.plus({ days: 1 })
-      //.startOf('day')
-      //.toMillis();
+    //.plus({ days: 1 })
+    //.startOf('day')
+    //.toMillis();
 
     const boundaryMs = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').startOf('day').valueOf();
     const validRates = tariffDefinition.unitRates
