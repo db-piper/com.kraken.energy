@@ -1,5 +1,7 @@
 'use strict';
-const { DateTime } = require('../bundles/luxon');
+//const { DateTime } = require('../bundles/luxon');
+const dayjs = require('dayjs');
+
 
 let TestData = null;
 try {
@@ -89,7 +91,8 @@ function getPrices(atTimeMillis, tariff, timeZone) {
     if (selectedRate) {
       let minPrice = Infinity;
       let maxPrice = -Infinity;
-      const tomorrowMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).plus({ days: 1 }).startOf('day').toMillis();
+      //const tomorrowMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).plus({ days: 1 }).startOf('day').toMillis();
+      const tomorrowMs = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').startOf('day').valueOf();
 
       // Optimized single-pass loop to find Min/Max for Today
       for (const rate of tariff.unitRates) {
@@ -123,7 +126,9 @@ function getPrices(atTimeMillis, tariff, timeZone) {
       };
     }
   } else if (tariff) {
-    const startTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).startOf('day');
+    //const startTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).startOf('day');
+    const startTime = dayjs(atTimeMillis).tz(timeZone).startOf('day');
+
     prices = {
       preVatUnitRate: tariff.preVatUnitRate,
       unitRate: tariff.unitRate,
@@ -147,7 +152,8 @@ function getPrices(atTimeMillis, tariff, timeZone) {
  * @returns {any}                                      Null if not half-hourly tariff; True if half-hourly and prices present; False otherwise
  */
 function hasTomorrowsPricesPresent(atTimeMillis, tariff, timeZone) {
-  const tomorrow = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).plus({ days: 1 }).toMillis();
+  //const tomorrow = DateTime.fromMillis(atTimeMillis, { zone: timeZone }).plus({ days: 1 }).toMillis();
+  const tomorrow = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').valueOf();
   const nextDayPrices = getPrices(tomorrow, tariff, timeZone);
   return (nextDayPrices === undefined) ? false : (nextDayPrices?.isHalfHourly === true) ? true : null;
 }
@@ -165,11 +171,12 @@ function minimumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
   if (!tariffDefinition) return undefined;
 
   if (Array.isArray(tariffDefinition.unitRates)) {
-    const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
-      .plus({ days: 1 })
-      .startOf('day')
-      .toMillis();
+    //const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
+      //.plus({ days: 1 })
+      //.startOf('day')
+      //.toMillis();
 
+    const boundaryMs = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').startOf('day').valueOf();
     const validRates = tariffDefinition.unitRates
       .filter(rate => Date.parse(rate.validFrom) < boundaryMs)
       .map(rate => rate.value);
@@ -199,11 +206,12 @@ function maximumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
   if (!tariffDefinition) return undefined;
 
   if (Array.isArray(tariffDefinition.unitRates)) {
-    const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
-      .plus({ days: 1 })
-      .startOf('day')
-      .toMillis();
+    //const boundaryMs = DateTime.fromMillis(atTimeMillis, { zone: timeZone })
+      //.plus({ days: 1 })
+      //.startOf('day')
+      //.toMillis();
 
+    const boundaryMs = dayjs(atTimeMillis).tz(timeZone).add(1, 'day').startOf('day').valueOf();
     const validRates = tariffDefinition.unitRates
       .filter(rate => Date.parse(rate.validFrom) < boundaryMs)
       .map(rate => rate.value);
@@ -303,13 +311,16 @@ module.exports = class dataExtractor {
       minimumPriceToday: minimumTariffPrice(atTimeMillis, tariffDefinition, timeZone),
       maximumPriceToday: maximumTariffPrice(atTimeMillis, tariffDefinition, timeZone),
       slotStart: `${pricesNow.thisSlotStart}`,
-      slotStartShort: DateTime.fromISO(pricesNow.thisSlotStart, { zone: timeZone }).toFormat('dd/LL T'),
+      //slotStartShort: DateTime.fromISO(pricesNow.thisSlotStart, { zone: timeZone }).toFormat('dd/LL T'),
+      slotStartShort: dayjs(pricesNow.thisSlotStart).tz(timeZone).format('DD/MM HH:mm'),
       slotEnd: slotEndStr,
-      slotEndShort: DateTime.fromMillis(slotEndMs, { zone: timeZone }).toFormat('dd/LL T'),
+      //slotEndShort: DateTime.fromMillis(slotEndMs, { zone: timeZone }).toFormat('dd/LL T'),
+      slotEndShort: dayjs(slotEndMs).tz(timeZone).format('DD/MM HH:mm'),
       slotQuartile: pricesNow.quartile,
       nextUnitPrice: pricesNext?.unitRate ?? null,
       nextSlotEnd: pricesNext ? `${pricesNext.nextSlotStart}` : null,
-      nextSlotEndShort: pricesNext ? DateTime.fromISO(pricesNext.nextSlotStart, { zone: timeZone }).toFormat('dd/LL T') : null,
+      //nextSlotEndShort: pricesNext ? DateTime.fromISO(pricesNext.nextSlotStart, { zone: timeZone }).toFormat('dd/LL T') : null,
+      nextSlotEndShort: pricesNext ? dayjs(pricesNext.nextSlotStart).tz(timeZone).format('DD/MM HH:mm') : null,
       nextSlotQuartile: pricesNext?.quartile ?? null
     };
   }
@@ -347,7 +358,8 @@ module.exports = class dataExtractor {
     const billingDate = account?.billingOptions?.currentBillingPeriodStartDate;
     let periodStartDay = 1;
     if (billingDate) {
-      periodStartDay = DateTime.fromISO(`${billingDate}`).setZone(timeZone).minus({ days: 1 }).day;
+      //periodStartDay = DateTime.fromISO(`${billingDate}`).setZone(timeZone).minus({ days: 1 }).day;
+      periodStartDay = dayjs(billingDate).tz(timeZone).subtract(1, 'day').date();
     }
 
     const definitions = [];
@@ -444,7 +456,7 @@ module.exports = class dataExtractor {
       // 2. Selection logic
       const source = (!TestData)
         ? rawPayload?.data?.[deviceKey]
-        : TestData.getMockDispatches(DateTime, timeZone)?.[deviceKey];
+        : TestData.getMockDispatches(timeZone)?.[deviceKey];
 
       if (Array.isArray(source)) {
         // 3. Transform and Map

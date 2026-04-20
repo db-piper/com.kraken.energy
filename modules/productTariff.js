@@ -2,7 +2,8 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const { DateTime } = require('../bundles/luxon');
+//const { DateTime } = require('../bundles/luxon');
+const dayjs = require('dayjs');
 
 module.exports = class productTariff extends krakenDevice {
 

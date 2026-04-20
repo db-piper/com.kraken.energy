@@ -2,7 +2,8 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
-const { DateTime } = require('../bundles/luxon');
+//const { DateTime } = require('../bundles/luxon');
+const dayjs = require('dayjs');
 
 module.exports = class smartEnergyDevice extends krakenDevice {
 
@@ -131,6 +132,25 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     return increment;
   }
 
+  /**
+   * Format the duration of the remaining part of a dispatch
+   * @param   {number}  diffMs    Duration in milliseconds
+   * @returns {string}            Formatted duration in hh:mm format
+   */
+  formatDuration(diffMs) {
+    const dur = dayjs.duration(diffMs);
+    const seconds = dur.seconds();
+    let minutes = dur.minutes();
+    let hours = dur.hours();
+    if (seconds >= 30) {
+      minutes += 1;
+    }
+    if (minutes >= 60) {
+      minutes = 0;
+      hours += 1;
+    }
+    return hours.toString().padStart(2, '0') + ':' + minutes.toString().padStart(2, '0');
+  }
 
   /**
    * Define the standard interface for processEvent.
@@ -151,7 +171,8 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
     //const lastEvent = this.homey.app.eventTime;
     const newDay = periodChanges.day;
-    const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
+    //const eventTime = DateTime.fromMillis(atTimeMillis, { zone: this.wrapper.timeZone });
+    const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone);
     const deviceId = this.getStoreValue("deviceId");
     const deviceStateData = deviceStates.find((device) => device.id === deviceId);
     const deviceStatus = deviceStateData ? deviceStateData.currentStateTitle : "Unknown";
@@ -184,29 +205,31 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     if (deviceDispatches.length > 0) {
       planEnergy = deviceDispatches.reduce((total, dispatch) => total + dispatch.energyAddedKwh, 0);
       const planEndTimeValue = Math.max(...deviceDispatches.map(dispatch => new Date(dispatch.end)));
-      planEndTime = DateTime.fromMillis(planEndTimeValue, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
+      //planEndTime = DateTime.fromMillis(planEndTimeValue, { zone: this.wrapper.timeZone }).toFormat("dd/LL T");
+      planEndTime = dayjs(planEndTimeValue).tz(this.wrapper.timeZone).format('DD/MM HH:mm');
     }
 
     if (inDispatch) {
-      const startDateTime = DateTime.fromISO(currentDispatches[0].start, { zone: this.wrapper.timeZone });
-      startTime = startDateTime.toFormat("dd/LL T");
-      const endDateTime = DateTime.fromISO(currentDispatches[0].end, { zone: this.wrapper.timeZone })
-      endTime = endDateTime.toFormat("dd/LL T");
+      //const startDateTime = DateTime.fromISO(currentDispatches[0].start, { zone: this.wrapper.timeZone });
+      const startDateTime = dayjs(currentDispatches[0].start).tz(this.wrapper.timeZone);
+      startTime = startDateTime.format('DD/MM HH:mm');
+      //const endDateTime = DateTime.fromISO(currentDispatches[0].end, { zone: this.wrapper.timeZone })
+      const endDateTime = dayjs(currentDispatches[0].end).tz(this.wrapper.timeZone)
+      endTime = endDateTime.format('DD/MM HH:mm');
       dispatchEnergy = currentDispatches[0].energyAddedKwh;
       countDownStart = endDateTime;
-      const diff = endDateTime.diff(eventTime, ['hours', 'minutes', 'seconds']);
-      const roundedDiff = diff.shiftTo('hours', 'minutes').plus({
-        minutes: diff.seconds >= 30 ? 1 : 0
-      });
-      duration = roundedDiff.toFormat("hh:mm");
+      //const diff = endDateTime.diff(eventTime, ['hours', 'minutes', 'seconds']);
+      duration = this.formatDuration(endDateTime.diff(eventTime));
       dispatchType = currentDispatches[0].type;
     }
 
     if (futureDispatchCount > 0) {
-      const nextStartDateTime = DateTime.fromISO(nextDispatch.start, { zone: this.wrapper.timeZone });
+      //const nextStartDateTime = DateTime.fromISO(nextDispatch.start, { zone: this.wrapper.timeZone });
+      const nextStartDateTime = dayjs(nextDispatch.start).tz(this.wrapper.timeZone);
       nextDispatchType = nextDispatch.type;
-      nextDispatchStart = nextStartDateTime.toFormat("dd/LL T");
-      countDown = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
+      nextDispatchStart = nextStartDateTime.format('DD/MM HH:mm');
+      //const diff = nextStartDateTime.diff(countDownStart, ['hours', 'minutes']).toFormat("hh:mm");
+      countDown = this.formatDuration(nextStartDateTime.diff(countDownStart));
     }
 
     if (!!devices) {

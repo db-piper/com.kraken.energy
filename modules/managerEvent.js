@@ -1,7 +1,8 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const { DateTime } = require('../bundles/luxon');
+//const { DateTime } = require('../bundles/luxon');
+const dayjs = require('dayjs');
 
 module.exports = class managerEvent {
   /**
@@ -18,7 +19,7 @@ module.exports = class managerEvent {
    * Execute a timed event.
    */
   async executeEvent() {
-    const atTimeMillis = DateTime.now().setZone(this.wrapper.timeZone).toMillis();
+    const atTimeMillis = dayjs().tz(this.wrapper.timeZone).valueOf();
     const lastEventTime = this.driver.homey.app.eventTime;
     const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis, lastEventTime);
     const fullEvent = this.driver.homey.app.fullEvent;
@@ -62,13 +63,13 @@ module.exports = class managerEvent {
     return this._driver;
   }
 
-  /**
-   * Return a reference to luxon DateTime
-   * @returns {DateTime} reference to luxon DateTime
-   */
-  get DateTime() {
-    return DateTime;
-  }
+  // /**
+  //  * Return a reference to luxon DateTime
+  //  * @returns {DateTime} reference to luxon DateTime
+  //  */
+  // get DateTime() {
+  //   return DateTime;
+  // }
 
   /**
    * Return an instance of krakenAccountWrapper

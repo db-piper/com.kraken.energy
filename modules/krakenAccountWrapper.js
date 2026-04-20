@@ -1,6 +1,7 @@
 'use strict';
 
-const { DateTime } = require('../bundles/luxon');
+//const { DateTime } = require('../bundles/luxon');
+const dayjs = require('dayjs');
 const dataFetcher = require('./dataFetcher');
 const DataExtractor = require('./dataExtractor');
 const Queries = require('./gQLQueries');
@@ -163,7 +164,7 @@ module.exports = class krakenAccountWrapper {
    * @param   {number} lastTimestamp  Last event time in milliseconds
    * @returns {object}                Flags indicating which boundaries were crossed
    */
-  checkTimeBoundaries(nowMillis, lastTimestamp) {
+checkTimeBoundaries(nowMillis, lastTimestamp) {
     const periodChanges = {
       chunk: true,
       day: true,
@@ -173,28 +174,30 @@ module.exports = class krakenAccountWrapper {
     };
 
     if (lastTimestamp) {
-      const event = DateTime.fromMillis(nowMillis, { zone: this.timeZone });
-      const lastEvent = DateTime.fromMillis(lastTimestamp, { zone: this.timeZone });
+      const event = dayjs(nowMillis).tz(this.timeZone);
+      const lastEvent = dayjs(lastTimestamp).tz(this.timeZone);
 
       periodChanges.chunk = Math.floor(nowMillis / 1800000) !== Math.floor(lastTimestamp / 1800000);
-      periodChanges.day = event.day !== lastEvent.day;
+      
+      // Use .date() for calendar day of month (1-31)
+      periodChanges.day = event.date() !== lastEvent.date();
 
       const importTariff = this._driver.homey.app.importTariff;
       if (importTariff && importTariff.present) {
         const importSlotEndMillis = Date.parse(importTariff.slotEnd) || 0;
-        const importSlotEnd = DateTime.fromMillis(importSlotEndMillis, { zone: this.timeZone });
-        periodChanges.tariffSlotImport = event >= importSlotEnd || periodChanges.day;
+        // Compare values directly (numbers) for better performance and reliability
+        periodChanges.tariffSlotImport = nowMillis >= importSlotEndMillis || periodChanges.day;
       }
 
       const exportTariff = this._driver.homey.app.exportTariff;
       if (exportTariff && exportTariff.present) {
         const exportSlotEndMillis = Date.parse(exportTariff.slotEnd) || 0;
-        const exportSlotEnd = DateTime.fromMillis(exportSlotEndMillis, { zone: this.timeZone });
-        periodChanges.tariffSlotExport = event >= exportSlotEnd || periodChanges.day;
+        periodChanges.tariffSlotExport = nowMillis >= exportSlotEndMillis || periodChanges.day;
       }
 
       const periodStartDay = this._driver.homey.app.periodStartDay;
-      periodChanges.invoicePeriod = periodChanges.day && event.day === periodStartDay;
+      // .date() returns 1-31 to match your periodStartDay setting
+      periodChanges.invoicePeriod = periodChanges.day && event.date() === periodStartDay;
     }
 
     return periodChanges;
@@ -220,12 +223,12 @@ module.exports = class krakenAccountWrapper {
 
   /**
    * Return live meter data from the instantiated live meter device
-   * @param   {number}          atTimeMillis  Datetime of the current event in milliseconds since the epoch
+   * @param   {number}          nowMillis     Current event time in epoch milliseconds
    * @param   {string}          liveMeterId   The meter ID of the live meter device
    * @param   {string[]}        deviceIds     Array of device ids
    * @returns {Promise<object>}               Reading JSON object representing the current data
    */
-  async getLiveMeterData(atTimeMillis, liveMeterId, deviceIds) {
+  async getLiveMeterData(nowMillis, liveMeterId, deviceIds) {
     const preparedDevices = deviceIds.map(deviceId => ({
       label: this.hashDeviceId(deviceId),
       id: deviceId

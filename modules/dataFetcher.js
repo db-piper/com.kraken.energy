@@ -1,6 +1,5 @@
 'use strict';
 const homey = require("homey");
-const { DateTime } = require('../bundles/luxon');
 const Queries = require('./gQLQueries');
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./constants');
 

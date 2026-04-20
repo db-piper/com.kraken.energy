@@ -6,6 +6,7 @@ const productTariff = require('../../modules/productTariff');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
 const managerEvent = require('../../modules/managerEvent');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
+const dayjs = require('dayjs');
 
 module.exports = class krakenDriver extends Homey.Driver {
 
@@ -212,15 +213,17 @@ module.exports = class krakenDriver extends Homey.Driver {
 
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
-        const now = this.eventer.DateTime.now().setZone(this.wrapper.timeZone);
+        //const now = this.eventer.DateTime.now().setZone(this.wrapper.timeZone);
+        const now = dayjs().tz(this.wrapper.timeZone);
         const offset = this.eventer.targetSecond;
         const interval = this.targetIntervalMinutes;
 
         // 1. Find the next "Grid Line" for the chosen interval
-        let nextMinute = Math.ceil(now.minute / interval) * interval;
+        let nextMinute = Math.ceil(now.minute() / interval) * interval;
 
         // 2. Set the target time
-        let nextRun = now.set({ minute: nextMinute, second: offset, millisecond: 0 });
+        //let nextRun = now.set({ minute: nextMinute, second: offset, millisecond: 0 });
+        let nextRun = now.set('minute', nextMinute).set('second', offset).set('millisecond', 0);
 
         // 3. THE "MISS THE BUS" GUARD
         // If we finished the last job at :16 and the target was :15, 
@@ -229,16 +232,16 @@ module.exports = class krakenDriver extends Homey.Driver {
           nextMinute += interval;
 
           if (nextMinute >= 60) {
-            nextRun = now.plus({ hours: 1 }).set({ minute: 0, second: offset, millisecond: 0 });
+            nextRun = now.add(1, 'hour').set('minute', 0).set('second', offset).set('millisecond', 0);
           } else {
-            nextRun = now.set({ minute: nextMinute, second: offset, millisecond: 0 });
+            nextRun = now.set('minute', nextMinute).set('second', offset).set('millisecond', 0);
           }
         }
 
         // 4. Calculate the "Elastic" Delay
         const delay = nextRun.diff(now).milliseconds;
 
-        this.log(`krakenDriver.startEventPoller: Next: ${nextRun.toJSDate().toISOString()} (Wait: ${delay / 1000}s)`);
+        this.log(`krakenDriver.startEventPoller: Next: ${nextRun.toISOString()} (Wait: ${delay / 1000}s)`);
         // Recursive timeout ensures drift is corrected every minute
         this._pollerTimeout = this.homey.setTimeout(async () => {
           try {
