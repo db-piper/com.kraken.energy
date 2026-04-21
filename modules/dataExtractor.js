@@ -1,6 +1,6 @@
 'use strict';
-const dayjs = require('dayjs');
-
+//const dayjs = require('dayjs');
+const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 let TestData = null;
 try {

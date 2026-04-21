@@ -1,5 +1,6 @@
 'use strict';
-const dayjs = require('dayjs');
+//const dayjs = require('dayjs');
+const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = {
   getMockDevices: () => [
@@ -55,50 +56,50 @@ module.exports = {
     return {
       d00000000_0009_4000_8020_00000007b8d2: [
         {
-          start: today.set({ hour: 11, minute: 36 }).toISOString(),
-          end: today.set({ hour: 11, minute: 50 }).toISOString(),
+          start: today.set('hour', 11).set('minute', 36).toISOString(),
+          end: today.set('hour', 11).set('minute', 50).toISOString(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 12, minute: 36 }).toISOString(),
-          end: today.set({ hour: 12, minute: 50 }).toISOString(),
+          start: today.set('hour', 12).set('minute', 36).toISOString(),
+          end: today.set('hour', 12).set('minute', 50).toISOString(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 13, minute: 36 }).toISOString(),
-          end: today.set({ hour: 13, minute: 50 }).toISOString(),
+          start: today.set('hour', 13).set('minute', 36).toISOString(),
+          end: today.set('hour', 13).set('minute', 50).toISOString(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 14, minute: 10 }).toISOString(),
-          end: today.set({ hour: 14, minute: 20 }).toISOString(),
+          start: today.set('hour', 14).set('minute', 10).toISOString(),
+          end: today.set('hour', 14).set('minute', 20).toISOString(),
           energyAddedKwh: -11.618,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 15, minute: 10 }).toISOString(),
-          end: today.set({ hour: 15, minute: 25 }).toISOString(),
+          start: today.set('hour', 15).set('minute', 10).toISOString(),
+          end: today.set('hour', 15).set('minute', 25).toISOString(),
           energyAddedKwh: -3.417,
           type: "BOOST"
         },
         {
-          start: today.set({ hour: 16, minute: 10 }).toISOString(),
-          end: today.set({ hour: 16, minute: 25 }).toISOString(),
+          start: today.set('hour', 16).set('minute', 10).toISOString(),
+          end: today.set('hour', 16).set('minute', 25).toISOString(),
           energyAddedKwh: -3.417,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 17, minute: 10 }).toISOString(),
-          end: today.set({ hour: 17, minute: 25 }).toISOString(),
+          start: today.set('hour', 17).set('minute', 10).toISOString(),
+          end: today.set('hour', 17).set('minute', 25).toISOString(),
           energyAddedKwh: -5.333,
           type: "SMART"
         },
         {
-          start: today.set({ hour: 17, minute: 30 }).toISOString(),
-          end: today.set({ hour: 17, minute: 50 }).toISOString(),
+          start: today.set('hour', 17).set('minute', 30).toISOString(),
+          end: today.set('hour', 17).set('minute', 50).toISOString(),
           energyAddedKwh: -5.333,
           type: "SMART"
         }

@@ -1,8 +1,0 @@
-# Ignore test data and any variant folder names
-/test_data*/
-
-# Ignore configuration files
-.git
-.gitignore
-.editorconfig
-.vscode/

@@ -1,6 +1,7 @@
 'use strict';
 
-const dayjs = require('dayjs');
+//const dayjs = require('dayjs');
+const dayjs = require('../bundles/dayjs-bundled/index.js');
 const dataFetcher = require('./dataFetcher');
 const DataExtractor = require('./dataExtractor');
 const Queries = require('./gQLQueries');

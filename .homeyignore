@@ -1,0 +1,12 @@
+# Ignore any folder starting with test_data_
+test_data_*
+
+# Ignore bundling tools and source
+node_modules/
+dayjs-config.js
+
+# Standard ignores
+.git/
+.vscode/
+.gitignore
+.editorconfig

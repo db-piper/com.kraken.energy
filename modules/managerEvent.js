@@ -1,7 +1,8 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-const dayjs = require('dayjs');
+//const dayjs = require('dayjs');
+const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class managerEvent {
   /**
