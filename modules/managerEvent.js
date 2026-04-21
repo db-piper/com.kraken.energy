@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-//const { DateTime } = require('../bundles/luxon');
 const dayjs = require('dayjs');
 
 module.exports = class managerEvent {
@@ -62,14 +61,6 @@ module.exports = class managerEvent {
   get driver() {
     return this._driver;
   }
-
-  // /**
-  //  * Return a reference to luxon DateTime
-  //  * @returns {DateTime} reference to luxon DateTime
-  //  */
-  // get DateTime() {
-  //   return DateTime;
-  // }
 
   /**
    * Return an instance of krakenAccountWrapper

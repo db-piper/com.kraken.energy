@@ -1,7 +1,6 @@
 'use strict';
 
 const Homey = require('homey');
-//const { DateTime } = require('../../bundles/luxon');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('../../modules/constants');

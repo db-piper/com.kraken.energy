@@ -2,7 +2,6 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
-//const { DateTime } = require('../bundles/luxon');
 const dayjs = require('dayjs');
 
 module.exports = class energyAccount extends krakenDevice {
@@ -187,7 +186,6 @@ module.exports = class energyAccount extends krakenDevice {
    */
   async updatePeriodDay(startDay) {
     this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
-    //const atTimeMillis = DateTime.now().setZone(this.wrapper.timeZone).toMillis();
     const atTimeMillis = dayjs().tz(this.wrapper.timeZone).valueOf();
     const periodDay = this.computePeriodDay(atTimeMillis, Number(startDay));
     const periodStartDate = this.computePeriodStartDate(atTimeMillis, startDay);
@@ -196,9 +194,7 @@ module.exports = class energyAccount extends krakenDevice {
 
     this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
     this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.format('YYYY-MM-DD'));
-    //this.updateCapability(this._capIds.PERIOD_START_DATETIME, periodStartDate.toISOString());
     this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextStartDate.format('YYYY-MM-DD'));
-    //this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextStartDate.toISOString());
     this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
 
     const updates = await this.updateCapabilities(false);
@@ -212,10 +208,8 @@ module.exports = class energyAccount extends krakenDevice {
    * @returns {integer}                     The 1-based index into the period of the date
    */
   computePeriodDay(atTimeMillis, periodStartDay) {
-    //const eventDateTime = DateTime.fromMillis(atTimeMillis, {zone: this.wrapper.timeZone}).startOf('day');
     const eventDateTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).startOf('day');
     const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
-    //const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days').days;
     const periodDay = 1 + eventDateTime.diff(periodStartDate, 'days');
     return periodDay;
   }
@@ -227,13 +221,8 @@ module.exports = class energyAccount extends krakenDevice {
    * @returns {dayjs}                     The start date of the period
    */
   computePeriodStartDate(atTimeMillis, periodStartDay) {
-    //const eventDateTime = DateTime.fromMillis(atTimeMillis, {zone: this.wrapper.timeZone}).startOf('day');
     const eventDateTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).startOf('day');
-    //const currentDay = eventDateTime.day();
     const currentDay = eventDateTime.date();
-    //const periodStartDate = (currentDay < periodStartDay) ?
-    //	eventDateTime.minus({ months: 1 }).set({ day: Number(periodStartDay) }) :
-    //	eventDateTime.set({ day: Number(periodStartDay) });
     const periodStartDate = (currentDay < periodStartDay) ?
       eventDateTime.subtract(1, 'month').date(Number(periodStartDay)) :
       eventDateTime.date(Number(periodStartDay));
@@ -249,9 +238,7 @@ module.exports = class energyAccount extends krakenDevice {
    */
   computePeriodLength(atTimeMillis, periodStartDay) {
     const periodStartDate = this.computePeriodStartDate(atTimeMillis, periodStartDay);
-    //const periodEndDate = periodStartDate.plus({ months: 1 });
     const periodEndDate = periodStartDate.add(1, 'month');
-    //const length = periodEndDate.diff(periodStartDate, 'days').days;
     const length = periodEndDate.diff(periodStartDate, 'days');
     this.homey.log(`energyAccount.computePeriodLength: periodLength ${length}`);
     return length;
@@ -279,12 +266,7 @@ module.exports = class energyAccount extends krakenDevice {
     const newChunk = periodChanges.chunk;
     const newDay = periodChanges.day;
     const timeZone = this.wrapper.timeZone;
-    //const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
     const eventDateTime = dayjs(atTimeMillis).tz(timeZone);
-    //let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
-    //let currentPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME) || undefined).tz(timeZone);
-    //let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
-    //let nextPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME) || undefined).tz(timeZone);
     const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
     const billingPeriodStartDay = this.getSettings().periodStartDay;
     let currentPeriodStartDate = this.computePeriodStartDate(atTimeMillis, billingPeriodStartDay);
