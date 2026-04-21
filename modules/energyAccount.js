@@ -34,8 +34,8 @@ module.exports = class energyAccount extends krakenDevice {
     this.defineCapability(this._capIds.PERIOD_DURATION, { "title": { "en": "Period Duration" } });
     this.defineCapability(this._capIds.ACCOUNT_BALANCE, { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
     this.defineCapability(this._capIds.PROJECTED_BILL, { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
-    this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units"]);
-    this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units"], hasExport);
+    this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units", "title"]);
+    this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units", "title"], hasExport);
     this.defineCapability(this._capIds.PERIOD_IMPORT_ENERGY, { "title": { "en": "Period Import" }, "decimals": 3 });
     this.defineCapability(this._capIds.PERIOD_EXPORT_ENERGY, { "title": { "en": "Period Export" }, "decimals": 3 }, [], hasExport);
     this.defineCapability(this._capIds.PERIOD_IMPORT_VALUE, { "title": { "en": "Import Cost" }, "decimals": 2, "units": { "en": "£" } });
@@ -52,8 +52,8 @@ module.exports = class energyAccount extends krakenDevice {
     this.defineCapability(this._capIds.CHUNK_EXPORT_VALUE, { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
     this.defineCapability(this._capIds.CURRENT_IMPORT_POWER, { "title": { "en": "Import Power" } });
     this.defineCapability(this._capIds.CURRENT_EXPORT_POWER, { "title": { "en": "Export Power" } }, [], hasExport);
-    this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
-    this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
+    //this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
+    //this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
     this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
     this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units']);
     this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units'], hasExport);
@@ -195,10 +195,10 @@ module.exports = class energyAccount extends krakenDevice {
     const periodLength = nextStartDate.diff(periodStartDate, 'days');
 
     this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
-    this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.format('DD/MM HH:mm'));
-    this.updateCapability(this._capIds.PERIOD_START_DATETIME, periodStartDate.toISOString());
-    this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextStartDate.format('DD/MM HH:mm'));
-    this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextStartDate.toISOString());
+    this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.format('YYYY-MM-DD'));
+    //this.updateCapability(this._capIds.PERIOD_START_DATETIME, periodStartDate.toISOString());
+    this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextStartDate.format('YYYY-MM-DD'));
+    //this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextStartDate.toISOString());
     this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
 
     const updates = await this.updateCapabilities(false);
@@ -237,6 +237,7 @@ module.exports = class energyAccount extends krakenDevice {
     const periodStartDate = (currentDay < periodStartDay) ?
       eventDateTime.subtract(1, 'month').date(Number(periodStartDay)) :
       eventDateTime.date(Number(periodStartDay));
+    this.log(`energyAccount.computePeriodStartDate: periodStartDate ${periodStartDate.toISOString()}`)
     return periodStartDate;
   }
 
@@ -281,11 +282,15 @@ module.exports = class energyAccount extends krakenDevice {
     //const eventDateTime = DateTime.fromMillis(atTimeMillis, { zone: timeZone });
     const eventDateTime = dayjs(atTimeMillis).tz(timeZone);
     //let currentPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME), { zone: timeZone });
-    let currentPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME) || undefined).tz(timeZone);
+    //let currentPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_START_DATETIME) || undefined).tz(timeZone);
     //let nextPeriodStartDate = DateTime.fromISO(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME), { zone: timeZone });
-    let nextPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME) || undefined).tz(timeZone);
+    //let nextPeriodStartDate = dayjs(this.readCapabilityValue(this._capIds.PERIOD_NEXT_START_DATETIME) || undefined).tz(timeZone);
     const firstTime = (null === this.readCapabilityValue(this._capIds.IMPORT_READING));
     const billingPeriodStartDay = this.getSettings().periodStartDay;
+    let currentPeriodStartDate = this.computePeriodStartDate(atTimeMillis, billingPeriodStartDay);
+    let nextPeriodStartDate = currentPeriodStartDate.add(1, 'month');
+    this.log(`energyAccount.processEvent: currentPeriodStartDate ${currentPeriodStartDate.toISOString()}, nextPeriodStartDate ${nextPeriodStartDate.toISOString()}`)
+
     const periodLength = this.computePeriodLength(atTimeMillis, billingPeriodStartDay);
 
     const currentDispatches = this.getAnyPricingDispatches(atTimeMillis, plannedDispatches)
@@ -350,10 +355,12 @@ module.exports = class energyAccount extends krakenDevice {
     observedDays += newDay ? 1 : 0;
 
     if (newPeriod) {
-      currentPeriodStartDate = nextPeriodStartDate;
-      nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
+      //currentPeriodStartDate = nextPeriodStartDate;
+      //nextPeriodStartDate = nextPeriodStartDate.plus({ months: 1 });
       observedDays = 0;
     }
+
+    this.log(`energyAccount.processEvent: currentPeriodStartDate ${currentPeriodStartDate.toISOString()}, nextPeriodStartDate ${nextPeriodStartDate.toISOString()}`)
 
     if (!firstTime) {
       if (exportTariffPresent) {
@@ -436,8 +443,8 @@ module.exports = class energyAccount extends krakenDevice {
     this.updateCapability(this._capIds.CURRENT_EXPORT_POWER, powerExport);
     this.updateCapability(this._capIds.CHUNK_IMPORT_VALUE, chunkUpdatedImportValue);
     this.updateCapability(this._capIds.CHUNK_EXPORT_VALUE, chunkUpdatedExportValue);
-    this.updateCapability(this._capIds.PERIOD_START_DATETIME, currentPeriodStartDate.toISOString());
-    this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextPeriodStartDate.toISOString());
+    //this.updateCapability(this._capIds.PERIOD_START_DATETIME, currentPeriodStartDate.toISOString());
+    //this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextPeriodStartDate.toISOString());
     this.updateCapability(this._capIds.OBSERVED_DAYS, observedDays);
     this.updateCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, importPrice);
     this.updateCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, exportPrice);
