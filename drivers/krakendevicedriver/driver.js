@@ -6,7 +6,6 @@ const productTariff = require('../../modules/productTariff');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
 const managerEvent = require('../../modules/managerEvent');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
-//const dayjs = require('dayjs');
 const dayjs = require('../../bundles/dayjs-bundled/index.js');
 
 module.exports = class krakenDriver extends Homey.Driver {

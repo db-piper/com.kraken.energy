@@ -2,7 +2,6 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("./krakenAccountWrapper");
-//const dayjs = require('dayjs');
 const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class productTariff extends krakenDevice {

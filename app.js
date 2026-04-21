@@ -1,15 +1,7 @@
 'use strict';
 const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
 const Homey = require('homey');
-// const dayjs = require('dayjs');
-// const utc = require('dayjs/plugin/utc');
-// const timezone = require('dayjs/plugin/timezone');
-// const duration = require('dayjs/plugin/duration');
-
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-// dayjs.extend(duration);
-const dayjs = require('./bundles/dayjs-bundled/index.js');
+//const dayjs = require('./bundles/dayjs-bundled/index.js');
 
 module.exports = class krakenApp extends Homey.App {
 

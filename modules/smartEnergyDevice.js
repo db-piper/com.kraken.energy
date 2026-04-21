@@ -2,7 +2,6 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
-//const dayjs = require('dayjs');
 const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class smartEnergyDevice extends krakenDevice {
