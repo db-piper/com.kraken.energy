@@ -7,12 +7,15 @@ const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class energyAccount extends krakenDevice {
 
+  #dispatchMinutes = 0;
+
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('energyAccount Device:onInit - energyAccount Initialization Started');
     await super.onInit();
+    this.#dispatchMinutes = 0;
 
     if (this.hasCapability("measure_monetary.chunk_accumulated_value")) {
       this.log(`energyAccount Device:onInit - Old capability detected, reset all capabilities`);
@@ -52,8 +55,6 @@ module.exports = class energyAccount extends krakenDevice {
     this.defineCapability(this._capIds.CHUNK_EXPORT_VALUE, { "title": { "en": "Chunk Export Value" }, "decimals": 2, "units": { "en": "£" } }, [], hasExport);
     this.defineCapability(this._capIds.CURRENT_IMPORT_POWER, { "title": { "en": "Import Power" } });
     this.defineCapability(this._capIds.CURRENT_EXPORT_POWER, { "title": { "en": "Export Power" } }, [], hasExport);
-    //this.defineCapability(this._capIds.PERIOD_START_DATETIME, { "title": { "en": "Full Start Date" }, "uiComponent": null });
-    //this.defineCapability(this._capIds.PERIOD_NEXT_START_DATETIME, { "title": { "en": "Full Next Start" }, "uiComponent": null });
     this.defineCapability(this._capIds.OBSERVED_DAYS, { "title": { "en": "Observed Days" }, "uiComponent": null, "decimals": 0 });
     this.defineCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, { "title": { "en": "Prior Import Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units']);
     this.defineCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, { "title": { "en": "Prior Export Price Paid" }, "uiComponent": null, "decimals": 4, "units": { "en": "£" } }, ['decimals', 'title', 'uiComponent', 'units'], hasExport);
@@ -149,27 +150,11 @@ module.exports = class energyAccount extends krakenDevice {
   }
 
   /**
-   * Set the incremental number of minutes dispatched since the last event
-   * @param {number}    minutes The incremental number of minutes dispatched since the last event
-   */
-  set dispatchMinutesIncrement(minutes) {
-    this._deltaDispatchMinutes = minutes;
-  }
-
-  /**
-   * Get the incremental number of minutes dispatched since the last event
-   * @returns {number}  The incremental number of minutes dispatched since the last event
-   */
-  get dispatchMinutesIncrement() {
-    return this._deltaDispatchMinutes ?? 0;
-  }
-
-  /**
    * Set the total number of minutes dispatched today
    * @param {number}  minutes The total number of minutes dispatched today
    */
   set dispatchMinutes(minutes) {
-    this._dispatchMinutes = minutes;
+    this.#dispatchMinutes = minutes;
   }
 
   /**
@@ -177,7 +162,7 @@ module.exports = class energyAccount extends krakenDevice {
    * @returns {number}  The total number of minutes dispatched today
    */
   get dispatchMinutes() {
-    return this._dispatchMinutes ?? 0;
+    return this.#dispatchMinutes ?? 0;
   }
 
   /**
@@ -263,6 +248,7 @@ module.exports = class energyAccount extends krakenDevice {
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
     const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    const lastEventTime = this.driver.homey.app.eventTime;
     const newPeriod = periodChanges.invoicePeriod;
     const newChunk = periodChanges.chunk;
     const newDay = periodChanges.day;
@@ -331,7 +317,10 @@ module.exports = class energyAccount extends krakenDevice {
     let importPrice = 0;
     let exportPrice = 0;
 
-    this.dispatchMinutes = newDay ? 0 : this.dispatchMinutes + this.dispatchMinutesIncrement;
+    //TODO: Unify logic in productTarrif and energyAccount for handling dispatch pricing
+    const smartDispatches = Object.values(plannedDispatches).flat().filter(dispatch => dispatch.type === 'SMART');
+    const dispatchMinutesIncrement = this.wrapper.countDispatchMinutes(smartDispatches, lastEventTime, atTimeMillis);
+    this.dispatchMinutes = dispatchMinutesIncrement + (newDay ? 0 : this.dispatchMinutes);
     const dispatchPricing = inExtendedDispatch && (this.dispatchMinutes < this.getSettings().dispatchMinutesLimit);
 
     let observedDays = firstTime ? 0 : this.readCapabilityValue(this._capIds.OBSERVED_DAYS);
@@ -426,8 +415,6 @@ module.exports = class energyAccount extends krakenDevice {
     this.updateCapability(this._capIds.CURRENT_EXPORT_POWER, powerExport);
     this.updateCapability(this._capIds.CHUNK_IMPORT_VALUE, chunkUpdatedImportValue);
     this.updateCapability(this._capIds.CHUNK_EXPORT_VALUE, chunkUpdatedExportValue);
-    //this.updateCapability(this._capIds.PERIOD_START_DATETIME, currentPeriodStartDate.toISOString());
-    //this.updateCapability(this._capIds.PERIOD_NEXT_START_DATETIME, nextPeriodStartDate.toISOString());
     this.updateCapability(this._capIds.OBSERVED_DAYS, observedDays);
     this.updateCapability(this._capIds.PRIOR_IMPORT_PRICE_PAID, importPrice);
     this.updateCapability(this._capIds.PRIOR_EXPORT_PRICE_PAID, exportPrice);

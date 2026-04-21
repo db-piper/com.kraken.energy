@@ -7,16 +7,12 @@ const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class productTariff extends krakenDevice {
 
-  #deltaMinutes = 0;
-
   /**
    * onInit is called when the device is initialized.
    */
   async onInit() {
     this.log('productTariff Device:onInit - productTariff Initialization Started');
     await super.onInit();
-
-    this.#deltaMinutes = 0;
 
     if (this.getCapabilities().length === 0) {
       await this.setSettings({
@@ -165,17 +161,6 @@ module.exports = class productTariff extends krakenDevice {
   }
 
   /**
-   * Receive announcement of dispatch minutes increment
-   * @param {number}  minutes The total number of minutes dispatched today
-   */
-  set dispatchMinutesIncrement(minutes) {
-    if (!this.isExport) {
-      this.#deltaMinutes += minutes;
-      this.log(`productTariff.dispatchMinutesIncrement: Adding ${minutes} dispatch minutes giving ${this.#deltaMinutes}.`);
-    }
-  }
-
-  /**
    * Process an event on a Product Tariff device
    * @param     {number}        atTimeMillis      Event time in milliseconds since the epoch
    * @param     {object}        periodChanges     Indicates periods have changed (chunk, tariffslot, day and period)
@@ -192,7 +177,7 @@ module.exports = class productTariff extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
-    //const eventInterval = this.homey.app.getEventIntervalMinutes(atTimeMillis);
+    const lastEventTime = this.driver.homey.app.eventTime;
     const isDispatchable = deviceStates.length > 0 && !this.isExport;
     const direction = this.isExport;
     const tariff = direction ? exportTariff : importTariff;
@@ -218,8 +203,10 @@ module.exports = class productTariff extends krakenDevice {
     const currentPriceDispatches = this.wrapper.getPricingDispatches(atTimeMillis, Object.values(plannedDispatches).flat());
     const inDispatch = isDispatchable && currentPriceDispatches.length > 0;
     const discountDispatch = inDispatch && currentPriceDispatches.every(dispatch => dispatch.type !== "BOOST");
-    const totalDispatchedMinutes = (!periodChanges.day ? priorDispatchedMinutes : 0) + this.#deltaMinutes;
-    this.#deltaMinutes = 0;
+    //TODO: Unify logic in productTarrif and energyAccount for handling dispatch pricing
+    const smartDispatches = Object.values(plannedDispatches).flat().filter(dispatch => dispatch.type === "SMART");
+    const deltaMinutes = this.wrapper.countDispatchMinutes(smartDispatches, lastEventTime, atTimeMillis);
+    const totalDispatchedMinutes = deltaMinutes + (periodChanges.day ? 0 : priorDispatchedMinutes);
     const percentDispatchLimit = 100 * totalDispatchedMinutes / this.getSettings().dispatchMinutesLimit;
     //Price is set high if we have run out of dispatch minutes
     const dispatchPrice = (discountDispatch && percentDispatchLimit < 100) ? minPrice : maxPrice;

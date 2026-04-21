@@ -107,32 +107,6 @@ module.exports = class smartEnergyDevice extends krakenDevice {
   }
 
   /**
-   * Calculate the incremental number of dispatch minutes to be announced
-   * @param   {number}    atTimeMillis        Current event time in epoch milliseconds
-   * @param   {object[]}  dispatches          Array of planned dispatches for this device
-   * @returns {number}                        Number of minutes to add to the dispatch minutes
-   */
-  calculateDispatchIncrement(atTimeMillis, dispatches) {
-    const currentDispatch = this.wrapper.getPlannedDispatches(atTimeMillis, dispatches);
-    const currentMinute = Math.floor(atTimeMillis / 60000);
-    let increment = 0;
-    const cache = this.getActiveDispatchCache(currentDispatch);
-    if (cache) {
-      const dispatchTime = Math.min(currentMinute, cache.end);
-      const dispatchElapsed = Math.max(0, dispatchTime - cache.start);
-      increment = Math.max(0, dispatchElapsed - cache.announced);
-      if (increment > 0) {
-        cache.announced += increment;
-        this.setStoreValue('active_dispatch_cache', cache)
-      }
-      if (currentDispatch.length === 0 && currentMinute >= cache.end) {
-        this.setStoreValue('active_dispatch_cache', null);
-      }
-    }
-    return increment;
-  }
-
-  /**
    * Format the duration of the remaining part of a dispatch
    * @param   {number}  diffMs    Duration in milliseconds
    * @returns {string}            Formatted duration in hh:mm format
@@ -169,6 +143,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
 
     let updates = super.processEvent(atTimeMillis, periodChanges, liveMeterReading, plannedDispatches, account, importTariff, exportTariff, devices, deviceStates);
 
+    const lastEventTime = this.driver.homey.app.eventTime;
     const newDay = periodChanges.day;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone);
     const deviceId = this.getStoreValue("deviceId");
@@ -194,11 +169,9 @@ module.exports = class smartEnergyDevice extends krakenDevice {
     let planEndTime = null;
     let nextDispatchType = null;
 
-    const announceCount = this.calculateDispatchIncrement(atTimeMillis, deviceDispatches);
-    const updatedDispatchMinutes = announceCount + (newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES));
-    if (announceCount > 0) {
-      this.driver.accounceDispatchMinuteIncrement(announceCount);
-    }
+    const smartDispatches = deviceDispatches.filter(dispatch => dispatch.type === 'SMART');
+    const minutesIncrement = this.wrapper.countDispatchMinutes(smartDispatches, lastEventTime, atTimeMillis);
+    const updatedDispatchMinutes = minutesIncrement + (newDay ? 0 : this.readCapabilityValue(this._capIds.DISPATCH_MINUTES));
 
     if (deviceDispatches.length > 0) {
       planEnergy = deviceDispatches.reduce((total, dispatch) => total + dispatch.energyAddedKwh, 0);

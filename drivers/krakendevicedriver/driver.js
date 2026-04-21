@@ -278,28 +278,4 @@ module.exports = class krakenDriver extends Homey.Driver {
     }
   }
 
-  /**
-   * Announce to all devices that the dispatch minute count has changed
-   * @param {number}  minutes The total number of minutes dispatched today
-   */
-  announceDispatchMinuteTotal(minutes) {
-    this.log(`krakenDriver.announceDispatchMinuteTotal: Announcing: ${minutes}`);
-    const devices = this.getDevices();
-    devices.forEach(device => {
-      device.dispatchMinutes = minutes;
-    });
-  }
-
-  /**
-   * Account to all devices that there is an increment to the dispatch minute count
-   * @param {number}  minutes The incremental number of minutes
-   */
-  accounceDispatchMinuteIncrement(minutes) {
-    this.log(`krakenDriver.announceDispatchMinuteIncrement: Announcing: ${minutes}`);
-    const devices = this.getDevices();
-    devices.forEach(device => {
-      device.dispatchMinutesIncrement = minutes;
-    });
-  }
-
 };

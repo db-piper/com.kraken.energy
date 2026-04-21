@@ -279,6 +279,28 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+   * Calculate the number of dispatch minutes that have occurred between two events
+   * @param   {Object[]}    dispatches      - Array of dispatches
+   * @param   {number}      lastEvent       - Last run timestamp (ms)
+   * @param   {number}      currentEvent    - Current run timestamp (ms)
+   * @returns {number}                      - Number of dispatch minutes that have occurred between two time points
+   */
+  countDispatchMinutes(dispatches, lastEvent, currentEvent) {
+    const winStart = Math.floor(lastEvent / 60000);
+    const winEnd = Math.floor(currentEvent / 60000);
+
+    return dispatches.reduce((total, dispatch) => {
+      const dStart = Math.floor(Date.parse(dispatch.start) / 60000);
+      const dEnd = Math.floor(Date.parse(dispatch.end) / 60000);
+
+      const overlapStart = Math.max(dStart, winStart);
+      const overlapEnd = Math.min(dEnd, winEnd);
+
+      return total + Math.max(0, overlapEnd - overlapStart);
+    }, 0);
+  }
+
+  /**
    * Core Engine: Filters dispatches based on a provided window-transformation strategy
    */
   getDispatchesInWindow(atTimeMillis, plannedDispatches, windowStrategy) {

@@ -163,20 +163,6 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
   /**
-   * Super class abstract implementation
-   * @param {number}  minutes The total number of minutes dispatched today
-   */
-  set dispatchMinutes(minutes) {
-  }
-
-  /**
-   * Super class abstract implementation
-   * @param {number}  minutes The total number of minutes dispatched today
-   */
-  set dispatchMinutesIncrement(minutes) {
-  }
-
-  /**
    * Get the current extended dispatches for a given time from the array of planned dispatches for all devices
    * @param 	{number}    atTimeMillis 			  String representation of the event time
    * @param 	{object[]}  plannedDispatches 	JSON object containing planned dispatches for all devices
