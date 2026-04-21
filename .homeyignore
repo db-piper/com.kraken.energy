@@ -1,5 +1,5 @@
 # Ignore any folder starting with test_data_
-test_data_*
+test_data?*
 
 # Ignore bundling tools and source
 node_modules/
