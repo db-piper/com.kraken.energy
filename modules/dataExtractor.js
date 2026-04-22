@@ -4,7 +4,7 @@ const dayjs = require('../bundles/dayjs-bundled/index.js');
 let TestData = null;
 try {
   TestData = require('../test_data');
-} catch (err) {
+} catch {
   // TestData remains null in production
 }
 
@@ -428,7 +428,7 @@ module.exports = class dataExtractor {
    */
   static extractAllDeviceDispatches(rawPayload, deviceStates, timeZone) {
     const dispatchMap = {};
-    for (const { id, currentState, currentStateTitle } of deviceStates) {
+    for (const { id, currentState } of deviceStates) {
       // 1. Filter Check: Is this device in a state allowed to receive dispatch minutes?
       if (!DEVICE_DISPATCHABLE_STATUSES.includes(currentState)) {
         continue;

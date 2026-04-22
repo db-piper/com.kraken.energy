@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
-const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
 const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class energyAccount extends krakenDevice {
@@ -290,15 +289,11 @@ module.exports = class energyAccount extends krakenDevice {
 
     const periodDay = this.computePeriodDay(atTimeMillis, billingPeriodStartDay);
 
-    let deltaExport = 0;
-    let deltaExportValue = 0;
     let periodUpdatedExport = 0;
     let periodUpdatedExportValue = 0;
     let dayUpdatedExport = 0;
     let dayUpdatedExportValue = 0;
     let dayExportStandingCharge = 0;
-    let deltaImport = 0;
-    let deltaImportValue = 0;
     let periodUpdatedImport = 0;
     let periodUpdatedImportValue = 0;
     let dayUpdatedImport = 0;
@@ -334,9 +329,9 @@ module.exports = class energyAccount extends krakenDevice {
     if (!firstTime) {
       if (exportTariffPresent) {
         exportPrice = .01 * exportTariff.unitRate;																									//pounds
-        deltaExport = liveMeterReading.export - currentExport;																			//watt hours
+        let deltaExport = liveMeterReading.export - currentExport;																			//watt hours
         //The prior price received is used to calculate the value of the energy exported in the previous tick
-        deltaExportValue = (deltaExport / 1000) * priorExportPricePaid;															//pounds
+        let deltaExportValue = (deltaExport / 1000) * priorExportPricePaid;															//pounds
         periodUpdatedExport = deltaExport + (newPeriod ? 0 : periodCurrentExport);									//watt hours
         periodUpdatedExportValue = deltaExportValue + (newPeriod ? 0 : periodCurrentExportValue);		//pounds
         dayUpdatedExport = deltaExport + (newDay ? 0 : dayCurrentExport);														//watt hours
@@ -350,9 +345,9 @@ module.exports = class energyAccount extends krakenDevice {
       if (importTariffPresent) {
         //TODO: Add boost pricing here.
         importPrice = .01 * (dispatchPricing ? minPrice : importTariff.unitRate);										//pounds	
-        deltaImport = liveMeterReading.consumption - currentImport;																	//watt hours
+        let deltaImport = liveMeterReading.consumption - currentImport;																	//watt hours
         //The prior price paid is used to calculate the value of the energy consumed in the previous tick
-        deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
+        let deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
         periodUpdatedImport = deltaImport + (newPeriod ? 0 : periodCurrentImport);									//watt hours
         periodUpdatedImportValue = deltaImportValue + (newPeriod ? 0 : periodCurrentImportValue);		//pounds
         dayUpdatedImport = deltaImport + (newDay ? 0 : dayCurrentImport);														//watt hours

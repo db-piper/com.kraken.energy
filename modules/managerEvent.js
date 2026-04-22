@@ -123,7 +123,7 @@ module.exports = class managerEvent {
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 
-    let [{ reading, dispatches, deviceStates }, ...homeyDeviceReadyResults] = await Promise.all([
+    let [{ reading, dispatches, deviceStates }] = await Promise.all([
       meterFetchPromise,
       ...homeyDeviceReadyPromises
     ]);
@@ -131,10 +131,6 @@ module.exports = class managerEvent {
     await Promise.all(availableDevicePromises);
 
     if ((reading !== undefined) && (dispatches !== undefined)) {
-      const deviceOrder = ['smartDevice', 'octopusTariff', 'octopusAccount'];
-      //const isNewDay = this.isNewDay(atTimeMillis);
-      //const eventInterval = this.driver.homey.app.getEventIntervalMinutes(atTimeMillis);
-
       for (const device of this.driver.getDevices()) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
@@ -210,7 +206,7 @@ module.exports = class managerEvent {
     let log;
     try {
       log = await this.driver.homey.insights.getLog(id);
-    } catch (e) {
+    } catch {
       log = await this.driver.homey.insights.createLog(id, {
         title: { en: title },
         type: 'number',

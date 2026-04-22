@@ -1,7 +1,7 @@
 'use strict';
 const homey = require("homey");
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting } = require('./constants');
 
 module.exports = class dataFetcher {
   /**
@@ -142,7 +142,6 @@ module.exports = class dataFetcher {
 
       rawjson = await response.json();
       let result;
-      //const result = JSON.parse(JSON.stringify(rawjson));
 
       if (typeof transformFunction === 'function') {
         // Strategy 2: The Airlock (Efficient)
@@ -198,17 +197,10 @@ module.exports = class dataFetcher {
    * @returns {object}                                              JSON result of Graph QL query
    */
   buildDispatchQuery(accountId, meterId, preparedDevices, atTimeMillis) {
-    // 1. Logic-Heavy calculation (State/Context)
     const minute = 60000;
     const endMs = Math.floor(atTimeMillis / minute) * minute;
     const startMs = endMs - minute;
-    // // 2. Prepare the device array for the factory
-    // const preparedDevices = deviceIds.map(deviceId => ({
-    //   label: this.hashDeviceId(deviceId),
-    //   id: deviceId
-    // }));
 
-    // 3. Call the Stateless Factory
     return Queries.getHighFrequencyData(
       accountId,
       meterId,

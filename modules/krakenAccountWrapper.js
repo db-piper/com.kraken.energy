@@ -4,12 +4,12 @@ const dayjs = require('../bundles/dayjs-bundled/index.js');
 const dataFetcher = require('./dataFetcher');
 const DataExtractor = require('./dataExtractor');
 const Queries = require('./gQLQueries');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./constants');
+const { ApiKeySetting, AccountIdSetting } = require('./constants');
 
 let TestData = null;
 try {
   TestData = require('../test_data');
-} catch (err) {
+} catch {
   // TestData remains null in production
 }
 
@@ -345,7 +345,6 @@ module.exports = class krakenAccountWrapper {
    * @returns {string}                Hashed deviceId usable as a GQL query label
    */
   hashDeviceId(deviceId) {
-    //return `d${deviceId.replaceAll("-", "_")}`;
     return DataExtractor.hashDeviceId(deviceId);
   }
 

@@ -1,7 +1,6 @@
 'use strict';
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
-const krakenAccountWrapper = require("../modules/krakenAccountWrapper");
 const dayjs = require('../bundles/dayjs-bundled/index.js');
 
 module.exports = class smartEnergyDevice extends krakenDevice {
@@ -74,9 +73,7 @@ module.exports = class smartEnergyDevice extends krakenDevice {
    */
   async setDeviceAvailability(deviceIds) {
     let available = super.setDeviceAvailability(deviceIds);
-    //this.log(`smartEnergyDevice:setDeviceAvailability - deviceIds: ${JSON.stringify(deviceIds)}`);
     const deviceId = this.getStoreValue("deviceId");
-    //const deviceData = deviceIds?.[this.wrapper.hashDeviceId(deviceId)];
     if (!deviceIds.includes(deviceId)) {
       await this.setUnavailable("bad device; please delete.");
       available = false;

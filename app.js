@@ -1,7 +1,6 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay } = require('./modules/constants');
 const Homey = require('homey');
-//const dayjs = require('./bundles/dayjs-bundled/index.js');
 
 module.exports = class krakenApp extends Homey.App {
 
@@ -205,6 +204,8 @@ module.exports = class krakenApp extends Homey.App {
       const scavengedDay = devices[0].getSetting(PeriodStartDay);
       this.homey.settings.set(PeriodStartDay, scavengedDay);
       return scavengedDay;
+    } else {
+      return 1;
     }
   }
 
@@ -214,14 +215,6 @@ module.exports = class krakenApp extends Homey.App {
    */
   set fullEvent(onOff) {
     this._fullEvent = onOff;
-  }
-
-  /**
-   * Get the full event flag
-   * @returns {boolean}  True if the full event should be executed, false otherwise
-   */
-  get fullEvent() {
-    return this._fullEvent;
   }
 
   /**

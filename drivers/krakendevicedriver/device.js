@@ -3,7 +3,7 @@
 const Homey = require('homey');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
 const Capabilities = require('../../modules/capabilities');
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, DeviceSettingNames } = require('../../modules/constants');
+const { DeviceSettingNames } = require('../../modules/constants');
 
 module.exports = class krakenDevice extends Homey.Device {
 
@@ -192,9 +192,7 @@ module.exports = class krakenDevice extends Homey.Device {
   updateCapability(capabilityId, newValue) {
     const capabilityName = this._capabilityIds[capabilityId];
     if (this.hasCapability(capabilityName)) {
-      if (!this.hasOwnProperty("_updatedCapabilities")) {
-        this._updatedCapabilities = {};
-      }
+      this._updatedCapabilities ??= {};
       const safeValue = (typeof newValue === 'object' && newValue !== null)
         ? JSON.parse(JSON.stringify(newValue))
         : newValue;
@@ -296,9 +294,7 @@ module.exports = class krakenDevice extends Homey.Device {
    * @param {boolean}		required		Indicates if the capability is required
    */
   defineCapability(id, overrides = {}, force = [], required = true) {
-    if (!this.hasOwnProperty("_requiredCapabilities")) {
-      this._requiredCapabilities = {};
-    }
+    this._requiredCapabilities ??= {};
     if (required) {
       const name = this.getCapabilityName(id);
       this._requiredCapabilities[id] = { name: name, overrides: overrides, force: force };
