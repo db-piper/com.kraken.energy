@@ -142,5 +142,8 @@
   },
   "1.2.9": {
     "en": "Improve code that obtains the OHM device id from account data to resolve problems pairing devices on some accounts"
+  },
+  "1.2.10": {
+    "en": "Smaller date-time handling library adopted; Simplify period start date management in Energy Account device; Improve handling of dispatch minute counting across all devices"
   }
 }
