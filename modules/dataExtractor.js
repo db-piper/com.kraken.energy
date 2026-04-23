@@ -46,10 +46,13 @@ function getLiveMeterId(accountData) {
 
 /**
  * Return tariff details for the specified direction for the account overview
- * @param   {boolean} isExport    true - export tariff; false - import tariff
- * @returns {JSON | undefined}    JSON structure of the tariff details or undefined
+ * @param   {number}              atTimeMillis  The time in milliseconds to get the prices for
+ * @param   {boolean}             isExport      true - export tariff; false - import tariff
+ * @param   {object}              accountData   Account data from Kraken
+ * @param   {string}              timeZone      The IANA timezone string to use for date calculations
+ * @returns {object | undefined}                Tariff details or undefined
  */
-function getTariffDirection(isExport, accountData) {
+function getTariffDirection(atTimeMillis, isExport, accountData, timeZone) {
   let tariff = undefined;
   const agreementsList = accountData?.data?.account?.electricityAgreements;
 
@@ -66,7 +69,101 @@ function getTariffDirection(isExport, accountData) {
     }
   }
 
+  if (tariff && tariff.__typename === 'DayNightTariff') {
+    tariff.unitRates = getDayNightTariffUnitRates(atTimeMillis, tariff, timeZone);
+  } else if (tariff && tariff.__typename === 'ThreeRateTariff') {
+    tariff.unitRates = getThreeRateTariffUnitRates(atTimeMillis, tariff, timeZone);
+  }
+
   return tariff;
+}
+
+/**
+ * Generates a list of unit rates for a Day/Night tariff.
+ * @param {number} atTimeMillis  A time within the day for which unit rates are required
+ * @param {object} tariff        DayNightTariff data structure from Kraken
+ * @param {string} timeZone      The IANA timezone string to use for date calculations
+ * @returns {Array<Object>}      Array of unit rates, each with validFrom, validTo, value, and preVatValue
+ */
+function getDayNightTariffUnitRates(atTimeMillis, tariff, timeZone) {
+  const todayLocal = dayjs(atTimeMillis).tz(timeZone).hour(0).minute(0).second(0).millisecond(0);
+  const todayZulu = dayjs(atTimeMillis).utc().hour(0).minute(0).second(0).millisecond(0);
+  return [
+    {
+      validFrom: todayLocal.hour(0).toISOString(),
+      validTo: todayZulu.hour(0).minute(30).toISOString(),
+      value: tariff.dayRate,
+      preVatValue: tariff.preVatDayRate
+    },
+    {
+      validFrom: todayZulu.hour(0).minute(30).toISOString(),
+      validTo: todayZulu.hour(7).minute(30).toISOString(),
+      value: tariff.nightRate,
+      preVatValue: tariff.preVatNightRate
+    },
+    {
+      validFrom: todayZulu.hour(7).minute(30).toISOString(),
+      validTo: todayLocal.add(1, 'day').hour(0).toISOString(),
+      value: tariff.dayRate,
+      preVatValue: tariff.preVatDayRate
+    },
+    {
+      validFrom: todayLocal.add(1, 'day').hour(0).toISOString(),
+      validTo: todayZulu.add(1, 'day').hour(0).minute(30).toISOString(),
+      value: tariff.dayRate,
+      preVatValue: tariff.preVatDayRate
+    }
+  ];
+}
+
+/**
+ * Generates a list of unit rates for a Three Rate tariff.
+ * @param {number} atTimeMillis  A time within the day for which unit rates are required
+ * @param {object} tariff        ThreeRateTariff data structure from Kraken
+ * @param {string} timeZone      The IANA timezone string to use for date calculations
+ * @returns {Array<Object>}      Array of unit rates, each with validFrom, validTo, value, and preVatValue
+ */
+function getThreeRateTariffUnitRates(atTimeMillis, tariff, timeZone) {
+  const todayLocal = dayjs(atTimeMillis).tz(timeZone).hour(0).minute(0).second(0).millisecond(0);
+  const todayZulu = dayjs(atTimeMillis).utc().hour(0).minute(0).second(0).millisecond(0);
+  return [
+    {
+      validFrom: todayLocal.hour(0).toISOString(),
+      validTo: todayZulu.hour(0).minute(30).toISOString(),
+      value: tariff.offPeakRate,
+      preVatValue: tariff.preVatOffPeakRate
+    },
+    {
+      validFrom: todayZulu.hour(0).minute(30).toISOString(),
+      validTo: todayZulu.hour(7).minute(30).toISOString(),
+      value: tariff.nightRate,
+      preVatValue: tariff.preVatNightRate
+    },
+    {
+      validFrom: todayZulu.hour(7).minute(30).toISOString(),
+      validTo: todayLocal.hour(16).toISOString(),
+      value: tariff.offPeakRate,
+      preVatValue: tariff.preVatOffPeakRate
+    },
+    {
+      validFrom: todayLocal.hour(16).toISOString(),
+      validTo: todayLocal.hour(19).toISOString(),
+      value: tariff.dayRate,
+      preVatValue: tariff.preVatDayRate
+    },
+    {
+      validFrom: todayLocal.hour(19).toISOString(),
+      validTo: todayLocal.add(1, 'day').hour(0).toISOString(),
+      value: tariff.offPeakRate,
+      preVatValue: tariff.preVatOffPeakRate
+    },
+    {
+      validFrom: todayLocal.add(1, 'day').hour(0).toISOString(),
+      validTo: todayZulu.add(1, 'day').hour(0).minute(30).toISOString(),
+      value: tariff.offPeakRate,
+      preVatValue: tariff.preVatOffPeakRate
+    }
+  ];
 }
 
 /**
@@ -79,7 +176,7 @@ function getTariffDirection(isExport, accountData) {
 function getPrices(atTimeMillis, tariff, timeZone) {
   let prices = undefined;
 
-  if (tariff && "unitRates" in tariff) {
+  if (tariff && tariff.__typename === 'HalfHourlyTariff') {
     const selectedRate = tariff.unitRates.find(rate => {
       const start = Date.parse(rate.validFrom);
       const end = Date.parse(rate.validTo);
@@ -274,7 +371,7 @@ module.exports = class dataExtractor {
    * @returns {object | undefined}                 The extracted account data
    */
   static extractTariffData(atTimeMillis, isExport, accountData, timeZone) {
-    const tariffDefinition = getTariffDirection(isExport, accountData);
+    const tariffDefinition = getTariffDirection(atTimeMillis, isExport, accountData, timeZone);
     if (!tariffDefinition) return { present: false };
 
     const pricesNow = getPrices(atTimeMillis, tariffDefinition, timeZone);

@@ -146,12 +146,12 @@ module.exports = class krakenAccountWrapper {
         const devices = DataExtractor.extractDeviceData(deviceData);
 
         // 3. Assemble final object
-        return { account, importTariff, exportTariff, devices };  //RETURN from closure function
+        return { account, importTariff, exportTariff, devices };  //RETURN from closure function - becomes accountData
       }
     );
 
     if (accountData) {
-      return accountData;
+      return accountData;                                         //RETURN the extracted accountData from this function
     } else {
       return { account: undefined, importTariff: undefined, exportTariff: undefined, devices: undefined };
     }

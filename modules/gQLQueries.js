@@ -40,6 +40,7 @@ const ACCOUNT_DATA_QUERY = `query GetAccount($accountNumber: String!) {
         agreements(includeInactive: false) {
           validFrom validTo
           tariff {
+            __typename
             ... on StandardTariff { id displayName fullName isExport productCode tariffCode standingCharge preVatStandingCharge unitRate preVatUnitRate }
             ... on DayNightTariff { id displayName fullName isExport productCode tariffCode standingCharge preVatStandingCharge dayRate preVatDayRate nightRate preVatNightRate }
             ... on ThreeRateTariff { id displayName fullName isExport productCode tariffCode standingCharge preVatStandingCharge offPeakRate preVatOffPeakRate nightRate preVatNightRate dayRate preVatDayRate }
