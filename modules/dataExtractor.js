@@ -451,7 +451,7 @@ module.exports = class dataExtractor {
         if (!tariff) continue;
 
         const direction = tariff.isExport ? "Export" : "Import";
-        const isHalfHourly = tariff.__typename === 'HalfHourlyTariff';
+        const isHalfHourly = ['HalfHourlyTariff', 'DayNightTariff', 'ThreeRateTariff'].includes(tariff.__typename);
 
         definitions.push({
           name: `${direction} Tariff`,
