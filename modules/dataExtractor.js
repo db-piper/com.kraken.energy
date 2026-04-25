@@ -176,7 +176,7 @@ function getThreeRateTariffUnitRates(atTimeMillis, tariff, timeZone) {
 function getPrices(atTimeMillis, tariff, timeZone) {
   let prices = undefined;
 
-  if (tariff && tariff.__typename === 'HalfHourlyTariff') {
+  if (tariff && tariff.unitRates && tariff.unitRates.length > 0) {
     const selectedRate = tariff.unitRates.find(rate => {
       const start = Date.parse(rate.validFrom);
       const end = Date.parse(rate.validTo);
