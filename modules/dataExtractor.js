@@ -386,7 +386,7 @@ module.exports = class dataExtractor {
       tariffCode: `${tariffDefinition.tariffCode}`,
       isExport: !!isExport,
       //isHalfHourly: tariffDefinition.__typename === 'HalfHourlyTariff',
-      isHalfHourly: ['HalfHourlyTariff', 'DayNightTariff', 'ThreeRateTariff'].includes(tariff.__typename),
+      isHalfHourly: ['HalfHourlyTariff', 'DayNightTariff', 'ThreeRateTariff'].includes(tariffDefinition.__typename),
 
       // Ensure these return primitives only:
       hasTomorrowsPrices: !!hasTomorrowsPricesPresent(atTimeMillis, tariffDefinition, timeZone),
