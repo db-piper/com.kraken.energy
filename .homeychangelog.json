@@ -145,5 +145,8 @@
   },
   "1.2.10": {
     "en": "Smaller date-time handling library adopted; Simplify period start date management in Energy Account device; Improve handling of dispatch minute counting across all devices"
+  },
+  "1.2.11": {
+    "en": "Add initial support for Day/Night and Three Rate tariffs based on standard slot schedules only"
   }
 }
