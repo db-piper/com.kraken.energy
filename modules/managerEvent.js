@@ -24,11 +24,11 @@ module.exports = class managerEvent {
     const fullEvent = this.driver.homey.app.fullEvent;
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
     let result = false;
-    let account, importTariff, exportTariff, devices, liveMeterId, deviceIds;
+    let account, importTariff, exportTariff, devices, liveMeterId, deviceIds, futurePrices;
 
     if (periodChanges.chunk || periodChanges.tariffSlotImport || periodChanges.tariffSlotExport || !this.driver.homey.app.importTariff || fullEvent) {
       this.driver.log(`managerEvent.executeEvent: Chunk changed or first run`);
-      ({ account, importTariff, exportTariff, devices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
+      ({ account, importTariff, exportTariff, devices, futurePrices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
       if (account) {
         liveMeterId = account.liveMeterId;
         deviceIds = Object.values(devices).map(device => device.id);
@@ -37,6 +37,7 @@ module.exports = class managerEvent {
         this.driver.homey.app.liveMeterId = liveMeterId;
         this.driver.homey.app.deviceIds = deviceIds;
         this.driver.homey.app.fullEvent = false;
+        await this.evaluateTriggerFlowCards(futurePrices);
       } else {
         throw new Error('Unable to access account data');
       }
@@ -52,6 +53,24 @@ module.exports = class managerEvent {
     this.driver.homey.app.eventTime = atTimeMillis;
     await this.logMemoryToInsights()
     return result;
+  }
+
+  async evaluateTriggerFlowCards(futurePrices) {
+    const flowCardDef = this.driver.homey.flow.getTriggerCard('cheapestBlockStrategy');
+    this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCardDef id ${flowCardDef.id}`);
+    this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCard Properties ${JSON.stringify(Object.getOwnPropertyNames(flowCardDef))}`);
+    const args = await flowCardDef.getArgumentValues();
+    this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
+    if (args.length > 0) {
+      const executedCards = this.driver.homey.app.triggerFlowCardState;
+      this.driver.log(`managerEvent.evaluateTriggerFlowCards: executedCards ${JSON.stringify(executedCards)}`);
+      const unfulfilled = args.filter(cardId => !executedCards[cardId.id]);
+      if (unfulfilled.length > 0) {
+        const validIds = unfulfilled.map(cardId => cardId.id);
+        this.driver.log(`managerEvent.evaluateTriggerFlowCards: validIds ${JSON.stringify(validIds)}`);
+        flowCardDef.trigger({}, { prices: futurePrices, validIds: validIds });
+      }
+    }
   }
 
   /**

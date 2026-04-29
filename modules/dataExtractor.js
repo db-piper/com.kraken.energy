@@ -312,6 +312,24 @@ function maximumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
   return maximumPrice;
 }
 
+/**
+ * Reify a tariff price slot into its chunks
+ * @param   {object}    slot    The tariff price slot to be reified
+ * @returns {object[]}          Slot reified into 30 minute chunks
+ */
+function expandToChunks(slot) {
+  const STEP = 1800000;
+  const startMs = Date.parse(slot.validFrom);
+  const count = (Date.parse(slot.validTo) - startMs) / STEP;
+
+  return Array.from({ length: count }, (_, i) => ({
+    validFrom: new Date(startMs + i * STEP).toISOString(),
+    validTo: new Date(startMs + (i + 1) * STEP).toISOString(),
+    value: slot.value,
+    preVatValue: slot.preVatValue
+  }));
+};
+
 const DEVICE_STATUS_TRANSLATIONS = {
   SMART_CONTROL_NOT_AVAILABLE: `Device Unavailable`,
   SMART_CONTROL_CAPABLE: `Nothing Planned`,
@@ -518,7 +536,7 @@ module.exports = class dataExtractor {
   }
 
   /**
-   * Iterates through devices and extracts atomized dispatch arrays, 
+   * Iterates through devices and extracts atomized dispatch arrays,
    * filtered by the current operational state of the Homey devices.
    * @param {object}   rawPayload        - The raw Kraken API response.
    * @param {object[]} deviceStates      - Array of {deviceId, deviceState, title}.
@@ -580,6 +598,24 @@ module.exports = class dataExtractor {
    */
   static hashDeviceId(deviceId) {
     return `d${deviceId.replaceAll("-", "_")}`;
+  }
+
+  static extractFuturePrices(atTimeMillis, queryData, timeZone) {
+    const tariff = getTariffDirection(atTimeMillis, false, queryData, timeZone);
+    const precedingChunk = atTimeMillis - (atTimeMillis % 1800000);
+    let prices = [];
+    if (tariff?.unitRates) {
+      prices = tariff.unitRates
+        .filter(slot => !dayjs(slot.validFrom).isBefore(precedingChunk))
+        .flatMap(expandToChunks)
+        .map(chunk => chunk.value);
+    } else {
+      const endOfDay = dayjs(atTimeMillis).endOf('day');
+      const msRemaining = endOfDay.diff(precedingChunk);
+      const count = Math.max(1, Math.ceil(msRemaining / 1800000));
+      prices = Array(count).fill(tariff.unitRate);
+    }
+    return prices;
   }
 
 }

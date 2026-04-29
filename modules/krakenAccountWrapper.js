@@ -144,16 +144,17 @@ module.exports = class krakenAccountWrapper {
         const importTariff = DataExtractor.extractTariffData(atTimeMillis, false, queryResultData, this.timeZone);
         const exportTariff = DataExtractor.extractTariffData(atTimeMillis, true, queryResultData, this.timeZone);
         const devices = DataExtractor.extractDeviceData(deviceData);
+        const futurePrices = DataExtractor.extractFuturePrices(atTimeMillis, queryResultData, this.timeZone);
 
         // 3. Assemble final object
-        return { account, importTariff, exportTariff, devices };  //RETURN from closure function - becomes accountData
+        return { account, importTariff, exportTariff, devices, futurePrices };  //RETURN from closure function - becomes accountData
       }
     );
 
     if (accountData) {
       return accountData;                                         //RETURN the extracted accountData from this function
     } else {
-      return { account: undefined, importTariff: undefined, exportTariff: undefined, devices: undefined };
+      return { account: undefined, importTariff: undefined, exportTariff: undefined, devices: undefined, futurePrices: undefined };
     }
   }
 

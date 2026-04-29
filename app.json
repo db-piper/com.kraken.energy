@@ -80,6 +80,86 @@
   "flow": {
     "triggers": [
       {
+        "id": "cheapestBlockStrategy",
+        "title": {
+          "en": "Cheapest block of time that matches a selected strategy"
+        },
+        "titleFormatted": {
+          "en": "When [[strategy]] [[duration]] hour block of the cheapest energy between [[startTime]] and [[endTime]] and with name [[identifier]] begins"
+        },
+        "args": [
+          {
+            "type": "number",
+            "name": "duration",
+            "title": {
+              "en": "Hours Duration"
+            },
+            "required": true,
+            "min": 0.5,
+            "max": 24,
+            "step": 0.5,
+            "placeholder": {
+              "en": "Block Duration (hours, e.g. 3.5)"
+            }
+          },
+          {
+            "type": "time",
+            "name": "startTime",
+            "title": {
+              "en": "Starting At"
+            },
+            "required": true,
+            "placeholder": {
+              "en": "Start Half Hour (hh:mm)"
+            }
+          },
+          {
+            "type": "time",
+            "name": "endTime",
+            "title": {
+              "en": "Ending At"
+            },
+            "required": true,
+            "placeholder": {
+              "en": "End Half Hour (hh:mm)"
+            }
+          },
+          {
+            "type": "dropdown",
+            "name": "strategy",
+            "title": {
+              "en": "Selection strategy"
+            },
+            "required": true,
+            "values": [
+              {
+                "id": "early",
+                "title": "the earliest"
+              },
+              {
+                "id": "late",
+                "title": "the latest"
+              },
+              {
+                "id": "random",
+                "title": "a random"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "name": "identifier",
+            "title": {
+              "en": "Identifier"
+            },
+            "placeholder": {
+              "en": "Unique identifier"
+            },
+            "required": true
+          }
+        ]
+      },
+      {
         "id": "data_presence.next_day_prices_true",
         "title": {
           "en": "Next Day Prices Published"

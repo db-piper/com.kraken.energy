@@ -1,6 +1,7 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, TriggerFlowCardState } = require('./modules/constants');
 const Homey = require('homey');
+const dayjs = require('./bundles/dayjs-bundled/index.js');
 
 module.exports = class krakenApp extends Homey.App {
 
@@ -223,6 +224,20 @@ module.exports = class krakenApp extends Homey.App {
    */
   get fullEvent() {
     return this._fullEvent;
+  }
+
+  set triggerFlowCardState(cards) {
+    this.homey.settings.set(TriggerFlowCardState, cards);
+  }
+
+  get triggerFlowCardState() {
+    const rawCards = this.homey.settings.get(TriggerFlowCardState) || [];
+    const startOfToday = dayjs().startOf('day');
+    const activeCards = rawCards.filter((card) => !dayjs(card.date).isBefore(startOfToday));
+    if (activeCards.length !== rawCards.length) {
+      this.homey.settings.set(TriggerFlowCardState, activeCards);
+    }
+    return activeCards;
   }
 
 }

@@ -15,5 +15,6 @@ module.exports = {
     PeriodStartDay,
     "dispatchMinutesLimit",
     "krakenPollingInterval"
-  ]
+  ],
+  TriggerFlowCardState: 'triggerFlowCardState'
 }
