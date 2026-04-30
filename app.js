@@ -231,13 +231,18 @@ module.exports = class krakenApp extends Homey.App {
   }
 
   get triggerFlowCardState() {
-    const rawCards = this.homey.settings.get(TriggerFlowCardState) || [];
-    const startOfToday = dayjs().startOf('day');
-    const activeCards = rawCards.filter((card) => !dayjs(card.date).isBefore(startOfToday));
-    if (activeCards.length !== rawCards.length) {
-      this.homey.settings.set(TriggerFlowCardState, activeCards);
+    const rawCards = this.homey.settings.get(TriggerFlowCardState) || {};
+    const startOfToday = dayjs().startOf('day').valueOf();
+
+    const entries = Object.entries(rawCards);
+    const activeEntries = entries.filter(([_, timestamp]) => timestamp >= startOfToday);
+    const states = Object.fromEntries(activeEntries);
+
+    if (activeEntries.length !== entries.length) {
+      this.homey.settings.set(TriggerFlowCardState, states);
     }
-    return activeCards;
+
+    return states;
   }
 
 }

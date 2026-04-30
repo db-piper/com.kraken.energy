@@ -64,13 +64,17 @@ module.exports = class managerEvent {
     if (args.length > 0) {
       const executedCards = this.driver.homey.app.triggerFlowCardState;
       this.driver.log(`managerEvent.evaluateTriggerFlowCards: executedCards ${JSON.stringify(executedCards)}`);
-      const unfulfilled = args.filter(cardId => !executedCards[cardId.id]);
+      const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
       if (unfulfilled.length > 0) {
-        const validIds = unfulfilled.map(cardId => cardId.id);
-        this.driver.log(`managerEvent.evaluateTriggerFlowCards: validIds ${JSON.stringify(validIds)}`);
-        flowCardDef.trigger({}, { prices: futurePrices, validIds: validIds });
+        const pendingIds = unfulfilled.map(cardArgs => this.hashFlowCardArgs(cardArgs));
+        this.driver.log(`managerEvent.evaluateTriggerFlowCards: pendingIds ${JSON.stringify(pendingIds)}`);
+        flowCardDef.trigger({}, { prices: futurePrices, pendingIds: pendingIds });
       }
     }
+  }
+
+  hashFlowCardArgs(flowCardArgs) {
+    return `${flowCardArgs.duration}_${flowCardArgs.start}_${flowCardArgs.end}_${flowCardArgs.strategy}_${flowCardArgs.label}`
   }
 
   /**
