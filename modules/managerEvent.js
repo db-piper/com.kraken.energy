@@ -97,12 +97,15 @@ module.exports = class managerEvent {
   async evaluateCheapestBlockStrategyCard(args, state) {
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: Starting Card Args: ${JSON.stringify(args)}`);
     const thisId = this.hashFlowCardArgs(args);
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: thisId ${thisId} targetId ${state.targetId}`);
+
     // This is not the right card, bail out
     if (thisId !== state.targetId) return false;
 
     const prices = state.prices;
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
 
     // Missed the boat for this chunk, probably a restart
     if (0 != eventTime.minute() % 30) return false;
@@ -113,28 +116,34 @@ module.exports = class managerEvent {
     const endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
 
     // Not in the window, so can't start yet
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
     if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return false;
     //Pick out the relevant set of prices from startTime to endTime
     //  startBlock is always [0] otherwise we are outside the window
     //  endBlock is (endTime - startTime)/1800000 [epoch milliseconds]
     const endBlock = Math.floor((endTime.valueOf() - startTime.valueOf()) / 1800000);
     const relevantPrices = prices.slice(0, endBlock);
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
 
     //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
     //  block length is <duration> * 2  (accounting for the 30 minute resolution of prices)
     const blockLength = Number(args.duration) * 2;
     const blockPrices = this.apertureMap(relevantPrices, blockLength, (window) => window.reduce((total, value) => total + value, 0));
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: blockLength ${blockLength} blockPrices ${blockPrices}`);
+
     //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
     const solutionIndices = this.targetIndices(blockPrices, Math.min(blockPrices));
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: solutionIndices ${solutionIndices}`);
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
     const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
-
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
     //Fire if block selected = [0] return true, else return false    
     const fire = solutionIndices[chosenIndex] === 0;
     //If we fire update the registry thingy
     if (fire) {
       const cardStates = this.driver.homey.app.triggerFlowCardState;
+      this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: cardStates ${cardStates}`);
       cardStates[thisId] = atTimeMillis
       this.driver.homey.app.triggerFlowCardState = cardStates;
     }
