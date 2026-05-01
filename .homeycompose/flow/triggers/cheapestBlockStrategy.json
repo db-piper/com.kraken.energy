@@ -112,6 +112,27 @@
       "title": {
         "en": "Identifier"
       }
+    },
+    {
+      "name": "avePrice",
+      "type": "number",
+      "title": {
+        "en": "Average Price"
+      }
+    },
+    {
+      "name": "blockStartTime",
+      "type": "string",
+      "title": {
+        "en": "Block Start Time"
+      }
+    },
+    {
+      "name": "blockEndTime",
+      "type": "string",
+      "title": {
+        "en": "Block End Time"
+      }
     }
   ]
 }

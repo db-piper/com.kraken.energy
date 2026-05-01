@@ -19,7 +19,7 @@ module.exports = class krakenDriver extends Homey.Driver {
 
     this.registerConditionCardListener('slot_relative_price', 'getCurrentlyCheaper');
     this.registerConditionCardListener('price_less_than_tariff', 'getPriceLessThanTariff');
-    this.registerGlobalTriggerCardListener('cheapestBlockStrategy', this.eventer, 'evaluateCheapestBlockStrategyCard');
+    this.registerGlobalTriggerCardListener('cheapestBlockStrategy', this.eventer, 'executeCheapestBlockStrategyCard');
 
     this.log(`krakenDriver.onInit: About to check if devices exist`);
     if (this.getDevices().length > 0) {

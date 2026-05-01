@@ -62,31 +62,38 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
     if (args.length > 0) {
       const executedCards = this.driver.homey.app.triggerFlowCardState;
-      this.driver.log(`managerEvent.evaluateTriggerFlowCards: executedCards ${JSON.stringify(executedCards)}`);
       const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
-      if (unfulfilled.length > 0) {
-        unfulfilled.forEach(item => {
-          const hash = this.hashFlowCardArgs(item);
+
+      unfulfilled.forEach(item => {
+        const hash = this.hashFlowCardArgs(item);
+        const state = {
+          eventTime: atTimeMillis,
+          prices: futurePrices,
+          targetId: hash
+        };
+        const result = this.decideCheapestBlockCardExecution(item, state);
+
+        if (result && result.fire) {
           const tokens = {
             'duration': item.duration,
             'startTime': item.startTime,
             'endTime': item.endTime,
             'strategy': item.strategy,
             'identifier': item.identifier,
+            'avePrice': result.avePrice,
+            'blockStartTime': result.blockStartTime,
+            'blockEndTime': result.blockEndTime
           };
 
-          const state = {
-            eventTime: atTimeMillis,
-            prices: futurePrices,
-            targetId: hash
-          };
-
-          this.driver.log(`[managerEvent.evaluateTriggerFlowCards] Triggering flow for: ${hash}`);
-
-          flowCardDef.trigger(tokens, state)
+          flowCardDef.trigger(tokens, { ...state, fire: true })
             .catch(err => this.driver.error(`Trigger Error: ${err}`));
-        });
-      }
+
+          executedCards[hash] = atTimeMillis;
+          this.driver.log(`[Manager] Committing Card ${hash} to persistence.`);
+        }
+      });
+
+      this.driver.homey.app.triggerFlowCardState = executedCards;
     }
   }
 
@@ -94,7 +101,7 @@ module.exports = class managerEvent {
     return `${flowCardArgs.duration}_${flowCardArgs.startTime}_${flowCardArgs.endTime}_${flowCardArgs.strategy}_${flowCardArgs.identifier}`
   }
 
-  async evaluateCheapestBlockStrategyCard(args, state) {
+  decideCheapestBlockCardExecution(args, state) {
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: Starting Card Args: ${JSON.stringify(args)}`);
     const thisId = this.hashFlowCardArgs(args);
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: thisId ${thisId} targetId ${state.targetId}`);
@@ -132,23 +139,29 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: blockLength ${blockLength} blockPrices ${blockPrices}`);
 
     //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
-    const solutionIndices = this.targetIndices(blockPrices, Math.min(blockPrices));
+    const solutionIndices = this.targetIndices(blockPrices, Math.min(...blockPrices));
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: solutionIndices ${solutionIndices}`);
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
     const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
     //Fire if block selected = [0] return true, else return false    
     const fire = solutionIndices[chosenIndex] === 0;
-    //If we fire update the registry thingy
-    if (fire) {
-      const cardStates = this.driver.homey.app.triggerFlowCardState;
-      this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: cardStates ${cardStates}`);
-      cardStates[thisId] = atTimeMillis
-      this.driver.homey.app.triggerFlowCardState = cardStates;
-    }
+    const avePrice = blockPrices[0] / blockLength;
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex} fire ${fire}`);
 
-    return fire;
+    return {
+      fire: fire,
+      avePrice: avePrice,
+      blockStartTime: eventTime.format('HH:mm'),
+      blockEndTime: eventTime.add(blockLength * 30, 'minute').format('HH:mm')
+    };
+  }
+
+
+  async executeCheapestBlockStrategyCard(args, state) {
+    const thisId = this.hashFlowCardArgs(args);
+    this.driver.log(`managerEvent.executeCheapestBlockStrategyCard: Fire card: ${thisId === state.targetId && state.fire}`);
+    return (thisId === state.targetId) && state.fire
   }
 
   /**
