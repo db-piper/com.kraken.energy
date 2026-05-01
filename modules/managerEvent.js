@@ -64,6 +64,7 @@ module.exports = class managerEvent {
     if (args.length > 0 && isHalfHour) {
       const executedCards = this.driver.homey.app.triggerFlowCardState;
       const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
+      this.driver.log(`managerEvent.evaluateTriggerFlowCards: unfulfilled ${JSON.stringify(unfulfilled)}`);
 
       unfulfilled.forEach(item => {
         const hash = this.hashFlowCardArgs(item);
@@ -104,6 +105,7 @@ module.exports = class managerEvent {
 
   decideCheapestBlockCardExecution(args, state) {
 
+    this.driver.log(`managerEvent.decideCheapestBlockCardExecution: args ${JSON.stringify(args)}`);
     const prices = state.prices;
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
@@ -120,7 +122,7 @@ module.exports = class managerEvent {
     //Pick out the relevant set of prices from startTime to endTime
     //  startBlock is always [0] otherwise we are outside the window
     //  endBlock is (endTime - startTime)/1800000 [epoch milliseconds]
-    const endBlock = Math.floor((endTime.valueOf() - startTime.valueOf()) / 1800000);
+    const endBlock = Math.floor((endTime.valueOf() - Math.max(eventTime.valueOf(), startTime.valueOf())) / 1800000);
     const relevantPrices = prices.slice(0, endBlock);
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
 
