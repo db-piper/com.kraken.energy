@@ -116,7 +116,7 @@ module.exports = class managerEvent {
 
     // Not in the window, so can't start yet
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
-    if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return false;
+    if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return { fire: false };
     //Pick out the relevant set of prices from startTime to endTime
     //  startBlock is always [0] otherwise we are outside the window
     //  endBlock is (endTime - startTime)/1800000 [epoch milliseconds]
@@ -136,10 +136,11 @@ module.exports = class managerEvent {
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
     const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
     //Fire if block selected = [0] return true, else return false    
     const fire = solutionIndices[chosenIndex] === 0;
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
     const avePrice = blockPrices[0] / blockLength;
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex} fire ${fire}`);
 
     return {
       fire: fire,

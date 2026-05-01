@@ -272,7 +272,6 @@ module.exports = class krakenDriver extends Homey.Driver {
 
     if (this.getDevices().length > 0) {
       const scheduleNext = () => {
-        this.log(`krakenDriver.startEventPoller: Using timezone ${this.wrapper.timeZone}`)
         const now = dayjs().tz(this.wrapper.timeZone);
         const offset = this.eventer.targetSecond;
         const interval = this.targetIntervalMinutes;

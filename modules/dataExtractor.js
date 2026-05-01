@@ -606,11 +606,14 @@ module.exports = class dataExtractor {
     let prices = [];
     if (tariff?.unitRates) {
       prices = tariff.unitRates
-        .filter(slot => !dayjs(slot.validFrom).isBefore(precedingChunk))
+        // 1. Keep slots that END after our current window starts
+        .filter(slot => Date.parse(slot.validTo) > precedingChunk)
         .flatMap(expandToChunks)
+        // 2. Remove chunks that started before our current window
+        .filter(chunk => Date.parse(chunk.validFrom) >= precedingChunk)
         .map(chunk => chunk.value);
     } else {
-      const endOfDay = dayjs(atTimeMillis).endOf('day');
+      const endOfDay = dayjs(atTimeMillis).tz(timeZone).endOf('day');
       const msRemaining = endOfDay.diff(precedingChunk);
       const count = Math.max(1, Math.ceil(msRemaining / 1800000));
       prices = Array(count).fill(tariff.unitRate);
