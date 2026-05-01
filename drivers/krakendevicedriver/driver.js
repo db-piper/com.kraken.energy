@@ -16,6 +16,11 @@ module.exports = class krakenDriver extends Homey.Driver {
   async onInit() {
     this.log('krakenDriver.onInit: Driver Initialization Started');
     this._maxPssPeak = 0;
+
+    this.registerConditionCardListener('slot_relative_price', 'getCurrentlyCheaper');
+    this.registerConditionCardListener('price_less_than_tariff', 'getPriceLessThanTariff');
+    this.registerGlobalTriggerCardListener('cheapestBlockStrategy', managerEvent, 'evaluateCheapestBlockStrategyCard');
+
     this.log(`krakenDriver.onInit: About to check if devices exist`);
     if (this.getDevices().length > 0) {
       try {
@@ -140,6 +145,60 @@ module.exports = class krakenDriver extends Homey.Driver {
   get targetIntervalMinutes() {
     return this.getDevices().length > 0 ? Number(this.getDevices()[0].getSetting('krakenPollingInterval')) : 1;
   }
+
+  /**
+   * Generic helper to link a Condition Card to a specific Device method
+   * @param {string} cardId     The ID of the flow card
+   * @param {string} methodName The name of the method to call on the device
+   */
+  registerConditionCardListener(cardId, methodName) {
+    this.log(`krakenDriver: Registering listener for ${cardId} -> ${methodName}`);
+    const card = this.homey.flow.getConditionCard(cardId);
+    if (card) {
+      card.registerRunListener(async (args, state) => {
+        let result = false;
+
+        try {
+          const device = args?.device;
+          if (!device) {
+            throw new Error(`[Listener Error] No device selected for ${cardId}.`);
+          }
+          const method = device?.[methodName];
+          if (typeof method === 'function') {
+            result = await device[methodName](args, state);
+          } else {
+            throw new Error(`Method ${methodName} not found on device ${device.getName()}.`);
+          }
+        } catch (err) {
+          this.error(`[Listener Error] ${cardId}: Condition card `, err.message);
+        }
+        return result;
+      });
+    }
+  }
+
+  registerGlobalTriggerCardListener(cardId, classRef, methodName) {
+    this.log(`krakenDriver: Registering listener for ${cardId} -> ${methodName}`);
+    const card = this.homey.flow.getTriggerCard(cardId);
+    if (card) {
+      card.registerRunListener(async (args, state) => {
+        let result = false;
+
+        try {
+          const method = classRef?.[methodName];
+          if (typeof method === 'function') {
+            result = await method.call(classRef, args, state);
+          } else {
+            throw new Error(`Method ${methodName} not found on specified class.`);
+          }
+        } catch (err) {
+          this.error(`[Listener Error] ${cardId}: Trigger card `, err.message);
+        }
+        return result;
+      });
+    }
+  }
+
 
   /**
    * The Heartbeat: The actual task performed every minute.
