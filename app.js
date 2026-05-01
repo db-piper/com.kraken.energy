@@ -13,6 +13,7 @@ module.exports = class krakenApp extends Homey.App {
 
     this.registerConditionCardListener('slot_relative_price', 'getCurrentlyCheaper');
     this.registerConditionCardListener('price_less_than_tariff', 'getPriceLessThanTariff');
+    this.registerGlobalTriggerCardListener('cheapestBlockStrategy', managerEvent, 'evaluateCheapestBlockStrategyCard');
 
     this.homey.log('krakenApp.onInit: App Initialization Completed');
   }
@@ -50,6 +51,28 @@ module.exports = class krakenApp extends Homey.App {
           }
         } catch (err) {
           this.error(`[Listener Error] ${cardId}: Condition card `, err.message);
+        }
+        return result;
+      });
+    }
+  }
+
+  registerGlobalTriggerCardListener(cardId, classRef, methodName) {
+    this.homey.log(`krakenApp: Registering listener for ${cardId} -> ${methodName}`);
+    const card = this.homey.flow.getTriggerCard(cardId);
+    if (card) {
+      card.registerRunListener(async (args, state) => {
+        let result = false;
+
+        try {
+          const method = classRef?.[methodName];
+          if (typeof method === 'function') {
+            result = await method.call(classRef, args, state);
+          } else {
+            throw new Error(`Method ${methodName} not found on specified class.`);
+          }
+        } catch (err) {
+          this.error(`[Listener Error] ${cardId}: Trigger card `, err.message);
         }
         return result;
       });

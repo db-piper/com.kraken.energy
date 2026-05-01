@@ -37,7 +37,7 @@ module.exports = class managerEvent {
         this.driver.homey.app.liveMeterId = liveMeterId;
         this.driver.homey.app.deviceIds = deviceIds;
         this.driver.homey.app.fullEvent = false;
-        await this.evaluateTriggerFlowCards(futurePrices);
+        await this.evaluateTriggerFlowCards(futurePrices, atTimeMillis);
       } else {
         throw new Error('Unable to access account data');
       }
@@ -55,10 +55,9 @@ module.exports = class managerEvent {
     return result;
   }
 
-  async evaluateTriggerFlowCards(futurePrices) {
+  async evaluateTriggerFlowCards(futurePrices, atTimeMillis) {
     const flowCardDef = this.driver.homey.flow.getTriggerCard('cheapestBlockStrategy');
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCardDef id ${flowCardDef.id}`);
-    this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCard Properties ${JSON.stringify(Object.getOwnPropertyNames(flowCardDef))}`);
     const args = await flowCardDef.getArgumentValues();
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
     if (args.length > 0) {
@@ -66,15 +65,107 @@ module.exports = class managerEvent {
       this.driver.log(`managerEvent.evaluateTriggerFlowCards: executedCards ${JSON.stringify(executedCards)}`);
       const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
       if (unfulfilled.length > 0) {
-        const pendingIds = unfulfilled.map(cardArgs => this.hashFlowCardArgs(cardArgs));
-        this.driver.log(`managerEvent.evaluateTriggerFlowCards: pendingIds ${JSON.stringify(pendingIds)}`);
-        flowCardDef.trigger({}, { prices: futurePrices, pendingIds: pendingIds });
+        unfulfilled.forEach(item => {
+          const hash = this.hashFlowCardArgs(item);
+          const tokens = {
+            'duration': item.duration,
+            'startTime': item.startTime,
+            'endTime': item.endTime,
+            'strategy': item.strategy,
+            'identifier': item.identifier,
+          };
+
+          const state = {
+            eventTime: atTimeMillis,
+            prices: futurePrices,
+            targetId: hash
+          };
+
+          this.driver.log(`[managerEvent.evaluateTriggerFlowCards] Triggering flow for: ${hash}`);
+
+          flowCardDef.trigger(tokens, state)
+            .catch(err => this.driver.error(`Trigger Error: ${err}`));
+        });
       }
     }
   }
 
   hashFlowCardArgs(flowCardArgs) {
-    return `${flowCardArgs.duration}_${flowCardArgs.start}_${flowCardArgs.end}_${flowCardArgs.strategy}_${flowCardArgs.label}`
+    return `${flowCardArgs.duration}_${flowCardArgs.startTime}_${flowCardArgs.endTime}_${flowCardArgs.strategy}_${flowCardArgs.identifier}`
+  }
+
+  async evaluateCheapestBlockStrategyCard(args, state) {
+    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: Starting Card Args: ${JSON.stringify(args)}`);
+    const thisId = this.hashFlowCardArgs(args);
+    // This is not the right card, bail out
+    if (thisId !== state.targetId) return false;
+
+    const prices = state.prices;
+    const atTimeMillis = state.eventTime;
+    const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
+
+    // Missed the boat for this chunk, probably a restart
+    if (0 != eventTime.minute() % 30) return false;
+
+    const sHhMm = args.startTime.split(":");
+    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1])).second(0).millisecond(0);
+    const eHhMm = args.endTime.split(":");
+    const endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
+
+    // Not in the window, so can't start yet
+    if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return false;
+    //Pick out the relevant set of prices from startTime to endTime
+    //  startBlock is always [0] otherwise we are outside the window
+    //  endBlock is (endTime - startTime)/1800000 [epoch milliseconds]
+    const endBlock = Math.floor((endTime.valueOf() - startTime.valueOf()) / 1800000);
+    const relevantPrices = prices.slice(0, endBlock);
+
+    //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
+    //  block length is <duration> * 2  (accounting for the 30 minute resolution of prices)
+    const blockLength = Number(args.duration) * 2;
+    const blockPrices = this.apertureMap(relevantPrices, blockLength, (window) => window.reduce((total, value) => total + value, 0));
+    //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
+    const solutionIndices = this.targetIndices(blockPrices, Math.min(blockPrices));
+    //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
+    const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
+    const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
+
+    //Fire if block selected = [0] return true, else return false    
+    const fire = solutionIndices[chosenIndex] === 0;
+    //If we fire update the registry thingy
+    if (fire) {
+      const cardStates = this.driver.homey.app.triggerFlowCardState;
+      cardStates[thisId] = atTimeMillis
+      this.driver.homey.app.triggerFlowCardState = cardStates;
+    }
+
+    return fire;
+  }
+
+  /**
+   * Apply a function to successive sub-arrays of a given length
+   * @param   {any[]}           prices          Array to process apertures from
+   * @param   {number}          apertureSize    Number of elements in each sub-array
+   * @param   {function}        fn              Function to be applied to each sub-array
+   * @result  {any[]}                           Result of applying the function to the successive sub-arrays                  
+   */
+  apertureMap(prices, apertureSize, fn) {
+    return apertureSize > prices.length
+      ? []
+      : prices.slice(apertureSize - 1).map((v, i) => fn(prices.slice(i, i + apertureSize)));
+  }
+
+  /** 
+   * Return the indices of the target value within the array
+   * @param   {any[]}           array       Array to find the indices within
+   * @param   {any}             target      Value to find within the array
+   * @result  {integer[]}                   Indices of the value within the array
+   */
+  targetIndices(array, target) {
+    return array.reduce((indices, value, index) => {
+      if (value === target) indices.push(index);
+      return indices;
+    }, []);
   }
 
   /**

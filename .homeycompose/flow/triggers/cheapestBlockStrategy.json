@@ -76,5 +76,42 @@
       },
       "required": true
     }
+  ],
+  "tokens": [
+    {
+      "name": "duration",
+      "type": "number",
+      "title": {
+        "en": "Duration"
+      }
+    },
+    {
+      "name": "startTime",
+      "type": "string",
+      "title": {
+        "en": "Start Time"
+      }
+    },
+    {
+      "name": "endTime",
+      "type": "string",
+      "title": {
+        "en": "End Time"
+      }
+    },
+    {
+      "name": "strategy",
+      "type": "string",
+      "title": {
+        "en": "Strategy"
+      }
+    },
+    {
+      "name": "identifier",
+      "type": "string",
+      "title": {
+        "en": "Identifier"
+      }
+    }
   ]
 }
