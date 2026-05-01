@@ -60,7 +60,8 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCardDef id ${flowCardDef.id}`);
     const args = await flowCardDef.getArgumentValues();
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
-    if (args.length > 0) {
+    const isHalfHour = dayjs(atTimeMillis).tz(this.wrapper.timeZone).minute() % 30 === 0;
+    if (args.length > 0 && isHalfHour) {
       const executedCards = this.driver.homey.app.triggerFlowCardState;
       const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
 
@@ -102,23 +103,14 @@ module.exports = class managerEvent {
   }
 
   decideCheapestBlockCardExecution(args, state) {
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: Starting Card Args: ${JSON.stringify(args)}`);
-    const thisId = this.hashFlowCardArgs(args);
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: thisId ${thisId} targetId ${state.targetId}`);
-
-    // This is not the right card, bail out
-    if (thisId !== state.targetId) return false;
 
     const prices = state.prices;
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
 
-    // Missed the boat for this chunk, probably a restart
-    if (0 != eventTime.minute() % 30) return false;
-
     const sHhMm = args.startTime.split(":");
-    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1])).second(0).millisecond(0);
+    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
     const eHhMm = args.endTime.split(":");
     const endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
 
@@ -156,7 +148,6 @@ module.exports = class managerEvent {
       blockEndTime: eventTime.add(blockLength * 30, 'minute').format('HH:mm')
     };
   }
-
 
   async executeCheapestBlockStrategyCard(args, state) {
     const thisId = this.hashFlowCardArgs(args);
