@@ -121,10 +121,10 @@ module.exports = class managerEvent {
     if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return { fire: false };
     //Pick out the relevant set of prices from startTime to endTime
     //  startBlock is always [0] otherwise we are outside the window
-    //  endBlock is (endTime - eventTime)/1800000 [epoch milliseconds]
-    //  use of eventTime reflects the prices start from NOW; if eventTime is before startTime, we don't get here
-    const endBlock = Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000);
-    const relevantPrices = prices.slice(0, Math.min(endBlock, prices.length));
+    //  endBlock is (endTime - eventTime)/1800000 [epoch milliseconds] constrained by prices.length
+    //  use of eventTime reflects the prices start from NOW; if eventTime is before startTime, we don't even get here
+    const endBlock = Math.min(prices.length, Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000));
+    const relevantPrices = prices.slice(0, endBlock);
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
 
     //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
