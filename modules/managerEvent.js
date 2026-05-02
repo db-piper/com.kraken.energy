@@ -114,16 +114,17 @@ module.exports = class managerEvent {
     const sHhMm = args.startTime.split(":");
     const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
     const eHhMm = args.endTime.split(":");
-    const endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
-
-    // Not in the window, so can't start yet
+    let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
+    endTime = (endTime.isBefore(startTime)) ? endTime.add(1, 'day') : endTime;
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
+    // If not in the window then can't start yet
     if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return { fire: false };
     //Pick out the relevant set of prices from startTime to endTime
     //  startBlock is always [0] otherwise we are outside the window
-    //  endBlock is (endTime - startTime)/1800000 [epoch milliseconds]
-    const endBlock = Math.floor((endTime.valueOf() - Math.max(eventTime.valueOf(), startTime.valueOf())) / 1800000);
-    const relevantPrices = prices.slice(0, endBlock);
+    //  endBlock is (endTime - eventTime)/1800000 [epoch milliseconds]
+    //  use of eventTime reflects the prices start from NOW; if eventTime is before startTime, we don't get here
+    const endBlock = Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000);
+    const relevantPrices = prices.slice(0, Math.min(endBlock, prices.length));
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
 
     //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
