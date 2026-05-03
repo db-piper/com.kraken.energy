@@ -55,8 +55,15 @@ module.exports = class managerEvent {
     return result;
   }
 
+  /**
+   * Evaluate trigger flow cards for the app
+   * @param   {object}            futurePrices      The future prices for import and export tariffs
+   * @param   {number}            atTimeMillis      The time in milliseconds to evaluate the trigger flow cards for
+   * @returns {Promise<boolean>}                    True if the trigger flow cards were evaluated successfully
+   */
   async evaluateTriggerFlowCards(futurePrices, atTimeMillis) {
-    const flowCardDef = this.driver.homey.flow.getTriggerCard('cheapestBlockStrategy');
+    const { importPrices, exportPrices } = futurePrices;
+    const flowCardDef = this.driver.homey.flow.getTriggerCard('bestBlockStrategy');
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCardDef id ${flowCardDef.id}`);
     const args = await flowCardDef.getArgumentValues();
     this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
@@ -68,6 +75,7 @@ module.exports = class managerEvent {
 
       unfulfilled.forEach(item => {
         const hash = this.hashFlowCardArgs(item);
+        futurePrices = (item.direction === 'import') ? importPrices : exportPrices;
         const state = {
           eventTime: atTimeMillis,
           prices: futurePrices,
@@ -77,6 +85,7 @@ module.exports = class managerEvent {
 
         if (result && result.fire) {
           const tokens = {
+            'direction': item.direction,
             'duration': item.duration,
             'startTime': item.startTime,
             'endTime': item.endTime,
@@ -103,10 +112,17 @@ module.exports = class managerEvent {
     return `${flowCardArgs.duration}_${flowCardArgs.startTime}_${flowCardArgs.endTime}_${flowCardArgs.strategy}_${flowCardArgs.identifier}`
   }
 
+  /**
+   * Decide whether to trigger a flow card based on the best block strategy
+   * @param   {object}  args    The arguments for the flow card
+   * @param   {object}  state   The state of application data relevant to the flow card
+   * @returns {boolean}         True if the flow card should be triggered, false otherwise
+   */
   decideCheapestBlockCardExecution(args, state) {
-
     this.driver.log(`managerEvent.decideCheapestBlockCardExecution: args ${JSON.stringify(args)}`);
     const prices = state.prices;
+    // Empty price vector indicates that the chosen tariff (import or export) is not defined on the Kraken account
+    if (prices.length === 0) return { fire: false };
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);

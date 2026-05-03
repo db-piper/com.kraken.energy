@@ -1,12 +1,30 @@
 {
-  "id": "cheapestBlockStrategy",
+  "id": "bestBlockStrategy",
   "title": {
-    "en": "Cheapest block of time that matches a selected strategy"
+    "en": "The block of time that best matches a selected strategy for the chosen tariff direction"
   },
   "titleFormatted": {
-    "en": "When [[strategy]] [[duration]] hour block of the cheapest energy between [[startTime]] and [[endTime]] and with name [[identifier]] begins"
+    "en": "When [[strategy]] [[duration]] hour block of the best priced [[direction]] energy between [[startTime]] and [[endTime]] and labelled [[identifier]] begins"
   },
   "args": [
+    {
+      "type": "dropdown",
+      "name": "direction",
+      "title": {
+        "en": "Direction"
+      },
+      "required": true,
+      "values": [
+        {
+          "id": "Import",
+          "title": "Import"
+        },
+        {
+          "id": "Export",
+          "title": "Export"
+        }
+      ]
+    },
     {
       "type": "number",
       "name": "duration",
@@ -53,15 +71,15 @@
       "values": [
         {
           "id": "early",
-          "title": "the earliest"
+          "title": "the Earliest"
         },
         {
           "id": "late",
-          "title": "the latest"
+          "title": "the Latest"
         },
         {
           "id": "random",
-          "title": "a random"
+          "title": "a Random"
         }
       ]
     },
@@ -72,12 +90,19 @@
         "en": "Identifier"
       },
       "placeholder": {
-        "en": "Unique identifier"
+        "en": "Unique block identifier"
       },
       "required": true
     }
   ],
   "tokens": [
+    {
+      "name": "direction",
+      "type": "string",
+      "title": {
+        "en": "Direction"
+      }
+    },
     {
       "name": "duration",
       "type": "number",

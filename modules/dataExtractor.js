@@ -313,6 +313,36 @@ function maximumTariffPrice(atTimeMillis, tariffDefinition, timeZone) {
 }
 
 /**
+ * Extract future prices for the tariff with the specified direction
+ * @param   {number}    atTimeMillis      Current time to pick prices from in epoch milliseconds
+ * @param   {object}    queryData         The query data returned from Kraken GraphQL API
+ * @param   {string}    timeZone          The IANA timezone string for date calculations
+ * @param   {boolean}   isExport          Whether to extract export (true) or import (false) prices
+ * @returns {number[]}                  Array of future prices in p/kWh
+ */
+
+function extractFuturePricesTariff(atTimeMillis, queryData, timeZone, isExport) {
+  const tariff = getTariffDirection(atTimeMillis, isExport, queryData, timeZone);
+  const precedingChunk = atTimeMillis - (atTimeMillis % 1800000);
+  let prices = [];
+  if (tariff?.unitRates) {
+    prices = tariff.unitRates
+      // 1. Keep slots that END after our current window starts
+      .filter(slot => Date.parse(slot.validTo) > precedingChunk)
+      .flatMap(expandToChunks)
+      // 2. Remove chunks that started before our current window
+      .filter(chunk => Date.parse(chunk.validFrom) >= precedingChunk)
+      .map(chunk => chunk.value);
+  } else if (tariff) {
+    const endOfDay = dayjs(atTimeMillis).tz(timeZone).endOf('day');
+    const msRemaining = endOfDay.diff(precedingChunk);
+    const count = Math.max(1, Math.ceil(msRemaining / 1800000));
+    prices = Array(count).fill(tariff.unitRate);
+  }
+  return prices;
+}
+
+/**
  * Reify a tariff price slot into its chunks
  * @param   {object}    slot    The tariff price slot to be reified
  * @returns {object[]}          Slot reified into 30 minute chunks
@@ -600,25 +630,18 @@ module.exports = class dataExtractor {
     return `d${deviceId.replaceAll("-", "_")}`;
   }
 
+  /**
+   * Extract future prices for both import and export tariffs
+   * @param   {number}    atTimeMillis      Current time to pick prices from in epoch milliseconds
+   * @param   {object}    queryData         The query data returned from Kraken GraphQL API
+   * @param   {string}    timeZone          The IANA timezone string for date calculations
+   * @returns {object}                      Object with importPrices and exportPrices arrays
+   */
   static extractFuturePrices(atTimeMillis, queryData, timeZone) {
-    const tariff = getTariffDirection(atTimeMillis, false, queryData, timeZone);
-    const precedingChunk = atTimeMillis - (atTimeMillis % 1800000);
-    let prices = [];
-    if (tariff?.unitRates) {
-      prices = tariff.unitRates
-        // 1. Keep slots that END after our current window starts
-        .filter(slot => Date.parse(slot.validTo) > precedingChunk)
-        .flatMap(expandToChunks)
-        // 2. Remove chunks that started before our current window
-        .filter(chunk => Date.parse(chunk.validFrom) >= precedingChunk)
-        .map(chunk => chunk.value);
-    } else {
-      const endOfDay = dayjs(atTimeMillis).tz(timeZone).endOf('day');
-      const msRemaining = endOfDay.diff(precedingChunk);
-      const count = Math.max(1, Math.ceil(msRemaining / 1800000));
-      prices = Array(count).fill(tariff.unitRate);
-    }
-    return prices;
+    const importPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, false);
+    const exportPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, true);
+    return { importPrices, exportPrices };
   }
+
 
 }
