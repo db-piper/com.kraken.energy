@@ -74,9 +74,9 @@ module.exports = class managerEvent {
       this.driver.log(`managerEvent.evaluateTriggerFlowCards: unfulfilled ${JSON.stringify(unfulfilled)}`);
 
       unfulfilled.forEach(item => {
-        const hash = this.hashFlowCardArgs(item);
         futurePrices = (item.direction === 'import') ? importPrices : exportPrices;
         if (futurePrices.length > 0) {
+          const hash = this.hashFlowCardArgs(item);
           const state = {
             eventTime: atTimeMillis,
             prices: futurePrices,
