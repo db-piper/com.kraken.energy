@@ -106,8 +106,8 @@ module.exports = class managerEvent {
     }
   }
 
-  hashFlowCardArgs(flowCardArgs) {
-    return `${flowCardArgs.duration}_${flowCardArgs.startTime}_${flowCardArgs.endTime}_${flowCardArgs.strategy}_${flowCardArgs.identifier}`
+  hashFlowCardArgs(args) {
+    return `${args.direction}_${args.duration}_${args.startTime}_${args.endTime}_${args.strategy}_${args.identifier}`
   }
 
   /**
