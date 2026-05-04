@@ -146,7 +146,8 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.decideBestBlockCardExecution: blockLength ${blockLength} blockPrices ${blockPrices}`);
 
     //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
-    const solutionIndices = this.targetIndices(blockPrices, Math.min(...blockPrices));
+    const goalFunction = args.direction === 'import' ? Math.min : Math.max;
+    const solutionIndices = this.targetIndices(blockPrices, goalFunction(...blockPrices));
     this.driver.log(`managerEvent.decideBestBlockCardExecution: solutionIndices ${solutionIndices}`);
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
