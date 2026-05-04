@@ -146,21 +146,21 @@
             "type": "dropdown",
             "name": "strategy",
             "title": {
-              "en": "Selection strategy"
+              "en": "Selection Strategy"
             },
             "required": true,
             "values": [
               {
                 "id": "early",
-                "title": "the Earliest"
+                "title": "The Earliest"
               },
               {
                 "id": "late",
-                "title": "the Latest"
+                "title": "The Latest"
               },
               {
                 "id": "random",
-                "title": "a Random"
+                "title": "A Random"
               }
             ]
           },
@@ -171,7 +171,7 @@
               "en": "Identifier"
             },
             "placeholder": {
-              "en": "Unique block identifier"
+              "en": "Unique Block Identifier"
             },
             "required": true
           }
