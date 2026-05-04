@@ -16,11 +16,11 @@
       "required": true,
       "values": [
         {
-          "id": "Import",
+          "id": "import",
           "title": "Import"
         },
         {
-          "id": "Export",
+          "id": "export",
           "title": "Export"
         }
       ]

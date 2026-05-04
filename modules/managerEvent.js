@@ -76,31 +76,30 @@ module.exports = class managerEvent {
       unfulfilled.forEach(item => {
         const hash = this.hashFlowCardArgs(item);
         futurePrices = (item.direction === 'import') ? importPrices : exportPrices;
-        const state = {
-          eventTime: atTimeMillis,
-          prices: futurePrices,
-          targetId: hash
-        };
-        const result = this.decideCheapestBlockCardExecution(item, state);
-
-        if (result && result.fire) {
-          const tokens = {
-            'direction': item.direction,
-            'duration': item.duration,
-            'startTime': item.startTime,
-            'endTime': item.endTime,
-            'strategy': item.strategy,
-            'identifier': item.identifier,
-            'avePrice': result.avePrice,
-            'blockStartTime': result.blockStartTime,
-            'blockEndTime': result.blockEndTime
+        if (futurePrices.length > 0) {
+          const state = {
+            eventTime: atTimeMillis,
+            prices: futurePrices,
+            targetId: hash
           };
-
-          flowCardDef.trigger(tokens, { ...state, fire: true })
-            .catch(err => this.driver.error(`Trigger Error: ${err}`));
-
-          executedCards[hash] = atTimeMillis;
-          this.driver.log(`[Manager] Committing Card ${hash} to persistence.`);
+          const result = this.decideCheapestBlockCardExecution(item, state);
+          if (result && result.fire) {
+            const tokens = {
+              'direction': item.direction,
+              'duration': item.duration,
+              'startTime': item.startTime,
+              'endTime': item.endTime,
+              'strategy': item.strategy,
+              'identifier': item.identifier,
+              'avePrice': result.avePrice,
+              'blockStartTime': result.blockStartTime,
+              'blockEndTime': result.blockEndTime
+            };
+            flowCardDef.trigger(tokens, { ...state, fire: true })
+              .catch(err => this.driver.error(`Trigger Error: ${err}`));
+            executedCards[hash] = atTimeMillis;
+            this.driver.log(`[Manager] Committing Card ${hash} to persistence.`);
+          }
         }
       });
 
@@ -121,8 +120,6 @@ module.exports = class managerEvent {
   decideCheapestBlockCardExecution(args, state) {
     this.driver.log(`managerEvent.decideCheapestBlockCardExecution: args ${JSON.stringify(args)}`);
     const prices = state.prices;
-    // Empty price vector indicates that the chosen tariff (import or export) is not defined on the Kraken account
-    if (prices.length === 0) return { fire: false };
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
     this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
