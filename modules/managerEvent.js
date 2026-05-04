@@ -82,7 +82,7 @@ module.exports = class managerEvent {
             prices: futurePrices,
             targetId: hash
           };
-          const result = this.decideCheapestBlockCardExecution(item, state);
+          const result = this.decideBestBlockCardExecution(item, state);
           if (result && result.fire) {
             const tokens = {
               'direction': item.direction,
@@ -117,19 +117,19 @@ module.exports = class managerEvent {
    * @param   {object}  state   The state of application data relevant to the flow card
    * @returns {boolean}         True if the flow card should be triggered, false otherwise
    */
-  decideCheapestBlockCardExecution(args, state) {
-    this.driver.log(`managerEvent.decideCheapestBlockCardExecution: args ${JSON.stringify(args)}`);
+  decideBestBlockCardExecution(args, state) {
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: args ${JSON.stringify(args)}`);
     const prices = state.prices;
     const atTimeMillis = state.eventTime;
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
 
     const sHhMm = args.startTime.split(":");
     const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
     const eHhMm = args.endTime.split(":");
     let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
     endTime = (endTime.isBefore(startTime)) ? endTime.add(1, 'day') : endTime;
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
     // If not in the window then can't start yet
     if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return { fire: false };
     //Pick out the relevant set of prices from startTime to endTime
@@ -138,24 +138,24 @@ module.exports = class managerEvent {
     //  use of eventTime reflects the prices start from NOW; if eventTime is before startTime, we don't even get here
     const endBlock = Math.min(prices.length, Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000));
     const relevantPrices = prices.slice(0, endBlock);
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
 
     //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
     //  block length is <duration> * 2  (accounting for the 30 minute resolution of prices)
     const blockLength = Number(args.duration) * 2;
     const blockPrices = this.apertureMap(relevantPrices, blockLength, (window) => window.reduce((total, value) => total + value, 0));
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: blockLength ${blockLength} blockPrices ${blockPrices}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: blockLength ${blockLength} blockPrices ${blockPrices}`);
 
     //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
     const solutionIndices = this.targetIndices(blockPrices, Math.min(...blockPrices));
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: solutionIndices ${solutionIndices}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: solutionIndices ${solutionIndices}`);
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
     const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
     //Fire if block selected = [0] return true, else return false    
     const fire = solutionIndices[chosenIndex] === 0;
-    this.driver.log(`managerEvent.evaluateCheapestBlockStrategyCard: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
     const avePrice = blockPrices[0] / blockLength;
 
     return {
@@ -166,9 +166,9 @@ module.exports = class managerEvent {
     };
   }
 
-  async executeCheapestBlockStrategyCard(args, state) {
+  async executeBestBlockStrategyCard(args, state) {
     const thisId = this.hashFlowCardArgs(args);
-    this.driver.log(`managerEvent.executeCheapestBlockStrategyCard: Fire card: ${thisId === state.targetId && state.fire}`);
+    this.driver.log(`managerEvent.executeBestBlockStrategyCard: Fire card: ${thisId === state.targetId && state.fire}`);
     return (thisId === state.targetId) && state.fire
   }
 
