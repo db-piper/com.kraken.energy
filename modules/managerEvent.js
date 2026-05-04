@@ -98,11 +98,10 @@ module.exports = class managerEvent {
             flowCardDef.trigger(tokens, { ...state, fire: true })
               .catch(err => this.driver.error(`Trigger Error: ${err}`));
             executedCards[hash] = atTimeMillis;
-            this.driver.log(`[Manager] Committing Card ${hash} to persistence.`);
+            this.driver.log(`managerEvent.evaluateTriggerFlowCards: Persisted Card Execution ${hash}`);
           }
         }
       });
-
       this.driver.homey.app.triggerFlowCardState = executedCards;
     }
   }
