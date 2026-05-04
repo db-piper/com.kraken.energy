@@ -107,7 +107,64 @@ module.exports = class managerEvent {
   }
 
   hashFlowCardArgs(args) {
-    return `${args.direction}_${args.duration}_${args.startTime}_${args.endTime}_${args.strategy}_${args.identifier}`
+    return `${args.direction}_${args.duration}_${args.startTime}_${args.endTime}_${args.strategy}_${args.identifier}`;
+  }
+
+  /**
+   * Evaluate if the current time is within the flow card window
+   * @param   {object}  args            The arguments for the flow card
+   * @param   {number}  atTimeMillis    The time in milliseconds to evaluate the flow card window
+   * @returns {object}                  inWindow: boolean, eventTime: Date, endTime: Date
+   */
+  evaluateFlowCardWindow(args, atTimeMillis) {
+    const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
+    const sHhMm = args.startTime.split(":");
+    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
+    const eHhMm = args.endTime.split(":");
+    let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
+    endTime = (endTime.isBefore(startTime)) ? endTime.add(1, 'day') : endTime;
+    this.driver.log(`managerEvent.evaluateFlowCardWindow: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
+    const inWindow = (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) ? false : true;
+    return { inWindow, eventTime, endTime };
+  }
+
+  /**
+   * Get the relevant block prices for the flow card
+   * @param   {array}   prices          The prices chunks in the window
+   * @param   {number}  eventTime       The time in milliseconds marking the start of the window
+   * @param   {number}  endTime         The time in milliseconds marking the end of the window
+   * @param   {number}  duration        The block duration required by the flow card in 30 minute chunks
+   * @returns {array}                   The price of each relevant block
+   */
+  getWindowBlockPrices(prices, eventTime, endTime, duration) {
+    const maxPossibleChunks = Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000);
+    const endBlock = Math.min(prices.length, maxPossibleChunks);
+    const relevantPrices = prices.slice(0, endBlock);
+    return (relevantPrices.length < duration * 2) ?
+      [] :
+      this.apertureMap(relevantPrices, duration * 2, (window) => window.reduce((total, value) => total + value, 0));
+  }
+
+  /**
+   * Decide if the zeroth block (current) satisfies the strategy defined on the card
+   * @param   {array}   blockPrices         The price of each relevant block
+   * @param   {string}  strategy            The strategy to use (early, late, random)
+   * @param   {string}  direction           The direction of import/export
+   * @returns {boolean}                     True if the flow card should be triggered, false otherwise
+   */
+  evaluateStrategy(blockPrices, strategy, direction) {
+    const goalFunction = direction === 'import' ? Math.min : Math.max;
+    const solutionIndices = this.targetIndices(blockPrices, goalFunction(...blockPrices));
+    this.driver.log(`managerEvent.evaluateStrategy: solutionIndices ${solutionIndices}`);
+    //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
+    const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
+    const chosenIndex = strategy === 'early' ? 0 : strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
+    this.driver.log(`managerEvent.evaluateStrategy: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
+    //Fire if block selected = [0] return true, else return false    
+    const fire = solutionIndices[chosenIndex] === 0;
+    this.driver.log(`managerEvent.evaluateStrategy: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
+    //const avePrice = blockPrices[0] / blockChunks;
+    return fire;
   }
 
   /**
@@ -118,51 +175,20 @@ module.exports = class managerEvent {
    */
   decideBestBlockCardExecution(args, state) {
     this.driver.log(`managerEvent.decideBestBlockCardExecution: args ${JSON.stringify(args)}`);
-    const prices = state.prices;
-    const atTimeMillis = state.eventTime;
-    const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: eventTime ${eventTime.format()} ${eventTime.minute() % 30}`);
-
-    const sHhMm = args.startTime.split(":");
-    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
-    const eHhMm = args.endTime.split(":");
-    let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
-    endTime = (endTime.isBefore(startTime)) ? endTime.add(1, 'day') : endTime;
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
-    // If not in the window then can't start yet
-    if (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) return { fire: false };
-    //Pick out the relevant set of prices from startTime to endTime
-    //  startBlock is always [0] otherwise we are outside the window
-    //  endBlock is (endTime - eventTime)/1800000 [epoch milliseconds] constrained by prices.length
-    //  use of eventTime reflects the prices start from NOW; if eventTime is before startTime, we don't even get here
-    const endBlock = Math.min(prices.length, Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000));
-    const relevantPrices = prices.slice(0, endBlock);
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: endBlock ${endBlock} relevantPrices ${relevantPrices}`);
-
-    //Evaluate the 1 kWh cost for each <duration> block - use the apertureMap function with +/
-    //  block length is <duration> * 2  (accounting for the 30 minute resolution of prices)
-    const blockLength = Number(args.duration) * 2;
-    const blockPrices = this.apertureMap(relevantPrices, blockLength, (window) => window.reduce((total, value) => total + value, 0));
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: blockLength ${blockLength} blockPrices ${blockPrices}`);
-
-    //Pick out all the equally cheapest blocks - use the targetIndices function with Math.min (could be 2, 4, 5)
-    const goalFunction = args.direction === 'import' ? Math.min : Math.max;
-    const solutionIndices = this.targetIndices(blockPrices, goalFunction(...blockPrices));
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: solutionIndices ${solutionIndices}`);
-    //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
-    const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
-    const chosenIndex = args.strategy === 'early' ? 0 : args.strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
-    //Fire if block selected = [0] return true, else return false    
-    const fire = solutionIndices[chosenIndex] === 0;
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
-    const avePrice = blockPrices[0] / blockLength;
-
+    const { inWindow, eventTime, endTime } = this.evaluateFlowCardWindow(args, state.eventTime);
+    //If not in the window then can't start yet
+    if (!inWindow) return { fire: false };
+    const blockChunks = 2 * Number(args.duration);
+    const blockPrices = this.getWindowBlockPrices(state.prices, eventTime, endTime, blockChunks);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: blockPrices ${JSON.stringify(blockPrices)}`);
+    if (!blockPrices || blockPrices.length === 0) return { fire: false };
+    const fire = this.evaluateStrategy(blockPrices, args.strategy, args.direction);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: fire ${fire}`);
     return {
       fire: fire,
-      avePrice: avePrice,
+      avePrice: blockPrices[0] / blockChunks,
       blockStartTime: eventTime.format('HH:mm'),
-      blockEndTime: eventTime.add(blockLength * 30, 'minute').format('HH:mm')
+      blockEndTime: eventTime.add(blockChunks * 30, 'minute').format('HH:mm')
     };
   }
 
