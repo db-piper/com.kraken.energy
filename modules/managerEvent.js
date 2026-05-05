@@ -64,44 +64,41 @@ module.exports = class managerEvent {
   async evaluateTriggerFlowCards(futurePrices, atTimeMillis) {
     const { importPrices, exportPrices } = futurePrices;
     const flowCardDef = this.driver.homey.flow.getTriggerCard('bestBlockStrategy');
-    this.driver.log(`managerEvent.evaluateTriggerFlowCards: flowCardDef id ${flowCardDef.id}`);
     const args = await flowCardDef.getArgumentValues();
-    this.driver.log(`managerEvent.evaluateTriggerFlowCards: args ${JSON.stringify(args)}`);
     const isHalfHour = dayjs(atTimeMillis).tz(this.wrapper.timeZone).minute() % 30 === 0;
     if (args.length > 0 && isHalfHour) {
       const executedCards = this.driver.homey.app.triggerFlowCardState;
-      const unfulfilled = args.filter((item) => !executedCards[this.hashFlowCardArgs(item)]);
-      this.driver.log(`managerEvent.evaluateTriggerFlowCards: unfulfilled ${JSON.stringify(unfulfilled)}`);
-
-      unfulfilled.forEach(item => {
-        futurePrices = (item.direction === 'import') ? importPrices : exportPrices;
-        if (futurePrices.length > 0) {
-          const hash = this.hashFlowCardArgs(item);
-          const state = {
-            eventTime: atTimeMillis,
-            prices: futurePrices,
-            targetId: hash
-          };
-          const result = this.decideBestBlockCardExecution(item, state);
-          if (result && result.fire) {
-            const tokens = {
-              'direction': item.direction,
-              'duration': item.duration,
-              'startTime': item.startTime,
-              'endTime': item.endTime,
-              'strategy': item.strategy,
-              'identifier': item.identifier,
-              'avePrice': Math.round(result.avePrice * 1000) / 1000,
-              'blockStartTime': result.blockStartTime,
-              'blockEndTime': result.blockEndTime
+      args
+        .filter((cardArgs) => !executedCards[this.hashFlowCardArgs(cardArgs)])
+        .forEach(cardArgs => {
+          futurePrices = (cardArgs.direction === 'import') ? importPrices : exportPrices;
+          if (futurePrices.length > 0) {
+            const hash = this.hashFlowCardArgs(cardArgs);
+            const state = {
+              eventTime: atTimeMillis,
+              prices: futurePrices,
+              targetId: hash
             };
-            flowCardDef.trigger(tokens, { ...state, fire: true })
-              .catch(err => this.driver.error(`Trigger Error: ${err}`));
-            executedCards[hash] = atTimeMillis;
-            this.driver.log(`managerEvent.evaluateTriggerFlowCards: Persisted Card Execution ${hash}`);
+            const result = this.decideBestBlockCardExecution(cardArgs, state);
+            if (result && result.fire) {
+              const tokens = {
+                'direction': cardArgs.direction,
+                'duration': cardArgs.duration,
+                'startTime': cardArgs.startTime,
+                'endTime': cardArgs.endTime,
+                'strategy': cardArgs.strategy,
+                'identifier': cardArgs.identifier,
+                'avePrice': Math.round(result.avePrice * 1000) / 1000,
+                'blockStartTime': result.blockStartTime,
+                'blockEndTime': result.blockEndTime
+              };
+              flowCardDef
+                .trigger(tokens, { ...state, fire: true })
+                .catch(err => this.driver.error(`Trigger Error: ${err}`));
+              executedCards[hash] = atTimeMillis;
+            }
           }
-        }
-      });
+        });
       this.driver.homey.app.triggerFlowCardState = executedCards;
     }
   }
@@ -123,13 +120,12 @@ module.exports = class managerEvent {
     const eHhMm = args.endTime.split(":");
     let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
     if (endTime.isBefore(startTime)) {           // Window crosses midnight
-      if (!eventTime.isBefore(startTime)) {      // Late in the day, so push the endTime into tomorrow
+      if (!eventTime.isBefore(startTime)) {      // Late in "today", so push the endTime forward into "tomorrow"
         endTime = endTime.add(1, 'day');
-      } else {                                   // Early in the day, so push the startTime back into yesterday
+      } else {                                   // Early in "tomorrow", so push the startTime back into "yesterday"
         startTime = startTime.subtract(1, 'day');
       }
     }
-    this.driver.log(`managerEvent.evaluateFlowCardWindow: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
     const inWindow = (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) ? false : true;
     return { inWindow, eventTime, endTime };
   }
@@ -161,15 +157,11 @@ module.exports = class managerEvent {
   evaluateStrategy(blockPrices, strategy, direction) {
     const goalFunction = direction === 'import' ? Math.min : Math.max;
     const solutionIndices = this.targetIndices(blockPrices, goalFunction(...blockPrices));
-    this.driver.log(`managerEvent.evaluateStrategy: solutionIndices ${solutionIndices}`);
     //Select the block according to the strategy - earliest = [0], latest = [length(cheapestBlocks) - 1], random = 1/length(cheapestBlocks)
     const randomIndex = Math.min((solutionIndices.length) - 1, Math.floor(Math.random() * solutionIndices.length));
     const chosenIndex = strategy === 'early' ? 0 : strategy === 'late' ? solutionIndices.length - 1 : randomIndex;
-    this.driver.log(`managerEvent.evaluateStrategy: randomIndex ${randomIndex} chosenIndex ${chosenIndex}`);
     //Fire if block selected = [0] return true, else return false    
     const fire = solutionIndices[chosenIndex] === 0;
-    this.driver.log(`managerEvent.evaluateStrategy: solutionIndices[chosenIndex] ${solutionIndices[chosenIndex]} fire ${fire}`);
-    //const avePrice = blockPrices[0] / blockChunks;
     return fire;
   }
 
@@ -180,16 +172,12 @@ module.exports = class managerEvent {
    * @returns {boolean}         True if the flow card should be triggered, false otherwise
    */
   decideBestBlockCardExecution(args, state) {
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: args ${JSON.stringify(args)}`);
     const { inWindow, eventTime, endTime } = this.evaluateFlowCardWindow(args, state.eventTime);
-    //If not in the window then can't start yet
     if (!inWindow) return { fire: false };
     const blockChunks = 2 * Number(args.duration);
     const blockPrices = this.getWindowBlockPrices(state.prices, eventTime, endTime, blockChunks);
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: blockPrices ${JSON.stringify(blockPrices)}`);
     if (!blockPrices || blockPrices.length === 0) return { fire: false };
     const fire = this.evaluateStrategy(blockPrices, args.strategy, args.direction);
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: fire ${fire} blockPrices[0] ${blockPrices[0]} blockChunks ${blockChunks}`);
     return {
       fire: fire,
       avePrice: blockPrices[0] / blockChunks,
