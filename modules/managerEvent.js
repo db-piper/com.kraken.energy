@@ -91,7 +91,7 @@ module.exports = class managerEvent {
               'endTime': item.endTime,
               'strategy': item.strategy,
               'identifier': item.identifier,
-              'avePrice': result.avePrice,
+              'avePrice': Math.round(result.avePrice * 1000) / 1000,
               'blockStartTime': result.blockStartTime,
               'blockEndTime': result.blockEndTime
             };
@@ -119,10 +119,16 @@ module.exports = class managerEvent {
   evaluateFlowCardWindow(args, atTimeMillis) {
     const eventTime = dayjs(atTimeMillis).tz(this.wrapper.timeZone).second(0).millisecond(0); //when called will be hh:00:00.000 or hh:30:00.000
     const sHhMm = args.startTime.split(":");
-    const startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
+    let startTime = eventTime.hour(Number(sHhMm[0])).minute(Number(sHhMm[1]));
     const eHhMm = args.endTime.split(":");
     let endTime = startTime.hour(Number(eHhMm[0])).minute(Number(eHhMm[1]));
-    endTime = (endTime.isBefore(startTime)) ? endTime.add(1, 'day') : endTime;
+    if (endTime.isBefore(startTime)) {           // Window crosses midnight
+      if (!eventTime.isBefore(startTime)) {      // Late in the day, so push the endTime into tomorrow
+        endTime = endTime.add(1, 'day');
+      } else {                                   // Early in the day, so push the startTime back into yesterday
+        startTime = startTime.subtract(1, 'day');
+      }
+    }
     this.driver.log(`managerEvent.evaluateFlowCardWindow: eventTime ${eventTime.format()} startTime ${startTime.format()} endTime ${endTime.format()}`);
     const inWindow = (eventTime.isBefore(startTime) || eventTime.isAfter(endTime)) ? false : true;
     return { inWindow, eventTime, endTime };
@@ -133,16 +139,16 @@ module.exports = class managerEvent {
    * @param   {array}   prices          The prices chunks in the window
    * @param   {number}  eventTime       The time in milliseconds marking the start of the window
    * @param   {number}  endTime         The time in milliseconds marking the end of the window
-   * @param   {number}  duration        The block duration required by the flow card in 30 minute chunks
+   * @param   {number}  blockChunks     The number of 30 minute chunks required by the flow card
    * @returns {array}                   The price of each relevant block
    */
-  getWindowBlockPrices(prices, eventTime, endTime, duration) {
+  getWindowBlockPrices(prices, eventTime, endTime, blockChunks) {
     const maxPossibleChunks = Math.floor((endTime.valueOf() - eventTime.valueOf()) / 1800000);
     const endBlock = Math.min(prices.length, maxPossibleChunks);
     const relevantPrices = prices.slice(0, endBlock);
-    return (relevantPrices.length < duration * 2) ?
+    return (relevantPrices.length < blockChunks) ?
       [] :
-      this.apertureMap(relevantPrices, duration * 2, (window) => window.reduce((total, value) => total + value, 0));
+      this.apertureMap(relevantPrices, blockChunks, (window) => window.reduce((total, value) => total + value, 0));
   }
 
   /**
@@ -183,7 +189,7 @@ module.exports = class managerEvent {
     this.driver.log(`managerEvent.decideBestBlockCardExecution: blockPrices ${JSON.stringify(blockPrices)}`);
     if (!blockPrices || blockPrices.length === 0) return { fire: false };
     const fire = this.evaluateStrategy(blockPrices, args.strategy, args.direction);
-    this.driver.log(`managerEvent.decideBestBlockCardExecution: fire ${fire}`);
+    this.driver.log(`managerEvent.decideBestBlockCardExecution: fire ${fire} blockPrices[0] ${blockPrices[0]} blockChunks ${blockChunks}`);
     return {
       fire: fire,
       avePrice: blockPrices[0] / blockChunks,
