@@ -148,5 +148,8 @@
   },
   "1.2.11": {
     "en": "Add initial support for Day/Night and Three Rate tariffs based on standard slot schedules only"
+  },
+  "1.2.12": {
+    "en": "New Best Priced Block of Time flowcard for both Import and Export Tariffs"
   }
 }
