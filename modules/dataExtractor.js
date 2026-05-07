@@ -335,7 +335,7 @@ function extractFuturePricesTariff(atTimeMillis, queryData, timeZone, isExport) 
   const tariff = getTariffDirection(atTimeMillis, isExport, queryData, timeZone);
   const precedingChunk = atTimeMillis - (atTimeMillis % 1800000);
   let prices = [];
-  const priceRange = { minPrice: 0, maxPrice: 0 };
+  let priceRange = { minPrice: 0, maxPrice: 0 };
   if (tariff?.unitRates) {
     priceRange = {
       minPrice: Math.min(...tariff.unitRates.map(rate => rate.value)),

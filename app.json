@@ -230,6 +230,13 @@
             }
           },
           {
+            "name": "quartile",
+            "type": "number",
+            "title": {
+              "en": "Price Quartile"
+            }
+          },
+          {
             "name": "blockStartTime",
             "type": "string",
             "title": {

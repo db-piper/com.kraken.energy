@@ -182,7 +182,7 @@ module.exports = class managerEvent {
     if (!blockPrices || blockPrices.length === 0) return { fire: false };
     const fire = this.evaluateStrategy(blockPrices, args.strategy, args.direction);
     const averagePrice = blockPrices[0] / blockChunks;
-    const quartile = this.accountWrapper.computeQuartile(state.priceRange.minPrice, state.priceRange.maxPrice, averagePrice);
+    const quartile = this.wrapper.computeQuartile(state.priceRange.minPrice, state.priceRange.maxPrice, averagePrice);
     return {
       fire: fire,
       avePrice: averagePrice,

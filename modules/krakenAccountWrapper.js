@@ -211,7 +211,9 @@ module.exports = class krakenAccountWrapper {
    * @returns {number}                    The quartile (0 to 3)
    */
   computeQuartile(minimumPrice, maximumPrice, price) {
-    return DataExtractor.computeQuartile(minimumPrice, maximumPrice, price);
+    const quartile = DataExtractor.computeQuartile(minimumPrice, maximumPrice, price);
+    this._driver.homey.log(`krakenAccountWrapper.computeQuartile: minimumPrice ${minimumPrice}, maximumPrice ${maximumPrice}, price ${price}, quartile ${quartile}`);
+    return quartile;
   }
 
   /**
