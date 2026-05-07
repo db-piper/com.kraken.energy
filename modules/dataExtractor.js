@@ -205,8 +205,6 @@ function getPrices(atTimeMillis, tariff, timeZone) {
         maxPrice = selectedRate.value;
       }
 
-      const quartileStep = (maxPrice - minPrice) / 4 || 0;
-
       prices = {
         preVatUnitRate: selectedRate.preVatValue,
         unitRate: selectedRate.value,
@@ -214,8 +212,7 @@ function getPrices(atTimeMillis, tariff, timeZone) {
         standingCharge: tariff.standingCharge,
         nextSlotStart: `${selectedRate.validTo}`,
         thisSlotStart: `${selectedRate.validFrom}`,
-        // Calculate quartile: 0 (cheapest) to 3 (most expensive)
-        quartile: Math.min(3, Math.floor((selectedRate.value - minPrice) / (quartileStep || 1))),
+        quartile: computeQuartile(minPrice, maxPrice, selectedRate.value),
         isHalfHourly: true
       };
     }
@@ -236,6 +233,19 @@ function getPrices(atTimeMillis, tariff, timeZone) {
 
   return prices;
 }
+
+/**
+ * Compute the quartile for a given price
+ * @param   {number}    minimumPrice    The minimum price
+ * @param   {number}    maximumPrice    The maximum price
+ * @param   {number}    price           The price to compute the quartile for
+ * @returns {number}                    The quartile
+ */
+function computeQuartile(minimumPrice, maximumPrice, price) {
+  const quartileStep = (maximumPrice - minimumPrice) / 4 || 1;
+  return Math.min(3, Math.floor((price - minimumPrice) / quartileStep));
+}
+
 
 /**
  * Indicate if tomorow's prices are available
@@ -325,7 +335,12 @@ function extractFuturePricesTariff(atTimeMillis, queryData, timeZone, isExport) 
   const tariff = getTariffDirection(atTimeMillis, isExport, queryData, timeZone);
   const precedingChunk = atTimeMillis - (atTimeMillis % 1800000);
   let prices = [];
+  const priceRange = { minPrice: 0, maxPrice: 0 };
   if (tariff?.unitRates) {
+    priceRange = {
+      minPrice: Math.min(...tariff.unitRates.map(rate => rate.value)),
+      maxPrice: Math.max(...tariff.unitRates.map(rate => rate.value))
+    };
     prices = tariff.unitRates
       // 1. Keep slots that END after our current window starts
       .filter(slot => Date.parse(slot.validTo) > precedingChunk)
@@ -338,8 +353,12 @@ function extractFuturePricesTariff(atTimeMillis, queryData, timeZone, isExport) 
     const msRemaining = endOfDay.diff(precedingChunk);
     const count = Math.max(1, Math.ceil(msRemaining / 1800000));
     prices = Array(count).fill(tariff.unitRate);
+    priceRange = {
+      minPrice: tariff.unitRate,
+      maxPrice: tariff.unitRate
+    };
   }
-  return prices;
+  return { prices, priceRange };
 }
 
 /**
@@ -638,10 +657,32 @@ module.exports = class dataExtractor {
    * @returns {object}                      Object with importPrices and exportPrices arrays
    */
   static extractFuturePrices(atTimeMillis, queryData, timeZone) {
-    const importPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, false);
-    const exportPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, true);
-    return { importPrices, exportPrices };
+    // const importPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, false);
+    // const exportPrices = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, true);
+    // return { importPrices, exportPrices };
+
+    const {
+      prices: importPrices,
+      priceRange: importPriceRange
+    } = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, false);
+
+    const {
+      prices: exportPrices,
+      priceRange: exportPriceRange
+    } = extractFuturePricesTariff(atTimeMillis, queryData, timeZone, true);
+
+    return { importPrices, exportPrices, importPriceRange, exportPriceRange };
   }
 
+  /**
+   * Compute the quartile for a given price
+   * @param   {number}    minimumPrice    The minimum price
+   * @param   {number}    maximumPrice    The maximum price
+   * @param   {number}    price           The price to compute the quartile for
+   * @returns {number}                    The quartile (0 to 3)
+   */
+  static computeQuartile(minimumPrice, maximumPrice, price) {
+    return computeQuartile(minimumPrice, maximumPrice, price);
+  }
 
 }

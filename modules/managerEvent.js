@@ -62,7 +62,7 @@ module.exports = class managerEvent {
    * @returns {Promise<boolean>}                    True if the trigger flow cards were evaluated successfully
    */
   async evaluateTriggerFlowCards(futurePrices, atTimeMillis) {
-    const { importPrices, exportPrices } = futurePrices;
+    const { importPrices, exportPrices, importPriceRange, exportPriceRange } = futurePrices;
     const flowCardDef = this.driver.homey.flow.getTriggerCard('bestBlockStrategy');
     const args = await flowCardDef.getArgumentValues();
     const isHalfHour = dayjs(atTimeMillis).tz(this.wrapper.timeZone).minute() % 30 === 0;
@@ -71,12 +71,14 @@ module.exports = class managerEvent {
       args
         .filter((cardArgs) => !executedCards[this.hashFlowCardArgs(cardArgs)])
         .forEach(cardArgs => {
-          futurePrices = (cardArgs.direction === 'import') ? importPrices : exportPrices;
-          if (futurePrices.length > 0) {
+          const prices = (cardArgs.direction === 'import') ? importPrices : exportPrices;
+          const priceRange = (cardArgs.direction === 'import') ? importPriceRange : exportPriceRange;
+          if (prices.length > 0) {
             const hash = this.hashFlowCardArgs(cardArgs);
             const state = {
               eventTime: atTimeMillis,
-              prices: futurePrices,
+              prices: prices,
+              priceRange: priceRange,
               targetId: hash
             };
             const result = this.decideBestBlockCardExecution(cardArgs, state);
@@ -89,6 +91,7 @@ module.exports = class managerEvent {
                 'strategy': cardArgs.strategy,
                 'identifier': cardArgs.identifier,
                 'avePrice': Math.round(result.avePrice * 1000) / 1000,
+                'quartile': result.quartile,
                 'blockStartTime': result.blockStartTime,
                 'blockEndTime': result.blockEndTime
               };
@@ -178,9 +181,12 @@ module.exports = class managerEvent {
     const blockPrices = this.getWindowBlockPrices(state.prices, eventTime, endTime, blockChunks);
     if (!blockPrices || blockPrices.length === 0) return { fire: false };
     const fire = this.evaluateStrategy(blockPrices, args.strategy, args.direction);
+    const averagePrice = blockPrices[0] / blockChunks;
+    const quartile = this.accountWrapper.computeQuartile(state.priceRange.minPrice, state.priceRange.maxPrice, averagePrice);
     return {
       fire: fire,
-      avePrice: blockPrices[0] / blockChunks,
+      avePrice: averagePrice,
+      quartile: quartile,
       blockStartTime: eventTime.format('HH:mm'),
       blockEndTime: eventTime.add(blockChunks * 30, 'minute').format('HH:mm')
     };

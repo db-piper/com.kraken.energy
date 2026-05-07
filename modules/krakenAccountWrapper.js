@@ -204,6 +204,17 @@ module.exports = class krakenAccountWrapper {
   }
 
   /**
+   * Compute the quartile for a given price
+   * @param   {number}    minimumPrice    The minimum price
+   * @param   {number}    maximumPrice    The maximum price
+   * @param   {number}    price           The price to compute the quartile for
+   * @returns {number}                    The quartile (0 to 3)
+   */
+  computeQuartile(minimumPrice, maximumPrice, price) {
+    return DataExtractor.computeQuartile(minimumPrice, maximumPrice, price);
+  }
+
+  /**
    * Get the product and tariff JSON for all MPAN on the account
    * @returns {Promise<object[]>} Array of kraken homey device definitions 
    */

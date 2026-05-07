@@ -6,6 +6,9 @@
   "titleFormatted": {
     "en": "When [[strategy]] [[duration]] hour block of the best priced [[direction]] energy between [[startTime]] and [[endTime]] and labelled [[identifier]] begins"
   },
+  "hint": {
+    "en": "Triggers when the block of time, within a window, that best matches the selected strategy for the chosen tariff direction begins"
+  },
   "args": [
     {
       "type": "dropdown",
@@ -143,6 +146,13 @@
       "type": "number",
       "title": {
         "en": "Average Price"
+      }
+    },
+    {
+      "name": "quartile",
+      "type": "number",
+      "title": {
+        "en": "Price Quartile"
       }
     },
     {
