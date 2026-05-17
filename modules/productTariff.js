@@ -29,22 +29,22 @@ module.exports = class productTariff extends krakenDevice {
 
     this.defineCapability(this._capIds.PRODUCT_CODE);
     this.defineCapability(this._capIds.TARIFF_CODE);
-    this.defineCapability(this._capIds.UNIT_PRICE_PAID, { "title": { "en": '£/kWh Paid' }, "decimals": 4, "units": { "en": "£", } }, ['title', 'decimals', 'units']);
+    this.defineCapability(this._capIds.UNIT_PRICE_PAID, { "title": { "en": '£/kWh Paid' }, "decimals": 4, "units": { "en": "£/kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.STANDING_CHARGE, { "title": { "en": 'Daily Charge', }, "decimals": 4, "units": { "en": "£", } });
     this.defineCapability(this._capIds.METER_READING, { "title": { "en": 'Cumulative kWh' }, "decimals": 3 });
     this.defineCapability(this._capIds.SLOT_ENERGY_CONSUMPTION, { "title": { "en": `${slotLabelWord} Energy kWh` }, "decimals": 3 });
-    this.defineCapability(this._capIds.SLOT_ENERGY_VALUE, { "title": { "en": `${slotLabelWord} Energy £ ` }, "decimals": 4, "units": { "en": "£", } });
+    this.defineCapability(this._capIds.SLOT_ENERGY_VALUE, { "title": { "en": `${slotLabelWord} Energy £ ` }, "decimals": 4, "units": { "en": "£" } });
     this.defineCapability(this._capIds.AVERAGE_POWER, { "title": { "en": `${slotLabelWord} Ave. Power` } });
     this.defineCapability(this._capIds.SLOT_QUARTILE, { "title": { "en": "Price Quartile" } }, [], isHalfHourly);
     this.defineCapability(this._capIds.TAX_RATE, { "title": { "en": "Tax Rate" } });
     this.defineCapability(this._capIds.SLOT_START_TIME, { "title": { "en": `${slotLabelWord} Start` } });
     this.defineCapability(this._capIds.SLOT_END_TIME, { "title": { "en": `${slotLabelWord} End`, } });
-    this.defineCapability(this._capIds.NEXT_UNIT_PRICE, { "title": { "en": 'Next £/kWh', }, "units": { "en": "£", "fr": "€" }, "decimals": 4 }, [], isHalfHourly);
+    this.defineCapability(this._capIds.NEXT_UNIT_PRICE, { "title": { "en": 'Next £/kWh', }, "units": { "en": "£/kWh" }, "decimals": 4 }, ['title', 'units', 'decimals'], isHalfHourly);
     this.defineCapability(this._capIds.NEXT_SLOT_QUARTILE, { "title": { "en": "Next Price Quartile" } }, [], isHalfHourly);
     this.defineCapability(this._capIds.NEXT_DAY_PRICES_INDICATOR, { "title": { "en": "Tomorrow's Prices" } }, [], isHalfHourly);
     this.defineCapability(this._capIds.NEXT_SLOT_END_TIME, { "title": { "en": 'Next Slot End' } }, [], isHalfHourly);
     this.defineCapability(this._capIds.DISPATCH_PRICING_INDICATOR, { "title": { "en": "Dispatch Pricing" } }, [], isDispatchable);
-    this.defineCapability(this._capIds.UNIT_PRICE_TARIFF, { "title": { "en": '£/kWh Tariff' }, "decimals": 4, "units": { "en": "£", } }, [], isDispatchable);
+    this.defineCapability(this._capIds.UNIT_PRICE_TARIFF, { "title": { "en": '£/kWh Tariff' }, "decimals": 4, "units": { "en": "£/kWh" } }, ['title', 'units', 'decimals'], isDispatchable);
     this.defineCapability(this._capIds.TOTAL_DISPATCHED_MINUTES, { "title": { "en": "Total Dispatched Minutes" }, "decimals": 0, "units": { "en": "mn" } }, ['title', 'decimals', 'units'], isDispatchable);
     this.defineCapability(this._capIds.DISPATCH_LIMIT_PERCENT, { "title": { "en": "Dispatch Limit" }, "decimals": 1, "units": { "en": "%" } }, ['title', 'decimals'], isDispatchable);
     this.defineCapability(this._capIds.SLOT_START_DATETIME, { "title": { "en": "SlotStartH" }, "uiComponent": null }, []);
