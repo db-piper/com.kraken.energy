@@ -24,11 +24,11 @@ module.exports = class managerEvent {
     const fullEvent = this.driver.homey.app.fullEvent;
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
     let result = false;
-    let account, importTariff, exportTariff, devices, liveMeterId, deviceIds, futurePrices;
+    let account, importTariff, exportTariff, gasTariff, devices, liveMeterId, deviceIds, futurePrices;
 
     if (periodChanges.chunk || periodChanges.tariffSlotImport || periodChanges.tariffSlotExport || !this.driver.homey.app.importTariff || fullEvent) {
       this.driver.log(`managerEvent.executeEvent: Chunk changed or first run`);
-      ({ account, importTariff, exportTariff, devices, futurePrices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
+      ({ account, importTariff, exportTariff, gasTariff, devices, futurePrices } = await this.wrapper.accessAccountGraphQL(atTimeMillis));
       if (account) {
         liveMeterId = account.liveMeterId;
         deviceIds = Object.values(devices).map(device => device.id);
@@ -45,6 +45,7 @@ module.exports = class managerEvent {
       this.driver.log(`managerEvent.executeEvent: Chunk unchanged`);
       importTariff = this.driver.homey.app.importTariff;
       exportTariff = this.driver.homey.app.exportTariff;
+      gasTariff = undefined;
       liveMeterId = this.driver.homey.app.liveMeterId;
       deviceIds = this.driver.homey.app.deviceIds;
     }

@@ -122,6 +122,15 @@ function getTariffDirection(atTimeMillis, isExport, accountData, timeZone) {
 }
 
 /**
+ * Return tariff details for the specified direction for the account overview
+ * @param   {object}              accountData   Account data from Kraken
+ * @returns {object | undefined}                Tariff details or undefined
+ */
+function getGasTariff(accountData) {
+  return accountData?.data?.account?.gasAgreements?.[0]?.tariff;
+}
+
+/**
  * Generates a list of unit rates for a Day/Night tariff.
  * @param {number} atTimeMillis  A time within the day for which unit rates are required
  * @param {object} tariff        DayNightTariff data structure from Kraken
@@ -522,6 +531,27 @@ module.exports = class dataExtractor {
       nextSlotEnd: pricesNext ? `${pricesNext.nextSlotStart}` : null,
       nextSlotEndShort: pricesNext ? dayjs(pricesNext.nextSlotStart).tz(timeZone).format('DD/MM HH:mm') : null,
       nextSlotQuartile: pricesNext?.quartile ?? null
+    };
+  }
+
+  /**
+   * From the mass of accountData abstract the key data items required by the homey devices
+   * @param   {object}               accountData   The account data from Kraken
+   * @returns {object | undefined}                 The extracted account data
+   */
+  static extractGasTariffData(accountData) {
+    const tariffDefinition = getGasTariff(accountData);
+    if (!tariffDefinition) return { present: false };
+
+    return {
+      present: true,
+      productCode: `${tariffDefinition.productCode}`,
+      tariffCode: `${tariffDefinition.tariffCode}`,
+      unitRate: tariffDefinition.unitRate,
+      preVatUnitRate: tariffDefinition.preVatUnitRate,
+      standingCharge: tariffDefinition.standingCharge,
+      preVatStandingCharge: tariffDefinition.preVatStandingCharge,
+      taxRate: 100 * (tariffDefinition.unitRate - tariffDefinition.preVatUnitRate) / tariffDefinition.preVatUnitRate,
     };
   }
 
