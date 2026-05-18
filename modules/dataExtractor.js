@@ -45,6 +45,49 @@ function getLiveMeterId(accountData) {
 }
 
 /**
+ * Get the gas meter id on the account
+ * @param   {object} accountData  Account data from Kraken
+ * @returns {string}              Gas meter ID
+ */
+function getGasMeterId(accountData) {
+  let meterId = undefined;
+  const account = accountData?.data?.account;
+  const agreements = account?.gasAgreements || [];
+
+  const meter = agreements[0]?.meterPoint?.meters?.find(meter =>
+    meter.smartGasMeter?.deviceId
+  );
+
+  if (meter) {
+    meterId = meter.smartGasMeter?.deviceId
+  }
+
+  return meterId;
+}
+
+/**
+ * Get the gas meter reading factor
+ * @param   {object} accountData  Account data from Kraken
+ * @returns {number}              Gas meter reading factor
+ */
+function getGasMeterReadingFactor(accountData) {
+  const account = accountData?.data?.account;
+  const agreements = account?.gasAgreements || [];
+  return Number(agreements[0]?.meterPoint?.meters?.readingFactor) || 1;
+}
+
+/**
+ * Get the gas meter consumption units label
+ * @param   {object} accountData  Account data from Kraken
+ * @returns {string}              Gas meter consumption units label
+ */
+function getGasMeterConsumptionUnits(accountData) {
+  const account = accountData?.data?.account;
+  const agreements = account?.gasAgreements || [];
+  return agreements[0]?.meterPoint?.meters?.consumptionUnit || '';
+}
+
+/**
  * Return tariff details for the specified direction for the account overview
  * @param   {number}              atTimeMillis  The time in milliseconds to get the prices for
  * @param   {boolean}             isExport      true - export tariff; false - import tariff
@@ -424,7 +467,14 @@ module.exports = class dataExtractor {
     if (account) {
       accountExtract.balance = account.balance;                                                             //number, pence
       accountExtract.billingStartDate = `${account?.billingOptions?.currentBillingPeriodStartDate || ''}`;  //string, YYYY-MM-DD
-      accountExtract.liveMeterId = `${getLiveMeterId(accountData) || ''}`;                             //string
+      accountExtract.liveMeterId = `${getLiveMeterId(accountData) || ''}`;                                  //string
+      const gasMeterId = `${getGasMeterId(accountData) || ''}`;                                             //string
+      accountExtract.hasGasTarriff = gasMeterId !== "";                                                     //boolean
+      if (accountExtract.hasGasTarriff) {
+        accountExtract.gasMeterId = gasMeterId;                                                             //string
+        accountExtract.gasMeterReadingFactor = getGasMeterReadingFactor(accountData);                       //number
+        accountExtract.gasMeterConsumptionUnits = getGasMeterConsumptionUnits(accountData);                 //string, e.g m³
+      }
     }
     return accountExtract;
   }

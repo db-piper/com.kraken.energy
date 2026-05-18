@@ -141,6 +141,7 @@ module.exports = class krakenAccountWrapper {
         // 2. Extract atomized data
         //TODO: Refactor these calls to consistently pass fragments rather than the whole queryDataResult
         const account = DataExtractor.extractAccountData(queryResultData);
+        this._driver.homey.log(`krakenAccountWrapper.accessAccountGraphQL: account ${JSON.stringify(account, null, 2)}`);
         const importTariff = DataExtractor.extractTariffData(atTimeMillis, false, queryResultData, this.timeZone);
         const exportTariff = DataExtractor.extractTariffData(atTimeMillis, true, queryResultData, this.timeZone);
         const devices = DataExtractor.extractDeviceData(deviceData);

@@ -50,6 +50,14 @@ const ACCOUNT_DATA_QUERY = `query GetAccount($accountNumber: String!) {
         }
       }
     }
+    gasAgreements(active: true) {
+      meterPoint {
+        meters(includeInactive: false) { id status units consumptionUnits hasAndAllowsHhReadings meterType readingFactor
+          smartGasMeter { deviceId id }
+        }
+      }
+      tariff { id displayName fullName productCode tariffCode standingCharge preVatUnitRate unitRate preVatStandingCharge }
+    }
   }
   devices(accountNumber: $accountNumber) { id name deviceType status { currentState current } }
 }`;
