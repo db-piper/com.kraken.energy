@@ -34,6 +34,7 @@ module.exports = class managerEvent {
         deviceIds = Object.values(devices).map(device => device.id);
         this.driver.homey.app.importTariff = importTariff;
         this.driver.homey.app.exportTariff = exportTariff;
+        this.driver.homey.app.gasTariff = gasTariff;
         this.driver.homey.app.liveMeterId = liveMeterId;
         this.driver.homey.app.deviceIds = deviceIds;
         this.driver.homey.app.fullEvent = false;
@@ -45,12 +46,12 @@ module.exports = class managerEvent {
       this.driver.log(`managerEvent.executeEvent: Chunk unchanged`);
       importTariff = this.driver.homey.app.importTariff;
       exportTariff = this.driver.homey.app.exportTariff;
-      gasTariff = undefined;
+      gasTariff = this.driver.homey.app.gasTariff;
       liveMeterId = this.driver.homey.app.liveMeterId;
       deviceIds = this.driver.homey.app.deviceIds;
     }
 
-    result = await this.executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account, importTariff, exportTariff, devices);
+    result = await this.executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account, importTariff, exportTariff, gasTariff, devices);
     this.driver.homey.app.eventTime = atTimeMillis;
     await this.logMemoryToInsights()
     return result;
@@ -285,12 +286,13 @@ module.exports = class managerEvent {
    * @param   {object}            account       kraken account header data
    * @param   {object}            importTariff  kraken import tariff data
    * @param   {object}            exportTariff  kraken export tariff data
+   * @param   {object}            gasTariff     kraken gas tariff data
    * @param   {object}            devices       kraken device data
    * @returns {promise<boolean>}                True iff any device has been updated by the event
    */
-  async executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined) {
+  async executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account = undefined, importTariff = undefined, exportTariff = undefined, gasTariff = undefined, devices = undefined) {
     let updates = false;
-    this.driver.homey.log(`managerEvent.executeEventOnDevices: liveMeterId ${liveMeterId}`);
+    this.driver.log(`managerEvent.executeEventOnDevices: gasTariff ${JSON.stringify(gasTariff)}`);
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 

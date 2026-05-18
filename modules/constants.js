@@ -8,6 +8,7 @@ module.exports = {
   EventTime: "kraken_event_time",
   ImportTariff: "kraken_import_tariff",
   ExportTariff: "kraken_export_tariff",
+  GasTariff: "kraken_gas_tariff",
   LiveMeterId: "kraken_live_meter_id",
   DeviceIds: "kraken_device_ids",
   PeriodStartDay: PeriodStartDay,

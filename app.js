@@ -1,5 +1,5 @@
 'use strict';
-const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, LiveMeterId, DeviceIds, PeriodStartDay, TriggerFlowCardState } = require('./modules/constants');
+const { TokenSetting, TokenExpirySetting, ApiKeySetting, AccountIdSetting, EventTime, ImportTariff, ExportTariff, GasTariff, LiveMeterId, DeviceIds, PeriodStartDay, TriggerFlowCardState } = require('./modules/constants');
 const Homey = require('homey');
 const dayjs = require('./bundles/dayjs-bundled/index.js');
 
@@ -72,6 +72,7 @@ module.exports = class krakenApp extends Homey.App {
     const settings = this.homey.settings;
     settings.unset(ImportTariff);
     settings.unset(ExportTariff);
+    settings.unset(GasTariff);
     settings.unset(LiveMeterId);
     settings.unset(DeviceIds);
     settings.unset(PeriodStartDay);
@@ -112,6 +113,14 @@ module.exports = class krakenApp extends Homey.App {
    */
   get exportTariff() {
     return this.homey.settings.get(ExportTariff);
+  }
+
+  set gasTariff(tariff) {
+    this.homey.settings.set(GasTariff, tariff);
+  }
+
+  get gasTariff() {
+    return this.homey.settings.get(GasTariff);
   }
 
   /**
