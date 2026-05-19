@@ -3,6 +3,7 @@
 const Homey = require('homey');
 const energyAccount = require('../../modules/energyAccount');
 const productTariff = require('../../modules/productTariff');
+const gasTariff = require('../../modules/gasTariff');
 const smartEnergyDevice = require('../../modules/smartEnergyDevice');
 const managerEvent = require('../../modules/managerEvent');
 const krakenAccountWrapper = require('../../modules/krakenAccountWrapper');
@@ -45,7 +46,8 @@ module.exports = class krakenDriver extends Homey.Driver {
     const classSwitch = {
       "octopusTariff": productTariff,
       "octopusAccount": energyAccount,
-      "smartDevice": smartEnergyDevice
+      "smartDevice": smartEnergyDevice,
+      "octopusGasTariff": gasTariff
     };
     if (deviceClass in classSwitch) {
       nodeClass = classSwitch[deviceClass];

@@ -31,6 +31,11 @@ const PRODUCT_TARIFF = {
   SLOT_END_DATETIME: "date_time.full_slot_end",
 };
 
+const GAS_TARIFF = {
+  PRODUCT_CODE: "product_code",
+  TARIFF_CODE: "tariff_code"
+};
+
 const ENERGY_ACCOUNT = {
   PERIOD_START_TEXT: "date_time.period_start",
   PERIOD_NEXT_START_TEXT: "date_time.next_period_start",
@@ -86,8 +91,9 @@ const SMART_ENERGY_DEVICE = {
 // The Registry: Mapping Driver IDs to their specific definitions
 const REGISTRY = {
   'octopusTariff': PRODUCT_TARIFF,
+  'octopusGasTariff': GAS_TARIFF,
   'octopusAccount': ENERGY_ACCOUNT,
-  'smartDevice': SMART_ENERGY_DEVICE,
+  'smartDevice': SMART_ENERGY_DEVICE
 };
 
 module.exports = {
