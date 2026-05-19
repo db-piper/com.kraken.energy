@@ -28,6 +28,16 @@ const PAIRING_QUERY = `query GetPairingData($accountNumber: String!) {
         }
       }
     }
+    gasAgreements(active: true) {
+      meterPoint {
+        meters(includeInactive: false) {
+          smartGasMeter {
+            deviceId
+            id
+          }
+        }
+      }
+    }
   }
   devices(accountNumber: $accountNumber) { id name status { currentState } }
 }`;

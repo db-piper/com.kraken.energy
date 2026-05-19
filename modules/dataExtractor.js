@@ -617,6 +617,30 @@ module.exports = class dataExtractor {
       }
     }
 
+    // 1b. Process Gas Tariff
+    if (account?.gasAgreements) {
+      for (const agreement of account.gasAgreements) {
+        const tariff = agreement.meterPoint?.agreements?.[0]?.tariff;
+        if (!tariff) continue;
+
+        const fuel = "Gas";
+        const isHalfHourly = false;
+
+        definitions.push({
+          name: `${fuel} Tariff`,
+          data: { id: `${accountId} ${fuel}` },
+          settings: { periodStartDay },
+          store: {
+            octopusClass: "octopusGasTariff",
+            isExport: false,
+            isHalfHourly: isHalfHourly,
+            isDispatchable: false
+          },
+          icon: `/${fuel.toLowerCase()}.svg`
+        });
+      }
+    }
+
     // 2. Add Account Definition
     definitions.push({
       name: "Octopus Account",
