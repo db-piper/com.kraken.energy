@@ -293,6 +293,7 @@ module.exports = class managerEvent {
   async executeEventOnDevices(atTimeMillis, periodChanges, deviceIds, liveMeterId, account = undefined, importTariff = undefined, exportTariff = undefined, gasTariff = undefined, devices = undefined) {
     let updates = false;
     this.driver.log(`managerEvent.executeEventOnDevices: gasTariff ${JSON.stringify(gasTariff)}`);
+    //TODO: Add code to get the live gas data readings; establish how power and gas device updates will be handled every 30 minutes.
     const meterFetchPromise = this.wrapper.getLiveMeterData(atTimeMillis, liveMeterId, deviceIds);
     const homeyDeviceReadyPromises = this.driver.getDevices().map(device => device.ready());
 

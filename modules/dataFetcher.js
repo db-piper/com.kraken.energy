@@ -78,6 +78,19 @@ module.exports = class dataFetcher {
     return this.homey.settings.get(ApiKeySetting);
   }
 
+  /**
+   * Get live gas reading from the Octopus GraphQL API.
+   * @param   {string}            gasMeterId  The gas meter ID to be queried
+   * @param   {string}            token       Current GraphQL access token
+   * @returns {promise<object>}               JSON object representing the result of the query
+   */
+  async getLiveGasReading(gasMeterId, token) {
+    const query = Queries.getGasMeterReadingQuery(gasMeterId);
+    const result = await this.getDataUsingGraphQL(query, token);
+    const reading = Number(result?.data?.smartMeterTelemetry?.[0]?.consumption || "0");
+    this.homey.log(`dataFetcher.getLiveGasReading: Gas Reading: ${reading}`);
+    return reading;
+  }
 
   /**
    * Make a query on the Octopus GraphQL API

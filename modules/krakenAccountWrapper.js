@@ -134,7 +134,7 @@ module.exports = class krakenAccountWrapper {
     const accountData = await this.fetcher.getDataUsingGraphQL(
       accountQuery,
       this.accessParameters.apiKey,
-      (queryResultData) => {
+      async (queryResultData) => {
         // 1. Resolve source for devices (No mutation of rawjson)
         const deviceData = (!TestData) ? queryResultData?.data?.devices : TestData.getMockDevices();
 
@@ -143,6 +143,9 @@ module.exports = class krakenAccountWrapper {
         const importTariff = DataExtractor.extractTariffData(atTimeMillis, false, queryResultData, this.timeZone);
         const exportTariff = DataExtractor.extractTariffData(atTimeMillis, true, queryResultData, this.timeZone);
         const gasTariff = DataExtractor.extractGasTariffData(queryResultData);
+        if (gasTariff && gasTariff.present) {
+          gasTariff.reading = await this.fetcher.getLiveGasReading(account.gasMeterId, this.accessParameters.apiKey);
+        }
         const devices = DataExtractor.extractDeviceData(deviceData);
         const futurePrices = DataExtractor.extractFuturePrices(atTimeMillis, queryResultData, this.timeZone);
 

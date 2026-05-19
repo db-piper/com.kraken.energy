@@ -1,5 +1,12 @@
 'use strict';
 
+const GAS_METER_READING_QUERY = `query GetLiveGasData($meterId: String!){
+  smartMeterTelemetry(deviceId: $meterId) {
+    readAt
+    consumption
+  }
+}`;
+
 const PAIRING_QUERY = `query GetPairingData($accountNumber: String!) {
   account(accountNumber: $accountNumber) {
     billingOptions { currentBillingPeriodStartDate }
@@ -100,6 +107,17 @@ module.exports = {
     operationName: "GetKrakenToken",
     query: KRAKEN_TOKEN_MUTATION,
     variables: { apikey: apiKey }
+  }),
+
+  /**
+   * Return the query string to obtain live gas data.
+   * @param   {string} meterId  The meter ID to be queried
+   * @returns {string}          Stringified JSON representing the query
+   */
+  getGasMeterReadingQuery: (meterId) => JSON.stringify({
+    operationName: "GetLiveGasData",
+    query: GAS_METER_READING_QUERY,
+    variables: { meterId: meterId }
   }),
 
 
