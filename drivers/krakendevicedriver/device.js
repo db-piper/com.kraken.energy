@@ -258,11 +258,12 @@ module.exports = class krakenDevice extends Homey.Device {
    * @param			{object}				account						Account abstract from Kraken
    * @param			{object}				importTariff			Import tariff object from Kraken
    * @param			{object}				exportTariff			Export tariff object from Kraken
+   * @param			{object}				gasTariff					Gas tariff object from Kraken
    * @param			{object}				devices						Map of devices from Kraken
    * @param			{object}				deviceStates			Map of device current states from Kraken
    * @returns   {Promise<boolean>}                Indicates if any updates are queued to the device capabilities
    */
-  processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, devices = undefined, deviceStates = undefined) {
+  processEvent(atTimeMillis, periodChanges, liveMeterReading = undefined, plannedDispatches = {}, account = undefined, importTariff = undefined, exportTariff = undefined, gasTariff = undefined, devices = undefined, deviceStates = undefined) {
     return false;
   }
 

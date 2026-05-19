@@ -308,7 +308,7 @@ module.exports = class managerEvent {
       for (const device of this.driver.getDevices()) {
         if (device.getAvailable()) {
           this.driver.log(`managerEvent.executeEventOnDevices: start event for: ${device.getName()}`);
-          device.processEvent(atTimeMillis, periodChanges, reading, dispatches, account, importTariff, exportTariff, devices, deviceStates);
+          device.processEvent(atTimeMillis, periodChanges, reading, dispatches, account, importTariff, exportTariff, gasTariff, devices, deviceStates);
           this.driver.log(`managerEvent.executeEventOnDevices: end event for: ${device.getName()}`);
         }
       }

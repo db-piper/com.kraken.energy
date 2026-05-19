@@ -88,7 +88,6 @@ module.exports = class dataFetcher {
     const query = Queries.getGasMeterReadingQuery(gasMeterId);
     const result = await this.getDataUsingGraphQL(query, token);
     const reading = Number(result?.data?.smartMeterTelemetry?.[0]?.consumption || "0");
-    this.homey.log(`dataFetcher.getLiveGasReading: Gas Reading: ${reading}`);
     return reading;
   }
 
