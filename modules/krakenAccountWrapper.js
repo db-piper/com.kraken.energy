@@ -227,9 +227,11 @@ module.exports = class krakenAccountWrapper {
     this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Starting");
 
     const definitions = await this.getPairingData(this.accountId, (rawParingData) => {
+      this._driver.homey.log("krakenAccountWrapper.getOctopusDeviceDefinitions: Raw pairing data: " + JSON.stringify(rawParingData));
       return DataExtractor.extractDeviceDefinitions(rawParingData, this.accountId, this.timeZone);
     })
 
+    this._driver.log(`krakenAccountWrapper.getOctopusDeviceDefinitions: definitions ${JSON.stringify(definitions)}`)
     if (!definitions) {
       throw new Error("Failed to retrieve device definitions from Kraken");
     }

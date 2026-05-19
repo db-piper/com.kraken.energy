@@ -37,6 +37,9 @@ const PAIRING_QUERY = `query GetPairingData($accountNumber: String!) {
           }
         }
       }
+      tariff {
+        id
+      }
     }
   }
   devices(accountNumber: $accountNumber) { id name status { currentState } }
