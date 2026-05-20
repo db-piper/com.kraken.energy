@@ -11,8 +11,8 @@ module.exports = class gasTariff extends krakenDevice {
     this.defineCapability(this._capIds.TARIFF_CODE);
     this.defineCapability(this._capIds.UNIT_PRICE_PAID, { "title": { "en": '£/kWh Paid' }, "decimals": 5, "units": { "en": "£/kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.STANDING_CHARGE, { "title": { "en": 'Daily Charge', }, "decimals": 5, "units": { "en": "£", } });
-    this.defineCapability(this._capIds.METER_READING);
-    this.defineCapability(this._capIds.DAY_CONSUMPTION, { "title": { "en": 'Daily Consumption' }, "decimals": 1, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
+    this.defineCapability(this._capIds.METER_READING, { "title": { "en": 'Total Energy' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
+    this.defineCapability(this._capIds.DAY_CONSUMPTION, { "title": { "en": 'Daily Consumption' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
 
     await this.applyCapabilities();
     await this.applyStoreValues();
