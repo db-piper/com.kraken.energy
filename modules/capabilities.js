@@ -33,7 +33,11 @@ const PRODUCT_TARIFF = {
 
 const GAS_TARIFF = {
   PRODUCT_CODE: "product_code",
-  TARIFF_CODE: "tariff_code"
+  TARIFF_CODE: "tariff_code",
+  UNIT_PRICE_PAID: "measure_monetary.unit_price_taxed",
+  STANDING_CHARGE: "measure_monetary.standing_charge_taxed",
+  METER_READING: "meter_power",
+  DAY_CONSUMPTION: "meter_power.consumption",
 };
 
 const ENERGY_ACCOUNT = {
