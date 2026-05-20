@@ -38,6 +38,7 @@ const GAS_TARIFF = {
   STANDING_CHARGE: "measure_monetary.standing_charge_taxed",
   METER_READING: "meter_power",
   DAY_CONSUMPTION: "meter_power.consumption",
+  TAX_RATE: "percent.tax_rate",
 };
 
 const ENERGY_ACCOUNT = {

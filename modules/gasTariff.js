@@ -13,6 +13,7 @@ module.exports = class gasTariff extends krakenDevice {
     this.defineCapability(this._capIds.STANDING_CHARGE, { "title": { "en": 'Daily Charge', }, "decimals": 5, "units": { "en": "£", } });
     this.defineCapability(this._capIds.METER_READING, { "title": { "en": 'Total Energy' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.DAY_CONSUMPTION, { "title": { "en": 'Daily Consumption' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
+    this.defineCapability(this._capIds.TAX_RATE, { "title": { "en": "Tax Rate" } });
 
     await this.applyCapabilities();
     await this.applyStoreValues();
@@ -77,6 +78,7 @@ module.exports = class gasTariff extends krakenDevice {
     this.updateCapability(this._capIds.STANDING_CHARGE, .01 * gasTariff.standingCharge);              // £/day   
     this.updateCapability(this._capIds.METER_READING, .001 * currentReading);                         // kWh
     this.updateCapability(this._capIds.DAY_CONSUMPTION, .001 * dayReading);                           // kWh
+    this.updateCapability(this._capIds.TAX_RATE, gasTariff.taxRate);
 
     return updates;
   }
