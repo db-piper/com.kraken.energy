@@ -14,6 +14,7 @@ module.exports = class gasTariff extends krakenDevice {
     this.defineCapability(this._capIds.METER_READING, { "title": { "en": 'Total Energy' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.DAY_CONSUMPTION, { "title": { "en": 'Daily Consumption' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.TAX_RATE, { "title": { "en": "Tax Rate" } });
+    this.defineCapability(this._capIds.DAY_ENERGY_VALUE, { "title": { "en": 'Day Energy Cost' }, "decimals": 4, "units": { "en": "£" } }, ['title', 'decimals', 'units']);
 
     await this.applyCapabilities();
     await this.applyStoreValues();
@@ -65,12 +66,11 @@ module.exports = class gasTariff extends krakenDevice {
 
     const firstTime = null === this.readCapabilityValue(this._capIds.PRODUCT_CODE);
     const currentReading = Math.floor(gasTariff.reading);                                                         // Wh integer
-    this.log(`gasTariff Device:processEvent - ${currentReading}`);
     const lastReading = firstTime ? currentReading : 1000 * this.readCapabilityValue(this._capIds.METER_READING); // Wh
     const lastdayReading = 1000 * this.readCapabilityValue(this._capIds.DAY_CONSUMPTION) || 0;                    // Wh
     const consumptionDelta = currentReading - lastReading;                                                        // Wh
     const dayReading = consumptionDelta + (periodChanges.day ? 0 : lastdayReading);                               // Wh
-    this.log(`gasTariff Device:processEvent - firstTime: ${firstTime}, lastReading: ${lastReading}, lastdayReading: ${lastdayReading}, dayReading: ${dayReading}, consumptionDelta: ${consumptionDelta}`);
+    const dayValue = (.001 * dayReading) * (.01 * gasTariff.unitRate);                                            // £      
 
     this.updateCapability(this._capIds.PRODUCT_CODE, gasTariff.productCode);
     this.updateCapability(this._capIds.TARIFF_CODE, gasTariff.tariffCode);
@@ -79,6 +79,7 @@ module.exports = class gasTariff extends krakenDevice {
     this.updateCapability(this._capIds.METER_READING, .001 * currentReading);                         // kWh
     this.updateCapability(this._capIds.DAY_CONSUMPTION, .001 * dayReading);                           // kWh
     this.updateCapability(this._capIds.TAX_RATE, gasTariff.taxRate);
+    this.updateCapability(this._capIds.DAY_ENERGY_VALUE, dayValue);                                   // £
 
     return updates;
   }

@@ -39,6 +39,7 @@ const GAS_TARIFF = {
   METER_READING: "meter_power",
   DAY_CONSUMPTION: "meter_power.consumption",
   TAX_RATE: "percent.tax_rate",
+  DAY_ENERGY_VALUE: "measure_monetary.day_energy_value",
 };
 
 const ENERGY_ACCOUNT = {
