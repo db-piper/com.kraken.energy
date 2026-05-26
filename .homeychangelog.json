@@ -154,5 +154,8 @@
   },
   "1.2.13": {
     "en": "Add Price Quartile to the tags of the bestBlockStrategy; Correct units of Unit Price measures on Product Tariff devices from £ to £/kWh."
+  },
+  "1.2.14": {
+    "en": "Add a simple Gas Tariff Device that measures consumption, price and cost of consumption"
   }
 }
