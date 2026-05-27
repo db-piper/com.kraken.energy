@@ -15,6 +15,8 @@ module.exports = class gasTariff extends krakenDevice {
     this.defineCapability(this._capIds.DAY_CONSUMPTION, { "title": { "en": 'Daily Consumption' }, "decimals": 3, "units": { "en": "kWh" } }, ['title', 'decimals', 'units']);
     this.defineCapability(this._capIds.TAX_RATE, { "title": { "en": "Tax Rate" } });
     this.defineCapability(this._capIds.DAY_ENERGY_VALUE, { "title": { "en": 'Day Energy Cost' }, "decimals": 4, "units": { "en": "£" } }, ['title', 'decimals', 'units']);
+    this.defineCapability(this._capIds.CHUNK_ENERGY, { "title": { "en": "Chunk Energy" }, "decimals": 3 });
+    this.defineCapability(this._capIds.CHUNK_VALUE, { "title": { "en": "Chunk Cost" }, "decimals": 2, "units": { "en": "£" } });
 
     await this.applyCapabilities();
     await this.applyStoreValues();
@@ -80,6 +82,8 @@ module.exports = class gasTariff extends krakenDevice {
     this.updateCapability(this._capIds.DAY_CONSUMPTION, .001 * dayReading);                           // kWh
     this.updateCapability(this._capIds.TAX_RATE, gasTariff.taxRate);
     this.updateCapability(this._capIds.DAY_ENERGY_VALUE, dayValue);                                   // £
+    this.updateCapability(this._capIds.CHUNK_ENERGY, .001 * consumptionDelta);                        // kWh
+    this.updateCapability(this._capIds.CHUNK_VALUE, .01 * consumptionDelta * gasTariff.unitRate);     // £
 
     return updates;
   }
