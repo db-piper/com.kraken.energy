@@ -157,5 +157,8 @@
   },
   "1.2.14": {
     "en": "Add a simple Gas Tariff Device that measures consumption, price and cost of consumption"
+  },
+  "1.2.15": {
+    "en": "Gas Tariff device reports consumption and cost by chunk (30 minute reading interval); Account device reports Octoplus (Loyalty) Points Balance and Value."
   }
 }
