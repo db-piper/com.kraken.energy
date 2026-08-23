@@ -753,6 +753,18 @@
       "uiComponent": "sensor",
       "decimals": 0
     },
+    "measure_magnitude": {
+      "type": "number",
+      "title": {
+        "en": "Number"
+      },
+      "decimals": 0,
+      "getable": true,
+      "setable": false,
+      "icon": "/assets/number.svg",
+      "insights": true,
+      "uiComponent": "sensor"
+    },
     "month_day": {
       "type": "enum",
       "title": {

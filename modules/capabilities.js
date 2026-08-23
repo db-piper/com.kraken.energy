@@ -75,6 +75,8 @@ const ENERGY_ACCOUNT = {
   PRIOR_IMPORT_PRICE_PAID: "measure_monetary.prior_import_price_paid",
   PRIOR_EXPORT_PRICE_PAID: "measure_monetary.prior_export_price_paid",
   NET_POWER: "measure_power",
+  LOYALTY_POINTS: "measure_magnitude.loyalty_points",
+  LOYALTY_VALUE: "measure_monetary.loyalty_value"
 };
 
 const SMART_ENERGY_DEVICE = {

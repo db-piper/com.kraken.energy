@@ -80,6 +80,7 @@ const ACCOUNT_DATA_QUERY = `query GetAccount($accountNumber: String!) {
     }
   }
   devices(accountNumber: $accountNumber) { id name deviceType status { currentState current } }
+  loyaltyPointLedgers {balanceCarriedForward}
 }`;
 
 const KRAKEN_TOKEN_MUTATION = `mutation GetKrakenToken($apikey: String!) {

@@ -472,6 +472,7 @@ module.exports = class dataExtractor {
    */
   static extractAccountData(accountData) {
     const account = accountData?.data?.account;
+    const loyalty = accountData?.data?.loyaltyPointLedgers;
     const accountExtract = (account) ? {} : undefined;
     if (account) {
       accountExtract.balance = account.balance;                                                             //number, pence
@@ -483,6 +484,12 @@ module.exports = class dataExtractor {
         accountExtract.gasMeterId = gasMeterId;                                                             //string
         accountExtract.gasMeterReadingFactor = getGasMeterReadingFactor(accountData);                       //number
         accountExtract.gasMeterConsumptionUnits = getGasMeterConsumptionUnits(accountData);                 //string, e.g m³
+      }
+    }
+    accountExtract.pointsBalance = 0;
+    if (loyalty) {
+      if (loyalty.length > 0) {
+        accountExtract.pointsBalance = Number(loyalty[0].balanceCarriedForward);
       }
     }
     return accountExtract;

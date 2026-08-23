@@ -1,0 +1,11 @@
+{
+  "type": "number",
+  "title": {"en": "Number"},
+  "decimals": 0,
+  "getable": true,
+  "setable": false,
+  "icon": "/assets/number.svg",
+  "insights": true,
+  "uiComponent": "sensor",
+  "decimals": 0
+}   

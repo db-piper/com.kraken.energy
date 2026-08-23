@@ -35,6 +35,8 @@ module.exports = class energyAccount extends krakenDevice {
     this.defineCapability(this._capIds.PERIOD_DURATION, { "title": { "en": "Period Duration" } });
     this.defineCapability(this._capIds.ACCOUNT_BALANCE, { "title": { "en": "Account Balance" }, "units": { "en": "£" } });
     this.defineCapability(this._capIds.PROJECTED_BILL, { "title": { "en": "Projected Bill" }, "units": { "en": "£" } });
+    this.defineCapability(this._capIds.LOYALTY_POINTS, {"title": {"en": "Loyalty Points"}});
+    this.defineCapability(this._capIds.LOYALTY_VALUE, {"title": {"en": "Loyalty Value"}, "decimals": 2, "units": {"en": "£"}});
     this.defineCapability(this._capIds.IMPORT_READING, { "title": { "en": "Import Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units", "title"]);
     this.defineCapability(this._capIds.EXPORT_READING, { "title": { "en": "Export Reading" }, "decimals": 3, "units": { "en": "kWh" } }, ["units", "title"], hasExport);
     this.defineCapability(this._capIds.PERIOD_IMPORT_ENERGY, { "title": { "en": "Period Import" }, "decimals": 3 });
@@ -266,6 +268,8 @@ module.exports = class energyAccount extends krakenDevice {
 
     const minPrice = importTariff.minimumPriceToday;
     const currentBalance = (!!account) ? .01 * account.balance : this.readCapabilityValue(this._capIds.ACCOUNT_BALANCE);
+    const pointsBalance = (!!account) ? account.pointsBalance : this.readCapabilityValue(this._capIds.LOYALTY_POINTS);
+    const pointsValue = pointsBalance / 800;
     const exportTariffPresent = exportTariff.present;
     const importTariffPresent = importTariff.present;
 
@@ -388,6 +392,8 @@ module.exports = class energyAccount extends krakenDevice {
     this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
     this.updateCapability(this._capIds.ACCOUNT_BALANCE, currentBalance);
     this.updateCapability(this._capIds.PROJECTED_BILL, projectedBill);
+    this.updateCapability(this._capIds.LOYALTY_POINTS, pointsBalance);
+    this.updateCapability(this._capIds.LOYALTY_VALUE, pointsValue);
     this.updateCapability(this._capIds.PERIOD_START_TEXT, currentPeriodStartDate.format("YYYY-MM-DD"));
     this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextPeriodStartDate.format("YYYY-MM-DD"));
     this.updateCapability(this._capIds.IMPORT_READING, liveMeterReading.consumption / 1000);
