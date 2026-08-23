@@ -17,6 +17,7 @@ module.exports = class dataFetcher {
     homey.log(`dataFetcher.constructor: Instantiating`);
     this._homey = homey;
     this._baseURL = 'https://api.octopus.energy';
+    this._backendURL = 'https://api.backend.octopus.energy';
     this._graphQlPath = '/v1/graphql/';
     this._hourMilliSeconds = 60 * 60 * 1000;
     this._dayMilliSeconds = 24 * this._hourMilliSeconds;
@@ -93,10 +94,13 @@ module.exports = class dataFetcher {
 
   /**
    * Make a query on the Octopus GraphQL API
-   * @param   {string} queryString  the GraphQL query to be performed
-   * @returns {promise<object>}     a JSON object representing the result of the query or undefined if query fails to execute
+   * @param   {string}    queryString         the GraphQL query to be performed
+   * @param   {string}    apiKey              API key for the account
+   * @param   {function}  transformFunction   Function that translates raw json into structured result
+   * @param   {boolean}   backend             indicates the query should be executed using the backend path
+   * @returns {promise<object>}               JSON object representing the result of the query or undefined if query fails to execute
    */
-  async getDataUsingGraphQL(queryString, apiKey, transformFunction = null) {
+  async getDataUsingGraphQL(queryString, apiKey, transformFunction = null, backend = false) {
     this.homey.log("datafetcher.getDataUsingGraphQL: starting");
     let validToken = await this.getApiToken(apiKey);
     // TODO: 
@@ -104,7 +108,7 @@ module.exports = class dataFetcher {
     // The API key and Account are assumed to be a valid matching pair.
     if (validToken) {
       try {
-        let result = await this.runGraphQlQuery(queryString, validToken, transformFunction);
+        let result = await this.runGraphQlQuery(queryString, validToken, transformFunction, backend);
         if (!result) {
           this.homey.log("dataFetcher.getDataUsingGraphQL: No result returned from fetcher");
           return undefined;
@@ -132,18 +136,20 @@ module.exports = class dataFetcher {
 
   /**
    * Execute the specified GraphQL query with an authorization header if needed
-   * @param   {string}          queryString   The GraphQL query to be performed
-   * @param   {string}          token         Current GraphQL access token (empty if no security header is needed)
-   * @returns {promise<object>}               JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
+   * @param   {string}          queryString       The GraphQL query to be performed
+   * @param   {string}          token             Current GraphQL access token (empty if no security header is needed)
+   * @param   {function}        transformFunction Function used to transform raw json in to required result structure
+   * @returns {promise<object>}                   JSON object with results of query or undefined. If there is a GQL problem, query succeeds but JSON contains error information
    */
-  async runGraphQlQuery(queryString, token, transformFunction = null) {
+  async runGraphQlQuery(queryString, token, transformFunction = null, backend = false) {
     this.homey.log("dataFetcher.runGraphQlQuery: starting");
     let rawjson;
     let response;
     let fetchParams;
     let result = undefined;
     try {
-      const url = `${this._baseURL}${this._graphQlPath}`;
+      const baseURL = backend ? this._backendURL : this._baseURL;
+      const url = `${baseURL}${this._graphQlPath}`;
       fetchParams = this.buildGraphQLFetchParams(queryString, token);
       response = await fetch(url, fetchParams);
 
