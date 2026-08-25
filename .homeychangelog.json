@@ -160,5 +160,8 @@
   },
   "1.2.15": {
     "en": "Gas Tariff device reports consumption and cost by chunk (30 minute reading interval); Account device reports Octoplus (Loyalty) Points Balance and Value."
+  },
+  "1.2.16": {
+    "en": "Harden price slot handling code to work with erroneous data supplied by Octopus"
   }
 }
