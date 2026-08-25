@@ -23,6 +23,7 @@ module.exports = class managerEvent {
     const periodChanges = this.wrapper.checkTimeBoundaries(atTimeMillis, lastEventTime);
     const fullEvent = this.driver.homey.app.fullEvent;
     this.driver.log(`managerEvent.executeEvent: Period changes: ${JSON.stringify(periodChanges)}`);
+    this.driver.log(`managerEvent.executeEvent: ${fullEvent}`);
     let result = false;
     let account, importTariff, exportTariff, gasTariff, devices, liveMeterId, deviceIds, futurePrices;
 

@@ -231,7 +231,8 @@ function getPrices(atTimeMillis, tariff, timeZone) {
   if (tariff && tariff.unitRates && tariff.unitRates.length > 0) {
     const selectedRate = tariff.unitRates.find(rate => {
       const start = Date.parse(rate.validFrom);
-      const end = Date.parse(rate.validTo);
+      //const end = Date.parse(rate.validTo);
+      const end = rate.validTo ? Date.parse(rate.validTo) : Infinity;
       return start <= atTimeMillis && end > atTimeMillis;
     });
 
@@ -242,10 +243,13 @@ function getPrices(atTimeMillis, tariff, timeZone) {
 
       // Optimized single-pass loop to find Min/Max for Today
       for (const rate of tariff.unitRates) {
-        const rateEndMs = Date.parse(rate.validTo);
+        //const rateEndMs = Date.parse(rate.validTo);
+        const rateStartMs = Date.parse(rate.validFrom);
+        const rateEndMs = rate.validTo ? Date.parse(rate.validTo) : Infinity;
 
         // Match original filter: only consider rates ending before or at start of tomorrow
         if (rateEndMs <= tomorrowMs) {
+        //if (rateStartMs < tomorrowMs && rateEndMs > atTimeMillis) {
           if (rate.value < minPrice) minPrice = rate.value;
           if (rate.value > maxPrice) maxPrice = rate.value;
         }
@@ -508,6 +512,7 @@ module.exports = class dataExtractor {
     if (!tariffDefinition) return { present: false };
 
     const pricesNow = getPrices(atTimeMillis, tariffDefinition, timeZone);
+    
     // Use a clean local variable for calculations
     const slotEndStr = `${pricesNow.nextSlotStart || ''}`;
     const slotEndMs = Date.parse(slotEndStr);

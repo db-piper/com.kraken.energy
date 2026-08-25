@@ -189,14 +189,14 @@ module.exports = class krakenAccountWrapper {
 
       const importTariff = this._driver.homey.app.importTariff;
       if (importTariff && importTariff.present) {
-        const importSlotEndMillis = Date.parse(importTariff.slotEnd) || 0;
+        const importSlotEndMillis = Date.parse(importTariff.slotEnd) || Infinity;
         // Compare values directly (numbers) for better performance and reliability
         periodChanges.tariffSlotImport = nowMillis >= importSlotEndMillis || periodChanges.day;
       }
 
       const exportTariff = this._driver.homey.app.exportTariff;
       if (exportTariff && exportTariff.present) {
-        const exportSlotEndMillis = Date.parse(exportTariff.slotEnd) || 0;
+        const exportSlotEndMillis = Date.parse(exportTariff.slotEnd) || Infinity;
         periodChanges.tariffSlotExport = nowMillis >= exportSlotEndMillis || periodChanges.day;
       }
 

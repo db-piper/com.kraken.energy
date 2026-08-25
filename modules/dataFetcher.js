@@ -161,6 +161,9 @@ module.exports = class dataFetcher {
       rawjson = await response.json();
       let result;
 
+      //this.homey.log(`dataFetcher.runGraphQLQuery: rawjson`);
+      //this.homey.log(JSON.stringify(rawjson));
+
       if (typeof transformFunction === 'function') {
         // Strategy 2: The Airlock (Efficient)
         result = transformFunction(rawjson);
