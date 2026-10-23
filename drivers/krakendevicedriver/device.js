@@ -140,7 +140,7 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
   /**
-   * Ensure the set of store values is complete for each device; overridden in concrete classes
+   * Ensure the set of store values is complete for each device; overridden in concrete classes.
    * @returns {promise<void>}
    */
   async migrateStore() {
