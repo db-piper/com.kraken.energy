@@ -100,7 +100,7 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
   /**
-   * onUninit is called when the device is destroyed
+   * onUninit is called when the device is destroyed.
    */
   async onUninit() {
     this.log('krakenDevice:onUninit - generic krakenDevice UnInitialization Started');
@@ -176,7 +176,7 @@ module.exports = class krakenDevice extends Homey.Device {
 
   /**
    * Check if the device has a capability with the given ID
-   * @param  	{string} 	id  ID of the capability to check	
+   * @param  	{string} 	id  ID of the capability to check
    * @returns {boolean}			True iff the device has a capability with the given ID
    */
   hasCapabilityWithId(id) {
