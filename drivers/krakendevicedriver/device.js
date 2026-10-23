@@ -110,7 +110,7 @@ module.exports = class krakenDevice extends Homey.Device {
   }
 
   /**
-   * Ensure the set of settings is complete set default values for any missing setting
+   * Ensure the set of settings is complete set default values for any missing setting.
    * @param 	{object} currentSettings	current settings and their values
    * @returns {promise<object>}					full settings as stored in device.settings
    */
