@@ -2,8 +2,9 @@
 
 const krakenDevice = require("../drivers/krakendevicedriver/device");
 const dayjs = require('../bundles/dayjs-bundled/index.js');
+const abstractAccount = require("./abstractAccount.js");
 
-module.exports = class energyAccount extends krakenDevice {
+module.exports = class energyAccount extends abstractAccount {
 
   #dispatchMinutes = 0;
 
@@ -188,9 +189,9 @@ module.exports = class energyAccount extends krakenDevice {
   }
 
   /**
-   * For a given date compute the number of the day in the period 
+   * For a given date compute the number of the day in the period
    * @param   {number}    atTimeMillis      Date in epoch milliseconds to compute the period day for
-   * @param   {integer}   periodStartDay    The day in month when the period starts 
+   * @param   {integer}   periodStartDay    The day in month when the period starts
    * @returns {integer}                     The 1-based index into the period of the date
    */
   computePeriodDay(atTimeMillis, periodStartDay) {
@@ -203,7 +204,7 @@ module.exports = class energyAccount extends krakenDevice {
   /**
    * Compute the start date of the period
    * @param   {number}    atTimeMillis      Event time in milliseconds since the epoch
-   * @param   {integer}   periodStartDay    The day in month when the period starts 
+   * @param   {integer}   periodStartDay    The day in month when the period starts
    * @returns {dayjs}                     The start date of the period
    */
   computePeriodStartDate(atTimeMillis, periodStartDay) {
@@ -219,7 +220,7 @@ module.exports = class energyAccount extends krakenDevice {
   /**
    * Compute the length of the period that includes the specified date in days
    * @param   {number}    atTimeMillis      Datetime in milliseconds since the epoch to be included in the period
-   * @param   {integer}   periodStartDay    The day in month when the period starts 
+   * @param   {integer}   periodStartDay    The day in month when the period starts
    * @returns {integer}                     The length of the period
    */
   computePeriodLength(atTimeMillis, periodStartDay) {
@@ -349,7 +350,7 @@ module.exports = class energyAccount extends krakenDevice {
 
       if (importTariffPresent) {
         //TODO: Add boost pricing here.
-        importPrice = .01 * (dispatchPricing ? minPrice : importTariff.unitRate);										//pounds	
+        importPrice = .01 * (dispatchPricing ? minPrice : importTariff.unitRate);										//pounds
         let deltaImport = liveMeterReading.consumption - currentImport;																	//watt hours
         //The prior price paid is used to calculate the value of the energy consumed in the previous tick
         let deltaImportValue = (deltaImport / 1000) * priorImportPricePaid;															//pounds
