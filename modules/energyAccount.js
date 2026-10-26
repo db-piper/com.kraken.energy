@@ -113,28 +113,6 @@ module.exports = class energyAccount extends abstractAccount {
     return this.#dispatchMinutes ?? 0;
   }
 
-  /**
-   * Update capability values that depend on the period day to be consistent
-   * @param   {integer}   startDay    The day number of the period start (1-31)
-   * @returns {Promise<boolean>}      Indicates if any capabilities are actually updated
-   */
-  async updatePeriodDay(startDay) {
-    this.homey.log(`energyAccount Device:updatePeriodDay - updating period start day to ${startDay}`);
-    const atTimeMillis = dayjs().tz(this.wrapper.timeZone).valueOf();
-    const periodDay = this.computePeriodDay(atTimeMillis, Number(startDay));
-    const periodStartDate = this.computePeriodStartDate(atTimeMillis, startDay);
-    const nextStartDate = periodStartDate.add(1, 'month');
-    const periodLength = nextStartDate.diff(periodStartDate, 'days');
-
-    this.updateCapability(this._capIds.PERIOD_DAY_NUMBER, periodDay);
-    this.updateCapability(this._capIds.PERIOD_START_TEXT, periodStartDate.format('YYYY-MM-DD'));
-    this.updateCapability(this._capIds.PERIOD_NEXT_START_TEXT, nextStartDate.format('YYYY-MM-DD'));
-    this.updateCapability(this._capIds.PERIOD_DURATION, periodLength);
-
-    const updates = await this.updateCapabilities(false);
-    return updates;
-  }
-
 
   /**
    * Define the standard interface for processEvent.

@@ -127,7 +127,7 @@ module.exports = class krakenDriver extends Homey.Driver {
 
   /**
    * Update the max RSS peak if it's greater than the current max
-   * @param {number} rss The RSS value to update 
+   * @param {number} rss The RSS value to update
    */
   set maxPssPeak(rss) {
     this._maxPssPeak = Math.max(this._maxPssPeak, rss);
@@ -221,7 +221,8 @@ module.exports = class krakenDriver extends Homey.Driver {
     } catch (err) {
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.message}`);
       this.homey.log(`krakenDriver.onHeartbeat: Failure: ${err.stack}`);
-      this.error('krakenDriver.onHeartbeat: Failure:', err.message);
+      this.error('krakenDriver.onHeartbeat: Untrapped Error:', err.message);
+      this.error(err.stack);
     } finally {
       this._eventer = null;
       this._wrapper = null;
@@ -242,7 +243,7 @@ module.exports = class krakenDriver extends Homey.Driver {
     const token = await this.eventer.getApiToken(apiKey);  //Get a kraken token from the api key - should be full validation
     //Full validation - apikey can be used to generate a GQL token && GQL token can be used to query the account
     //If both are true - persist apikey, account number, GQL token and Expiry Date.
-    //Currently the second part is attempted by setValidAccount, below. The problem is that getApiToken persists 
+    //Currently the second part is attempted by setValidAccount, below. The problem is that getApiToken persists
     //settings assuming that it is doing the whole job.
     let success = false;
     if (token) {
@@ -285,7 +286,7 @@ module.exports = class krakenDriver extends Homey.Driver {
         let nextRun = now.set('minute', nextMinute).set('second', offset).set('millisecond', 0);
 
         // 3. THE "MISS THE BUS" GUARD
-        // If we finished the last job at :16 and the target was :15, 
+        // If we finished the last job at :16 and the target was :15,
         // or if Math.ceil gave us the 'current' minute which is already gone.
         if (now.valueOf() >= nextRun.valueOf()) {
           nextMinute += interval;
